@@ -8,7 +8,7 @@ NEXTJS_ENV=development
 # ── 公開（可與 wrangler.toml [vars] 相同）──────────────────
 NEXT_PUBLIC_SITE_URL=https://zenith-mind.com
 NEXT_PUBLIC_SUPABASE_URL=https://qhutexisyfbclxntgkvx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_xxx
 NEXT_PUBLIC_GA4_MEASUREMENT_ID=G-4C955FQCZ2
 
 # ── 資料庫 ───────────────────────────────────────────────

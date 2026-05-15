@@ -18,6 +18,7 @@ service = "zenith-mind"
 [vars]
 NEXT_PUBLIC_SITE_URL = "https://zenith-mind.com"
 NEXT_PUBLIC_SUPABASE_URL = "https://qhutexisyfbclxntgkvx.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_FogU-AYv-rXBblU77k4dUw_AZTH9qPh"
 NEXT_PUBLIC_GA4_MEASUREMENT_ID = "G-4C955FQCZ2"
 GA4_CLIENT_EMAIL = "ga4-api-reader@my-blog-analytics-495817.iam.gserviceaccount.com"
 GA4_PROPERTY_ID = "533209763"
