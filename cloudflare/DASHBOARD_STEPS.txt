@@ -43,6 +43,14 @@ Cloudflare Pages 部署設定（getzenithmind.com）
     NEXT_PUBLIC_SUPABASE_ANON_KEY=
     REDIRECT_LOOKUP_SECRET=
 
+  Google Ads（選用，後台儀表板狀態用）：
+    GOOGLE_ADS_CUSTOMER_ID=8702788584
+    GOOGLE_ADS_LOGIN_CUSTOMER_ID=4708073999
+    GOOGLE_ADS_DEVELOPER_TOKEN=（你的 Developer Token，勿用 DEVELOPER_TOKEN 當變數名）
+    GOOGLE_ADS_CLIENT_ID=
+    GOOGLE_ADS_CLIENT_SECRET=
+    GOOGLE_ADS_REFRESH_TOKEN=
+
 【C】Custom domains
   www.getzenithmind.com（主要）
   getzenithmind.com（裸網域，Redirect Rule 301 → www）

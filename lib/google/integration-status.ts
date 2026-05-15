@@ -27,13 +27,17 @@ export function getGoogleIntegrationStatuses(): GoogleIntegrationStatus[] {
       "GA4_PROPERTY_ID",
       "NEXT_PUBLIC_GA4_MEASUREMENT_ID",
     ]),
-    status("Google Ads", "需 OAuth Client、Refresh Token、Developer Token 與 Customer ID。", [
-      "GOOGLE_ADS_CLIENT_ID",
-      "GOOGLE_ADS_CLIENT_SECRET",
-      "GOOGLE_ADS_REFRESH_TOKEN",
-      "GOOGLE_ADS_DEVELOPER_TOKEN",
-      "GOOGLE_ADS_CUSTOMER_ID",
-    ]),
+    status(
+      "Google Ads",
+      "需 OAuth Client、Refresh Token、Developer Token；MCC 帳戶另需 LOGIN_CUSTOMER_ID。",
+      [
+        "GOOGLE_ADS_CLIENT_ID",
+        "GOOGLE_ADS_CLIENT_SECRET",
+        "GOOGLE_ADS_REFRESH_TOKEN",
+        "GOOGLE_ADS_DEVELOPER_TOKEN",
+        "GOOGLE_ADS_CUSTOMER_ID",
+      ]
+    ),
     status("Search Console", "需授權服務帳號或 OAuth，並提供網站資源 URL。", [
       "GOOGLE_SEARCH_CONSOLE_SITE_URL",
     ]),
