@@ -20,6 +20,9 @@ import { buildOrganizationSchema } from "@/lib/seo/schemas/article.schema";
 import JsonLd from "@/components/seo/JsonLd";
 import { getSiteSettings } from "@/lib/site/queries";
 
+// 避免建置階段無 DATABASE_URL 時 Prisma 查詢失敗（執行期仍可用 revalidate）
+export const dynamic = "force-dynamic";
+
 interface Props {
   children: React.ReactNode;
   params:   Promise<{ locale: string }>;

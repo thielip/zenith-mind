@@ -26,6 +26,7 @@ import PostArticleBody from "@/components/blog/PostArticleBody";
 import TableOfContents  from "@/components/blog/TableOfContents";
 import RecommendedPosts from "@/components/blog/RecommendedPosts";
 import PageViewTracker from "@/components/analytics/PageViewTracker";
+import { isDatabaseAvailable } from "@/lib/build/runtime-env";
 
 export const revalidate = 3600;
 
@@ -51,6 +52,9 @@ const getPublishedPostBySlug = cache((slug: string) =>
 export async function generateStaticParams(): Promise<
   Array<{ locale: string; slug: string }>
 > {
+  // Cloudflare 建置若未注入 DATABASE_URL，略過預生成（首訪時 ISR 再產生）
+  if (!isDatabaseAvailable()) return [];
+
   const posts = await prisma.post.findMany({
     where:   { status: "PUBLISHED", deletedAt: null },
     select:  { slug: true },

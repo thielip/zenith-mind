@@ -14,10 +14,15 @@ Cloudflare Pages 部署設定（getzenithmind.com）
   Node.js version:     22
 
 【B】Pages → Settings → Environment variables（Production + Preview 建置都要）
-  建置建議：
+  建置必填：
     SKIP_ENV_VALIDATION=true
     NEXT_PUBLIC_SITE_URL=https://www.getzenithmind.com
-    （未設定時程式會用預設網址建置，但 Production 仍請務必設定）
+
+  執行階段必填（Production）：
+    DATABASE_URL、DIRECT_URL、JWT_*、UPSTASH_*、SUPABASE_* 等（見下方）
+
+  建置選填（有 DATABASE_URL 時可預生成文章靜態路徑，加快首屏）：
+    DATABASE_URL=（與 Production 相同即可）
 
   執行階段必填（與 .env.example 一致，請填真實值）：
     NEXT_PUBLIC_SITE_URL=https://www.getzenithmind.com

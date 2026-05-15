@@ -13,6 +13,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false, googleBot: { index: false, follow: false } },
 };
 
+export const dynamic = "force-dynamic";
+
 interface Props {
   children: React.ReactNode;
 }

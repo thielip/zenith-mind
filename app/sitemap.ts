@@ -1,13 +1,16 @@
 // app/sitemap.ts — 動態 sitemap
 import type { MetadataRoute } from "next";
-import { env } from "@/env";
+import { isDatabaseAvailable } from "@/lib/build/runtime-env";
+import { getPublicSiteUrl } from "@/lib/site/url";
 import { prisma } from "@/infrastructure/db/prisma";
 
 export const revalidate = 3600;
 const SITEMAP_POST_LIMIT = 5000;
 
+export const dynamic = "force-dynamic";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = env.NEXT_PUBLIC_SITE_URL;
+  const base = getPublicSiteUrl();
 
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: `${base}/zh-TW`,       lastModified: new Date(), changeFrequency: "daily",   priority: 1.0 },
@@ -17,6 +20,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/en/blog`,     lastModified: new Date(), changeFrequency: "daily",   priority: 0.8 },
     { url: `${base}/en/about`,   lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
   ];
+
+  if (!isDatabaseAvailable()) {
+    return staticRoutes;
+  }
 
   const posts = await prisma.post.findMany({
     where:   { status: "PUBLISHED", deletedAt: null },
