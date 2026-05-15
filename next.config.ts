@@ -46,13 +46,13 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // SEO：www → non-www 永久轉址
+  // SEO：裸網域 → www 永久轉址（正式站：https://www.getzenithmind.com）
   async redirects() {
     return [
       {
         source: "/:path*",
-        has: [{ type: "host", value: "www.zenith-mind.com" }],
-        destination: "https://zenith-mind.com/:path*",
+        has: [{ type: "host", value: "getzenithmind.com" }],
+        destination: "https://www.getzenithmind.com/:path*",
         permanent: true,
       },
     ];
