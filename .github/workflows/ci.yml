@@ -1,0 +1,85 @@
+# .github/workflows/ci.yml
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Step 1：Secret 掃描（最優先，fail 即停）────────────
+  secret-scan:
+    name: gitleaks Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Step 2：型別檢查 + Lint ───────────────────────────
+  quality:
+    name: TypeScript + ESLint
+    runs-on: ubuntu-latest
+    needs: secret-scan
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci
+      - name: TypeScript strict（0 error）
+        run: npm run type-check
+      - name: ESLint（0 warning）
+        run: npm run lint
+
+  # ── Step 3：依賴安全掃描 ──────────────────────────────
+  audit:
+    name: npm audit
+    runs-on: ubuntu-latest
+    needs: secret-scan
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci
+      - run: npm audit --audit-level=high
+
+  # ── Step 4：CodeQL 靜態安全分析 ───────────────────────
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    needs: secret-scan
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+      - uses: github/codeql-action/autobuild@v3
+      - uses: github/codeql-action/analyze@v3
+
+  # ── Step 5：Build 驗證 ────────────────────────────────
+  build:
+    name: next build
+    runs-on: ubuntu-latest
+    needs: [quality, audit]
+    env:
+      SKIP_ENV_VALIDATION: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run build

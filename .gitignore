@@ -1,0 +1,17 @@
+# secrets
+.env
+.env*.local
+
+# Next.js
+.next/
+out/
+
+# dependencies
+node_modules/
+
+# misc
+.DS_Store
+*.log
+coverage/
+test-results/
+tsconfig.tsbuildinfo

@@ -1,0 +1,559 @@
+// prisma/schema.prisma
+// 完整資料模型 — 最終確認版
+// 包含：User、Post、Category、Tag、SeoMetadata、
+//       PageView、DailyAggregate、AffiliateLink、
+//       AuditLog、AiJob、Redirect、EventOutbox
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // App：Transaction pooler（:6543）；migrate／introspect：directUrl（見 Supabase 後台 Connection string）
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ═══════════════════════════════════════════════
+// ENUM
+// ═══════════════════════════════════════════════
+
+enum UserRole {
+  ADMIN
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+  ARCHIVED
+}
+
+enum AiJobStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+  DEAD_LETTER
+}
+
+enum AiJobType {
+  GENERATE_DRAFT
+  OPTIMIZE_TITLE
+  EXTRACT_FAQ
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  TOTP_SETUP
+  TOTP_VERIFY
+  AI_GENERATE
+  PUBLISH
+  SCHEDULE
+}
+
+enum OutboxStatus {
+  PENDING
+  PROCESSED
+  FAILED
+}
+
+enum NewsletterSubscriberStatus {
+  ACTIVE
+  UNSUBSCRIBED
+}
+
+// ═══════════════════════════════════════════════
+// USER
+// ═══════════════════════════════════════════════
+
+model User {
+  id    String   @id @default(cuid())
+  email String   @unique
+  password String // bcrypt hash，絕不存明文
+
+  // TOTP 2FA（AES-256-CBC 加密後儲存）
+  totpSecret     String?
+  totpEnabled    Boolean   @default(false)
+  totpVerifiedAt DateTime?
+
+  role      UserRole  @default(ADMIN)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  posts     Post[]
+  auditLogs AuditLog[]
+  aiJobs    AiJob[]
+
+  @@index([email])
+  @@index([email, deletedAt])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+// ═══════════════════════════════════════════════
+// CATEGORY
+// ═══════════════════════════════════════════════
+
+model Category {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  name        String    // 繁中
+  nameEn      String?   // 英文
+  description String?
+  color       String?   // Hex 色碼
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  posts Post[]
+
+  @@index([slug])
+  @@map("categories")
+}
+
+// ═══════════════════════════════════════════════
+// TAG
+// ═══════════════════════════════════════════════
+
+model Tag {
+  id     String  @id @default(cuid())
+  slug   String  @unique
+  name   String
+  nameEn String?
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  posts PostTag[]
+
+  @@index([slug])
+  @@map("tags")
+}
+
+// ═══════════════════════════════════════════════
+// POST（核心 Entity）
+// ═══════════════════════════════════════════════
+
+model Post {
+  id     String     @id @default(cuid())
+  slug   String     @unique // 發布後不可修改（由應用層強制）
+  status PostStatus @default(DRAFT)
+
+  // 多語系內容
+  title     String
+  titleEn   String?
+  excerpt   String?
+  excerptEn String?
+  content   String  @db.Text // Markdown 或 Tiptap JSON
+  contentEn String? @db.Text
+  contentType String @default("markdown") // "markdown" | "tiptap"
+
+  // 封面圖
+  coverImage    String?
+  coverImageAlt String?
+  /// next/image 與 CLS：建議後台／上傳流程寫入寬高與 blurHash
+  coverImageWidth    Int?
+  coverImageHeight   Int?
+  coverImageBlurHash String?
+
+  /// 語意化區塊 JSON（與 HTML 並存；前台有契約時優先渲染）
+  contentBlocks Json?
+  /// Tiptap ProseMirror 文件 JSON 快照（防腐層／未來遷移用）
+  contentDoc    Json?
+
+  // FAQ（存於 Post，含版本控制）
+  faq          Json?    // AI 生成或手動維護的 FAQ 陣列
+  faqVersion   Int      @default(1)
+  faqUpdatedAt DateTime?
+
+  // 排程發文
+  publishedAt DateTime?
+  scheduledAt DateTime?
+
+  // pSEO 識別
+  isProgrammatic Boolean @default(false)
+  pSeoTemplate   String?
+
+  // 閱讀時間（自動計算，分鐘）
+  readingTime Int @default(0)
+
+  // Soft Delete（避免 SEO 斷鏈，改用 Redirect）
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  authorId   String
+  author     User      @relation(fields: [authorId], references: [id])
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  tags        PostTag[]
+  seoMetadata SeoMetadata?
+  pageViews   PageView[]
+  dailyAggregates DailyAggregate[]
+  aiJobs      AiJob[]
+
+  @@index([slug])
+  @@index([status, publishedAt])
+  @@index([status, deletedAt, publishedAt])
+  @@index([deletedAt, coverImage])
+  @@index([createdAt])
+  @@index([categoryId])
+  @@index([deletedAt])
+  @@index([scheduledAt, status])
+  @@index([isProgrammatic])
+  @@map("posts")
+}
+
+// ═══════════════════════════════════════════════
+// AD SLOT（廣告位：樣式與資料分離，圖片帶寬高與 alt）
+// ═══════════════════════════════════════════════
+
+model AdSlot {
+  id     String  @id @default(cuid())
+  /// 同一 slot 不同語系各一筆，例如 home_below_hero + zh-TW
+  slotKey String
+  locale  String  @default("zh-TW")
+
+  name     String
+  imageUrl String
+  imageWidth  Int?
+  imageHeight Int?
+  imageAlt    String
+  blurHash    String?
+
+  href        String?
+  /// 例如 "16/9" 供 aspect-ratio，降低 CLS
+  aspectRatio String?
+
+  priority Int     @default(0)
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([slotKey, locale])
+  @@index([isActive, slotKey, locale])
+  @@map("ad_slots")
+}
+
+// Post ↔ Tag 多對多中介表
+model PostTag {
+  postId String
+  tagId  String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@index([tagId])
+  @@map("post_tags")
+}
+
+// ═══════════════════════════════════════════════
+// SEO_METADATA（1:1 with Post）
+// ═══════════════════════════════════════════════
+
+model SeoMetadata {
+  id String @id @default(cuid())
+
+  metaTitle         String?
+  metaTitleEn       String?
+  metaDescription   String?
+  metaDescriptionEn String?
+  canonicalUrl      String?
+
+  ogTitle       String?
+  ogDescription String?
+  ogImage       String?
+
+  focusKeyword String?
+  keywords     String[] // PostgreSQL array
+
+  noIndex  Boolean @default(false)
+  noFollow Boolean @default(false)
+
+  // 版本控制（為未來 Snapshot 保留空間）
+  version  Int     @default(1)
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  postId String  @unique
+  post   Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("seo_metadata")
+}
+
+// ═══════════════════════════════════════════════
+// REDIRECT（Slug 變更防壞鏈，301 SEO 保護）
+// ═══════════════════════════════════════════════
+
+model Redirect {
+  id         String @id @default(cuid())
+  oldPath    String @unique // 舊的 URL 路徑（如 /blog/old-slug）
+  newPath    String         // 新的 URL 路徑
+  statusCode Int    @default(301)
+  isActive   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  @@index([oldPath, isActive])
+  @@map("redirects")
+}
+
+// ═══════════════════════════════════════════════
+// PAGE_VIEW（保留 180 天，定期 DELETE cutoff）
+// ═══════════════════════════════════════════════
+
+model PageView {
+  id        String @id @default(cuid())
+  visitorHash String? // SHA-256(IP + UA + 鹽)，不存原始 IP
+  referer   String?
+  locale    String @default("zh-TW")
+  createdAt DateTime @default(now())
+
+  postId String?
+  post   Post?   @relation(fields: [postId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])          // 清理任務用
+  @@index([postId, createdAt])  // 查單篇流量趨勢用
+  @@map("page_views")
+}
+
+// ═══════════════════════════════════════════════
+// DAILY_AGGREGATE（每日彙總，Dashboard 查詢用）
+// ═══════════════════════════════════════════════
+
+model DailyAggregate {
+  id             String   @id @default(cuid())
+  date           DateTime // 精確到天（UTC 00:00:00）
+  views          Int      @default(0)
+  uniqueVisitors Int      @default(0) // 24h visitorHash distinct count
+
+  postId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([date, postId])             // 防重複計算
+  @@index([postId, date(sort: Desc)])  // 查單篇最近 30 天趨勢
+  @@map("daily_aggregates")
+}
+
+// ═══════════════════════════════════════════════
+// AFFILIATE_LINK（聯盟行銷連結）
+// ═══════════════════════════════════════════════
+
+model AffiliateLink {
+  id         String  @id @default(cuid())
+  name       String
+  slug       String  @unique // 短網址 /go/[slug]
+  targetUrl  String
+  platform   String? // Klook、KKday、Amazon 等
+  commission String?
+  isActive   Boolean @default(true)
+  clickCount Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug, isActive])
+  @@map("affiliate_links")
+}
+
+// ═══════════════════════════════════════════════
+// AI_JOB（防併發 + 防重放 + SLA 追蹤）
+// ═══════════════════════════════════════════════
+
+model AiJob {
+  id              String      @id @default(cuid())
+  idempotencyKey  String      @unique // 阻擋 Webhook 重送與 UI 連點
+  type            AiJobType
+  status          AiJobStatus @default(PENDING)
+
+  payload     Json
+  result      Json?
+  failedReason Json?
+
+  retryCount Int @default(0) // Max: 3
+
+  // SLA 追蹤
+  lockedAt  DateTime? // Worker 取走時記錄
+  lockedBy  String?   // Worker 實例 ID
+  startedAt DateTime?
+  timeoutAt DateTime? // 超時後 Watchdog 可接管
+  scheduledAt DateTime?
+
+  // Checkpoint（從斷點續跑，不重頭消耗 Token）
+  stepIndex     Int  @default(0)
+  partialResult Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  postId String?
+  post   Post?   @relation(fields: [postId], references: [id], onDelete: SetNull)
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])   // Worker 查詢 PENDING 任務
+  @@index([status, retryCount])  // 重試邏輯查詢
+  @@index([timeoutAt, status])   // Watchdog 超時掃描
+  @@index([createdAt])
+  @@index([scheduledAt, status])
+  @@map("ai_jobs")
+}
+
+// ═══════════════════════════════════════════════
+// AUDIT_LOG（Level 3 必備，保留 90 天）
+// ═══════════════════════════════════════════════
+
+model AuditLog {
+  id         String      @id @default(cuid())
+  action     AuditAction
+  entityType String?
+  entityId   String?
+  metadata   Json?
+  ipMasked   String?  // 後段 IP 遮罩（GDPR）
+  userAgent  String?
+  requestId  String?  // 全鏈路追蹤
+
+  createdAt DateTime @default(now())
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])              // 清理任務
+  @@index([userId, createdAt])
+  @@index([action, entityType])
+  @@map("audit_logs")
+}
+
+// ═══════════════════════════════════════════════
+// EVENT_OUTBOX（最終一致性解耦）
+// ═══════════════════════════════════════════════
+// 領域邏輯完成後寫入 Outbox，不直接觸發 Side Effect
+// Cron Job 掃描 PENDING → 執行 revalidatePath / 發送通知
+
+model EventOutbox {
+  id        String       @id @default(cuid())
+  eventType String       // "POST_PUBLISHED" | "AI_JOB_DONE" | "SLUG_CHANGED"
+  payload   Json
+  status    OutboxStatus @default(PENDING)
+  error     String?      // 處理失敗原因
+  processedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([status, createdAt]) // Cron 掃描 PENDING 用
+  @@map("event_outbox")
+}
+
+// ═══════════════════════════════════════════════
+// NEWSLETTER_SUBSCRIBER（Email Capture）
+// ═══════════════════════════════════════════════
+
+model NewsletterSubscriber {
+  id     String @id @default(cuid())
+  email  String @unique
+  locale String @default("zh-TW")
+  source String @default("homepage")
+  status NewsletterSubscriberStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([locale])
+  @@map("newsletter_subscribers")
+}
+
+// ═══════════════════════════════════════════════
+// SITE SETTINGS（前台 Header / 社群 / 快速導覽）
+// ═══════════════════════════════════════════════
+
+model SiteSettings {
+  id String @id @default("site")
+
+  logoUrl String?
+  logoAlt String?
+
+  quickLinks          Json?
+  socialLinks         Json?
+  homepageCopy        Json?
+  aboutSections       Json?
+  instagramEmbedUrl   String?
+  socialSidebarActive Boolean @default(false)
+
+  /// 首頁大圖輪播自動切換間隔（秒）；0 = 不自動輪播
+  heroAutoplaySeconds Int @default(8)
+  /// 首頁小圖橫向輪播自動捲動間隔（秒）；0 = 不自動
+  carouselAutoplaySeconds Int @default(6)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("site_settings")
+}
+
+// ═══════════════════════════════════════════════
+// HERO SLIDER（首頁全寬大圖輪播）
+// ═══════════════════════════════════════════════
+
+model HeroSlide {
+  id String @id @default(cuid())
+
+  locale      String @default("zh-TW")
+  title       String
+  subtitle    String?
+  buttonLabel String?
+  buttonHref  String?
+  /// 點擊大圖區域開啟的連結（https 或站內 / 路徑）；空白則僅展示不導連
+  imageHref   String?
+  imageUrl    String
+  imageAlt    String?
+
+  textX    Int     @default(12)
+  textY    Int     @default(50)
+  sortOrder Int    @default(0)
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([locale, isActive, sortOrder])
+  @@map("hero_slides")
+}
+
+// ═══════════════════════════════════════════════
+// HOME CAROUSEL（首頁中段小圖輪播）
+// ═══════════════════════════════════════════════
+
+model HomeCarouselItem {
+  id String @id @default(cuid())
+
+  locale      String @default("zh-TW")
+  title       String
+  description String?
+  href        String?
+  imageUrl    String
+  imageAlt    String?
+
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([locale, isActive, sortOrder])
+  @@map("home_carousel_items")
+}

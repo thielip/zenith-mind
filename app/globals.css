@@ -1,0 +1,62 @@
+/* app/globals.css */
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* 自定義 focus 樣式（WCAG 可見性）*/
+:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* sr-only 輔助工具類別（螢幕閱讀器）*/
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* 平滑捲動（目錄錨點跳轉）*/
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  overflow-x: clip;
+}
+
+[id] {
+  scroll-margin-top: 5rem;
+}
+
+/* Article HTML is rendered from CMS content. Keep layout-affecting styles scoped. */
+[data-article-content] {
+  isolation: isolate;
+  contain: layout paint;
+}
+
+[data-article-content] :where(img, video, iframe, table, pre) {
+  max-width: 100%;
+}
+
+[data-article-content] :where(img) {
+  height: auto;
+}
+
+/* 減少動效（尊重使用者系統設定）*/
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

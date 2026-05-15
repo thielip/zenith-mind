@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-label="AI content strategy">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#020617"/>
+      <stop offset="0.5" stop-color="#1d4ed8"/>
+      <stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+    <pattern id="grid" width="64" height="64" patternUnits="userSpaceOnUse">
+      <path d="M64 0H0V64" fill="none" stroke="#ffffff" stroke-opacity="0.12"/>
+    </pattern>
+  </defs>
+  <rect width="1600" height="900" fill="url(#g)"/>
+  <rect width="1600" height="900" fill="url(#grid)"/>
+  <circle cx="1210" cy="210" r="220" fill="#60a5fa" opacity="0.22"/>
+  <circle cx="1060" cy="610" r="320" fill="#c084fc" opacity="0.18"/>
+  <path d="M240 630C420 430 520 710 710 500S1030 360 1320 520" fill="none" stroke="#bfdbfe" stroke-width="10" stroke-linecap="round" opacity="0.75"/>
+</svg>

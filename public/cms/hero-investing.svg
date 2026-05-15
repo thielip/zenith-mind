@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-label="Investing and analytics">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#111827"/>
+      <stop offset="0.55" stop-color="#047857"/>
+      <stop offset="1" stop-color="#0f766e"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#g)"/>
+  <g fill="none" stroke="#d1fae5" stroke-width="8" opacity="0.7">
+    <path d="M210 650H1390"/>
+    <path d="M310 650V500"/>
+    <path d="M480 650V390"/>
+    <path d="M650 650V560"/>
+    <path d="M820 650V320"/>
+    <path d="M990 650V420"/>
+    <path d="M1160 650V260"/>
+  </g>
+  <circle cx="1230" cy="240" r="250" fill="#34d399" opacity="0.18"/>
+  <circle cx="440" cy="250" r="180" fill="#a7f3d0" opacity="0.14"/>
+</svg>

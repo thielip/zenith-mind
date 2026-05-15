@@ -1,0 +1,23 @@
+{
+  "nav": {
+    "home":  "首頁",
+    "blog":  "文章",
+    "about": "關於"
+  },
+  "blog": {
+    "readingTime": "閱讀時間",
+    "minutes":     "分鐘",
+    "tags":        "文章標籤",
+    "category":    "分類",
+    "publishedAt": "發布日期",
+    "updatedAt":   "更新日期",
+    "relatedPosts":"相關文章",
+    "tableOfContents": "文章目錄",
+    "faq":         "常見問題"
+  },
+  "common": {
+    "readMore":    "閱讀更多",
+    "home":        "首頁",
+    "backToList":  "返回列表"
+  }
+}

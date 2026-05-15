@@ -1,0 +1,23 @@
+{
+  "nav": {
+    "home":  "Home",
+    "blog":  "Blog",
+    "about": "About"
+  },
+  "blog": {
+    "readingTime": "Reading time",
+    "minutes":     "min",
+    "tags":        "Tags",
+    "category":    "Category",
+    "publishedAt": "Published",
+    "updatedAt":   "Updated",
+    "relatedPosts":"Related Posts",
+    "tableOfContents": "Table of Contents",
+    "faq":         "FAQ"
+  },
+  "common": {
+    "readMore":    "Read more",
+    "home":        "Home",
+    "backToList":  "Back to list"
+  }
+}
