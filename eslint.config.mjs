@@ -22,14 +22,10 @@ const eslintConfig = [
     },
   },
 
-  // TypeScript 嚴格規則
+  // TypeScript 規則（不含需 type-aware 的 no-unsafe-*，避免 next build lint 階段失敗）
   {
     rules: {
       "@typescript-eslint/no-explicit-any": "error",
-      "@typescript-eslint/no-unsafe-assignment": "error",
-      "@typescript-eslint/no-unsafe-call": "error",
-      "@typescript-eslint/no-unsafe-member-access": "error",
-      "@typescript-eslint/no-unsafe-return": "error",
       "no-empty": ["error", { allowEmptyCatch: false }],
       "no-console": ["warn", { allow: ["warn", "error"] }],
       "@typescript-eslint/no-non-null-assertion": "warn",

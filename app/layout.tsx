@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { env } from "@/env";
+import { getPublicSiteUrl } from "@/lib/site/url";
 import "@/app/globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(env.NEXT_PUBLIC_SITE_URL),
+  metadataBase: new URL(getPublicSiteUrl()),
   title: {
     template: "%s | 巔峰思維 Zenith Mind",
     default: "巔峰思維 Zenith Mind — AI 思維 × 投資理財 × 個人品牌",
