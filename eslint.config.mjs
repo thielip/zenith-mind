@@ -36,7 +36,17 @@ const eslintConfig = [
     },
   },
 
-  { ignores: [".next/**", "node_modules/**", "prisma/migrations/**"] },
+  {
+    ignores: [
+      ".next/**",
+      ".open-next/**",
+      "node_modules/**",
+      "prisma/migrations/**",
+      "**/__tests__/**",
+      "**/*.test.ts",
+      "**/*.test.tsx",
+    ],
+  },
 ];
 
 export default eslintConfig;
