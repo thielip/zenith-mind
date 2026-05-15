@@ -1,0 +1,50 @@
+# 複製為 .dev.vars（勿提交 Git）：cp .dev.vars.example .dev.vars
+# 本機 `npm run preview:cf` / `wrangler dev` 會讀取此檔
+
+# ── 建置／開發輔助 ─────────────────────────────────────────
+SKIP_ENV_VALIDATION=true
+NEXTJS_ENV=development
+
+# ── 公開（可與 wrangler.toml [vars] 相同）──────────────────
+NEXT_PUBLIC_SITE_URL=https://zenith-mind.com
+NEXT_PUBLIC_SUPABASE_URL=https://qhutexisyfbclxntgkvx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_GA4_MEASUREMENT_ID=G-4C955FQCZ2
+
+# ── 資料庫 ───────────────────────────────────────────────
+DATABASE_URL=
+DIRECT_URL=
+
+# ── Auth / Redis ─────────────────────────────────────────
+JWT_ACCESS_SECRET=
+JWT_REFRESH_SECRET=
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+TOTP_ENCRYPTION_KEY=
+
+# ── GA4（私鑰用 secret put 上線；本機可貼在 .dev.vars）──
+GA4_CLIENT_EMAIL=ga4-api-reader@my-blog-analytics-495817.iam.gserviceaccount.com
+GA4_PRIVATE_KEY=
+GA4_PROPERTY_ID=533209763
+
+# ── Google Ads ───────────────────────────────────────────
+GOOGLE_ADS_CLIENT_ID=
+GOOGLE_ADS_CLIENT_SECRET=
+GOOGLE_ADS_REFRESH_TOKEN=
+GOOGLE_ADS_DEVELOPER_TOKEN=
+GOOGLE_ADS_CUSTOMER_ID=8702788584
+GOOGLE_ADS_LOGIN_CUSTOMER_ID=4708073999
+
+# ── Supabase / Webhook / Cron ────────────────────────────
+SUPABASE_SERVICE_ROLE_KEY=
+WEBHOOK_SECRET=
+REVALIDATE_SECRET=
+CRON_SECRET=
+REDIRECT_LOOKUP_SECRET=
+PAGEVIEW_HASH_SALT=
+
+# ── 其他 ─────────────────────────────────────────────────
+GEMINI_API_KEY=
+ALERT_EMAIL_USER=
+ALERT_EMAIL_PASS=
+ALERT_EMAIL_TO=tvb2001thielip@yahoo.com.tw

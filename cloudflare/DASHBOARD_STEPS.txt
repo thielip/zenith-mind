@@ -1,4 +1,4 @@
-Cloudflare Pages 部署設定（getzenithmind.com）
+Cloudflare Workers 部署設定（getzenithmind.com / zenith-mind.com）
 ============================================
 
 【重要】本專案為 Next.js 15 SSR，請使用 OpenNext 建置（非純靜態 export）。
@@ -43,13 +43,8 @@ Cloudflare Pages 部署設定（getzenithmind.com）
     NEXT_PUBLIC_SUPABASE_ANON_KEY=
     REDIRECT_LOOKUP_SECRET=
 
-  Google Ads（選用，後台儀表板狀態用）：
-    GOOGLE_ADS_CUSTOMER_ID=8702788584
-    GOOGLE_ADS_LOGIN_CUSTOMER_ID=4708073999
-    GOOGLE_ADS_DEVELOPER_TOKEN=（你的 Developer Token，勿用 DEVELOPER_TOKEN 當變數名）
-    GOOGLE_ADS_CLIENT_ID=
-    GOOGLE_ADS_CLIENT_SECRET=
-    GOOGLE_ADS_REFRESH_TOKEN=
+  公開變數已寫入 repo 的 wrangler.toml [vars]（隨 Git 部署）。
+  敏感變數請用：npx wrangler secret put <NAME>（見 .dev.vars.example）
 
 【C】Custom domains
   www.getzenithmind.com（主要）

@@ -1,0 +1,26 @@
+# Cloudflare Workers（OpenNext）— 與 wrangler deploy / GitHub CI 同步
+# 敏感值請用 `npx wrangler secret put`，勿寫入此檔。見 .dev.vars.example
+
+name = "zenith-mind"
+main = ".open-next/worker.js"
+compatibility_date = "2024-12-30"
+compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+[[services]]
+binding = "WORKER_SELF_REFERENCE"
+service = "zenith-mind"
+
+# 可提交 Git 的環境變數（部署時寫入 Worker，不會被清空）
+[vars]
+NEXT_PUBLIC_SITE_URL = "https://zenith-mind.com"
+NEXT_PUBLIC_SUPABASE_URL = "https://qhutexisyfbclxntgkvx.supabase.co"
+NEXT_PUBLIC_GA4_MEASUREMENT_ID = "G-4C955FQCZ2"
+GA4_CLIENT_EMAIL = "ga4-api-reader@my-blog-analytics-495817.iam.gserviceaccount.com"
+GA4_PROPERTY_ID = "533209763"
+GOOGLE_ADS_CUSTOMER_ID = "8702788584"
+GOOGLE_ADS_LOGIN_CUSTOMER_ID = "4708073999"
+ALERT_EMAIL_TO = "tvb2001thielip@yahoo.com.tw"
