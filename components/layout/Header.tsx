@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import type { SiteSettingsData } from "@/lib/site/types";
+import { resolveSiteLogoSrc } from "@/lib/site/brand";
 
 interface Props {
   locale: string;
@@ -98,20 +99,14 @@ export default function Header({ locale, settings }: Props) {
               aria-hidden="true"
               className="absolute -bottom-10 -left-4 h-20 w-20 rounded-full border border-indigo-100/70 bg-indigo-50/40"
             />
-            {settings.logoUrl ? (
-              <Image
-                src={settings.logoUrl}
-                alt={settings.logoAlt || (isEn ? "Zenith Mind" : "巔峰思維")}
-                width={200}
-                height={56}
-                className="relative z-[1] h-8 w-auto max-w-[132px] object-contain sm:h-10 sm:max-w-[168px]"
-                priority
-              />
-            ) : (
-              <span className="relative z-[1] text-lg font-bold text-gray-900">
-                ⚡ {isEn ? "Zenith Mind" : "巔峰思維"}
-              </span>
-            )}
+            <Image
+              src={resolveSiteLogoSrc(settings.logoUrl)}
+              alt={settings.logoAlt || (isEn ? "Zenith Mind" : "巔峰思維")}
+              width={200}
+              height={56}
+              className="relative z-[1] h-8 w-auto max-w-[132px] object-contain sm:h-10 sm:max-w-[168px]"
+              priority
+            />
           </Link>
 
           {/* 手機選單按鈕 */}

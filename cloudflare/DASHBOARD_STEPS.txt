@@ -1,0 +1,40 @@
+Cloudflare 正式環境設定清單（getzenithmind.com）
+================================================
+
+【A】Pages 專案 → Settings → Builds
+  Build command:  npm ci && npm run build
+  Node version:     22（或與 .node-version 一致）
+
+【B】Pages → Settings → Environment variables（Production）
+  必填：
+    NEXT_PUBLIC_SITE_URL=https://www.getzenithmind.com
+    DATABASE_URL=（Supabase pooler）
+    DIRECT_URL=（Supabase direct）
+    JWT_ACCESS_SECRET=
+    JWT_REFRESH_SECRET=
+    NEXT_PUBLIC_SUPABASE_URL=
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=
+    SUPABASE_SERVICE_ROLE_KEY=
+  建議：
+    REDIRECT_LOOKUP_SECRET=（隨機長字串，與 middleware 轉址 API 共用）
+    GOOGLE_SEARCH_CONSOLE_SITE_URL=https://www.getzenithmind.com/
+
+【C】Pages → Custom domains（兩個都要加）
+  1. www.getzenithmind.com   ← 主要網域（Active）
+  2. getzenithmind.com       ← 裸網域（Active）
+
+【D】SSL/TLS（網域在 Cloudflare 託管時）
+  SSL/TLS → Overview → Full (strict)
+  SSL/TLS → Edge Certificates → Always Use HTTPS: ON
+  SSL/TLS → Edge Certificates → Automatic HTTPS Rewrites: ON
+
+【E】裸網域 → www（301，擇一即可）
+  方式 1（建議）：Rules → Redirect Rules
+    If: Hostname equals getzenithmind.com
+    Then: Dynamic redirect → https://www.getzenithmind.com${http.request.uri.path}
+    Status: 301
+
+  方式 2：程式已於 next.config.ts 設定 host 轉址（需 Pages 支援 Next redirects）
+
+【F】部署
+  推送 main 分支後，Pages 會自動 build；確認最新部署 Success。

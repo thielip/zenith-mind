@@ -2,8 +2,10 @@
 // JSON-LD Schema 產生函式（統一管理，page.tsx import 使用）
 
 import { env } from "@/env";
+import { absoluteSiteLogoUrl } from "@/lib/site/brand";
 
 const SITE_URL  = env.NEXT_PUBLIC_SITE_URL;
+const SITE_LOGO = absoluteSiteLogoUrl(SITE_URL);
 const BRAND_ZH  = "巔峰思維";
 const BRAND_EN  = "Zenith Mind";
 
@@ -29,7 +31,7 @@ export function buildArticleSchema(p: {
     publisher: {
       "@type": "Organization",
       name:    BRAND_ZH,
-      logo:    { "@type": "ImageObject", url: `${SITE_URL}/logo.png` },
+      logo:    { "@type": "ImageObject", url: SITE_LOGO },
     },
     datePublished:    p.publishedAt.toISOString(),
     dateModified:     p.updatedAt.toISOString(),
@@ -80,7 +82,7 @@ export function buildOrganizationSchema() {
         name:          BRAND_ZH,
         alternateName: BRAND_EN,
         url:           SITE_URL,
-        logo: { "@type": "ImageObject", url: `${SITE_URL}/logo.png` },
+        logo: { "@type": "ImageObject", url: SITE_LOGO },
       },
       {
         "@type":     "WebSite",

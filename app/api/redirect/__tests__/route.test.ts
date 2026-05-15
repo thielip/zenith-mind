@@ -6,7 +6,10 @@ import { NextRequest } from "next/server";
 import { findActiveRedirect } from "@/lib/redirects/queries";
 import { GET } from "../route";
 
-function req(url: string, init?: RequestInit): NextRequest {
+function req(
+  url: string,
+  init?: ConstructorParameters<typeof NextRequest>[1]
+): NextRequest {
   return new NextRequest(url, init);
 }
 

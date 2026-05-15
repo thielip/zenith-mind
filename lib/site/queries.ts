@@ -1,5 +1,6 @@
 import { prisma } from "@/infrastructure/db/prisma";
 import { DEFAULT_CATEGORIES } from "@/lib/categories/defaults";
+import { DEFAULT_SITE_LOGO_PATH } from "@/lib/site/brand";
 import { DEFAULT_QUICK_LINKS } from "@/lib/site/default-quick-links";
 import { isPrismaMissingColumnError } from "@/lib/site/prisma-compat";
 import type {
@@ -147,7 +148,7 @@ export const DEFAULT_ABOUT_SECTIONS: AboutSectionData[] = [
 ];
 
 export const DEFAULT_SITE_SETTINGS: SiteSettingsData = {
-  logoUrl: "",
+  logoUrl: DEFAULT_SITE_LOGO_PATH,
   logoAlt: "Zenith Mind",
   quickLinks: DEFAULT_QUICK_LINKS,
   socialLinks: {},
