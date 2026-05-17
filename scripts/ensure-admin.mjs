@@ -1,8 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { loadEnvConfig } from "@next/env";
+import pkg from "@next/env";
 
-loadEnvConfig(process.cwd());
+pkg.loadEnvConfig(process.cwd());
 
 const prisma = new PrismaClient();
 

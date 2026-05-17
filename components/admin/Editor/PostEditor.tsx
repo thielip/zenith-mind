@@ -51,7 +51,7 @@ export interface PostEditorData {
 interface Props {
   post:       PostEditorData;
   categories: Array<{ id: string; name: string; slug: string }>;
-  allTags:    Array<{ id: string; name: string; slug: string }>;
+  allTags?:   Array<{ id: string; name: string; slug: string }>;
 }
 
 // ── Zod Schema ─────────────────────────────────────────────
@@ -85,7 +85,7 @@ type PostFormParsed = z.output<typeof formSchema>;
 
 // ── 元件 ──────────────────────────────────────────────────
 
-export default function PostEditor({ post, categories, allTags }: Props) {
+export default function PostEditor({ post, categories }: Props) {
   const router = useRouter();
   const editorZhRef = useRef<RichTextEditorHandle>(null);
   const editorEnRef = useRef<RichTextEditorHandle>(null);
@@ -457,10 +457,10 @@ export default function PostEditor({ post, categories, allTags }: Props) {
             </div>
 
             {/* 繁中內容編輯器 */}
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">
+            <div role="group" aria-labelledby="editor-zh-label">
+              <p id="editor-zh-label" className="mb-1.5 block text-sm font-medium text-gray-700">
                 HTML 網頁內容編輯器（繁中）<span aria-hidden="true" className="text-red-500">*</span>
-              </label>
+              </p>
               <RichTextEditor
                 ref={editorZhRef}
                 content={contentZh}
@@ -470,10 +470,10 @@ export default function PostEditor({ post, categories, allTags }: Props) {
             </div>
 
             {/* 英文內容編輯器 */}
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">
+            <div role="group" aria-labelledby="editor-en-label">
+              <p id="editor-en-label" className="mb-1.5 block text-sm font-medium text-gray-700">
                 HTML 網頁內容編輯器（英文，選填）
-              </label>
+              </p>
               <RichTextEditor
                 ref={editorEnRef}
                 content={contentEn}

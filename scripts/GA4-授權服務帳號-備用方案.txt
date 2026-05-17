@@ -1,0 +1,79 @@
+GA4 UI 無法新增服務帳號時 — 用 Admin API 繞過（一次性）
+
+前提：
+- 你登入 GA4 的 Google 帳號必須是 zenith-mind 帳戶的「管理員」
+- GCP 專案 my-blog-analytics-495817 已啟用「Google Analytics Admin API」
+  https://console.cloud.google.com/apis/library/analyticsadmin.googleapis.com?project=my-blog-analytics-495817
+
+────────────────────────────────────────
+方法 A：OAuth 2.0 Playground（最簡單）
+────────────────────────────────────────
+
+1. 開啟 https://developers.google.com/oauthplayground/
+
+2. 右上角齒輪 → 勾選「Use your own OAuth credentials」
+   ⚠ 必須填【你自己專案】的 Client，不要用 Playground 預設的 407408718192…
+   Client ID：700046205335-55899i8227g94rvac08bhlvok7hk3btj.apps.googleusercontent.com
+   Client Secret：（.env.local 的 GA4_OAUTH_CLIENT_SECRET）
+
+   GCP 憑證頁該 OAuth 用戶端需有重新導向 URI：
+   https://developers.google.com/oauthplayground
+
+3. 左側「Input your own scopes」貼上：
+   https://www.googleapis.com/auth/analytics.manage.users
+
+4. Authorize APIs → 用【擁有 GA4 管理員權限】的 Google 帳號登入 → Allow
+
+5. Exchange authorization code for tokens → 複製 Access token
+
+6. 在 PowerShell 執行（把 YOUR_TOKEN 換成上一步 token）：
+
+# 優先：帳戶層級（帳戶 ID 394118928）
+curl.exe -X POST "https://analyticsadmin.googleapis.com/v1alpha/properties/536903218/userLinks" ^
+  -H "Authorization: Bearer YOUR_TOKEN" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"emailAddress\":\"ga4-api-reader@my-blog-analytics-495817.iam.gserviceaccount.com\",\"directRoles\":[\"VIEWER\"]}"
+
+# 帳戶層級（v1alpha；v1beta 會 404）
+curl.exe -X POST "https://analyticsadmin.googleapis.com/v1alpha/accounts/394118928/accessBindings" ^
+  -H "Authorization: Bearer YOUR_TOKEN" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"user\":\"ga4-api-reader@my-blog-analytics-495817.iam.gserviceaccount.com\",\"roles\":[\"predefinedRoles/viewer\"]}"
+
+# 若上一步成功，可再設資源層級（Property ID 536903218）
+curl.exe -X POST "https://analyticsadmin.googleapis.com/v1alpha/properties/536903218/accessBindings" ^
+  -H "Authorization: Bearer YOUR_TOKEN" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"user\":\"ga4-api-reader@my-blog-analytics-495817.iam.gserviceaccount.com\",\"roles\":[\"predefinedRoles/viewer\"]}"
+
+7. 本機驗證：
+   npx tsx --env-file=.env.local scripts/check-integrations.mjs
+
+────────────────────────────────────────
+方法 A2：本機腳本（推薦，避免 Playground 用錯 Client）
+────────────────────────────────────────
+
+1. GCP → OAuth 用戶端 → 授權重新導向 URI 新增：
+   http://localhost:8765/callback
+
+2. 執行：
+   npx tsx --env-file=.env.local scripts/ga4-oauth-grant.mjs
+
+3. 瀏覽器用 GA4 管理員帳號登入 → 完成後終端機應顯示 [OK]
+
+────────────────────────────────────────
+方法 B：GA4 改在「帳戶」欄新增（非資源欄）
+────────────────────────────────────────
+
+管理 → 中間【帳戶】欄（zenith-mind）→ 帳戶存取管理 → 新增使用者
+（不要只在右側「資源」的 Property 存取管理）
+
+email 請【手打】不要貼上，避免隱藏空白字元。
+
+────────────────────────────────────────
+方法 C：新建不同名稱的服務帳號
+────────────────────────────────────────
+
+若仍顯示「與 Google 帳戶不符」：
+GCP 建立 ga4-reader-v2 → 新 JSON 金鑰 → 更新 .env.local
+→ 用【新 email】在 GA4 新增檢視者

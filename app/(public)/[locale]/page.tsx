@@ -4,7 +4,6 @@
 // ✓ 禁止 'use client'、禁止 Prisma 直接操作
 
 import type { Metadata } from "next";
-import { prisma } from "@/infrastructure/db/prisma";
 import { env } from "@/env";
 import HeroSection from "@/components/home/HeroSection";
 import HeroSlider from "@/components/home/HeroSlider";
@@ -18,8 +17,7 @@ import ProgrammaticSeoSection from "@/components/home/ProgrammaticSeoSection";
 import HomeConversionBanner from "@/components/home/HomeConversionBanner";
 import AdSlotBanner from "@/components/home/AdSlotBanner";
 import HomePageViewTracker from "@/components/analytics/HomePageViewTracker";
-import { getHeroSlidesForHomepage, getHomeCarouselForHomepage } from "@/lib/site/homepage-data-cache";
-import { getSiteSettings } from "@/lib/site/queries";
+import { loadHomepageData } from "@/lib/homepage/load-homepage-data";
 import type { SiteLocale } from "@/lib/site/types";
 
 // ── Cache 模式 A（Segment Config）────────────────────────
@@ -62,31 +60,16 @@ export default async function HomePage({ params }: Props) {
   const isEn = locale === "en";
 
   const siteLocale = (isEn ? "en" : "zh-TW") satisfies SiteLocale;
-  const [featuredPosts, heroSlides, carouselItems, publishedPostCount, categoryCount, affiliateLinks, siteSettings, homePageViews] =
-    await Promise.all([
-    prisma.post.findMany({
-      where:   { status: "PUBLISHED", deletedAt: null },
-      select: {
-        id: true, slug: true, title: true, titleEn: true,
-        excerpt: true, excerptEn: true, publishedAt: true, readingTime: true,
-        category: { select: { name: true, nameEn: true, slug: true } },
-      },
-      orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
-      take: 6,
-    }),
-    getHeroSlidesForHomepage(siteLocale),
-    getHomeCarouselForHomepage(siteLocale),
-    prisma.post.count({ where: { status: "PUBLISHED", deletedAt: null } }),
-    prisma.category.count({ where: { deletedAt: null } }),
-    prisma.affiliateLink.findMany({
-      where: { isActive: true },
-      select: { name: true, slug: true, platform: true, commission: true },
-      orderBy: { createdAt: "desc" },
-      take: 6,
-    }),
-    getSiteSettings(),
-    prisma.pageView.count({ where: { postId: null, locale: siteLocale } }),
-  ]);
+  const {
+    featuredPosts,
+    heroSlides,
+    carouselItems,
+    publishedPostCount,
+    categoryCount,
+    affiliateLinks,
+    siteSettings,
+    homePageViews,
+  } = await loadHomepageData(siteLocale);
 
   const topics = siteSettings.homepageCopy.topicClusters.cards.map((c) => ({
     slug: c.slug,

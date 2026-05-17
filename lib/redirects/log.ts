@@ -3,11 +3,15 @@
 const PREFIX = "[redirect]";
 
 export function logRedirectHit(from: string, to: string, status: number): void {
-  console.log(`${PREFIX} hit`, { from, to, status });
+  if (process.env["NODE_ENV"] === "development") {
+    console.warn(`${PREFIX} hit`, { from, to, status });
+  }
 }
 
 export function logRedirectMiss(pathname: string): void {
-  console.log(`${PREFIX} miss`, { pathname });
+  if (process.env["NODE_ENV"] === "development") {
+    console.warn(`${PREFIX} miss`, { pathname });
+  }
 }
 
 export function logRedirectWarn(

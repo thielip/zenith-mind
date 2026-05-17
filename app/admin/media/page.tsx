@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { Metadata } from "next";
 import { prisma } from "@/infrastructure/db/prisma";
 import { getHeroSlides, getHomeCarouselItems } from "@/lib/site/hero-carousel-queries";
@@ -74,12 +75,12 @@ export default async function MediaPage() {
             集中檢視目前前台 CMS 與文章封面使用中的圖片。上傳請至「首頁版型」或文章編輯頁操作。
           </p>
         </div>
-        <a
+        <Link
           href="/admin/site"
           className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
         >
           前往上傳圖片
-        </a>
+        </Link>
       </div>
 
       {items.length === 0 ? (

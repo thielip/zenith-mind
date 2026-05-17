@@ -68,6 +68,12 @@ enum NewsletterSubscriberStatus {
   UNSUBSCRIBED
 }
 
+enum IntegrationConnectionStatus {
+  DISCONNECTED
+  CONNECTED
+  ERROR
+}
+
 // ═══════════════════════════════════════════════
 // USER
 // ═══════════════════════════════════════════════
@@ -556,4 +562,21 @@ model HomeCarouselItem {
 
   @@index([locale, isActive, sortOrder])
   @@map("home_carousel_items")
+}
+
+// ═══════════════════════════════════════════════
+// 作戰中心 — 外部整合憑證（加密儲存）
+// ═══════════════════════════════════════════════
+
+model IntegrationCredential {
+  id               String                     @id @default(cuid())
+  provider         String                     @unique
+  payloadEncrypted String                     @db.Text
+  status           IntegrationConnectionStatus @default(DISCONNECTED)
+  lastError        String?
+  lastVerifiedAt   DateTime?
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
+
+  @@map("integration_credentials")
 }

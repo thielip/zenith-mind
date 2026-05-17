@@ -20,8 +20,7 @@ export default function BlockRenderer({ blocks }: Props) {
           case "paragraph":
             return (
               <div
-                // eslint-disable-next-line @typescript-eslint/naming-convention
-                key={i}
+                key={`paragraph-${i}`}
                 dangerouslySetInnerHTML={{
                   __html: sanitizeRichText(block.data.html),
                 }}

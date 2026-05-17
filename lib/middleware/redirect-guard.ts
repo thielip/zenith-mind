@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { resolveSafeFirstRedirectHop } from "@/lib/redirects/cycle";
 import { shouldSkipRedirectLookup } from "@/lib/redirects/matcher";
 import {
   logRedirectError,
@@ -7,17 +8,16 @@ import {
   logRedirectWarn,
 } from "@/lib/redirects/log";
 import {
-  isSelfRedirect,
   mergeRedirectSearch,
   normalizeRedirectPathname,
   parseRedirectPath,
 } from "@/lib/redirects/normalize";
-
-const INTERNAL_HEADER = "x-redirect-internal";
-
-function lookupSecret(): string {
-  return process.env["REDIRECT_LOOKUP_SECRET"] ?? "dev-redirect";
-}
+import { findActiveRedirectViaSupabase } from "@/lib/redirects/edge-lookup";
+import {
+  getRedirectFromCache,
+  setRedirectCache,
+} from "@/lib/redirects/redis-cache";
+import type { ActiveRedirect } from "@/lib/redirects/queries";
 
 function buildRedirectTarget(
   request: NextRequest,
@@ -30,6 +30,18 @@ function buildRedirectTarget(
   return { url: target, pathname: parsed.pathname };
 }
 
+async function lookupRedirectHop(
+  pathname: string
+): Promise<ActiveRedirect | null> {
+  const cached = await getRedirectFromCache(pathname);
+  if (cached.kind === "hit") return cached.redirect;
+  if (cached.kind === "negative") return null;
+
+  const hit = await findActiveRedirectViaSupabase(pathname);
+  await setRedirectCache(pathname, hit);
+  return hit;
+}
+
 export async function redirectGuard(
   request: NextRequest
 ): Promise<NextResponse | null> {
@@ -37,42 +49,21 @@ export async function redirectGuard(
 
   if (shouldSkipRedirectLookup(pathname)) return null;
 
-  const lookupUrl = new URL("/api/redirect", request.url);
-  lookupUrl.searchParams.set("path", pathname);
-
   try {
-    const res = await fetch(lookupUrl.toString(), {
-      headers: { [INTERNAL_HEADER]: lookupSecret() },
-      cache: "no-store",
+    const hit = await resolveSafeFirstRedirectHop(pathname, async (path) => {
+      const row = await lookupRedirectHop(path);
+      if (!row) return null;
+      return {
+        newPath: row.newPath,
+        statusCode: row.statusCode,
+      };
     });
 
-    if (!res.ok) {
-      logRedirectWarn("lookup api non-ok", {
-        pathname,
-        status: res.status,
-      });
-      return null;
-    }
-
-    const data = (await res.json()) as {
-      hit?: boolean;
-      newPath?: string;
-      statusCode?: number;
-    };
-
-    if (!data.hit || !data.newPath) return null;
-
-    if (isSelfRedirect(pathname, data.newPath)) {
-      logRedirectWarn("loop prevented", {
-        from: pathname,
-        to: data.newPath,
-      });
-      return null;
-    }
+    if (!hit) return null;
 
     const { url: target, pathname: destPathname } = buildRedirectTarget(
       request,
-      data.newPath
+      hit.newPath
     );
 
     if (normalizeRedirectPathname(destPathname) === pathname) {
@@ -83,7 +74,7 @@ export async function redirectGuard(
       return null;
     }
 
-    const status = data.statusCode === 302 ? 302 : 301;
+    const status = hit.statusCode === 302 ? 302 : 301;
     logRedirectHit(pathname, target.toString(), status);
     return NextResponse.redirect(target, status);
   } catch (error) {

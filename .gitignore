@@ -7,6 +7,7 @@
 # Next.js
 .next/
 .open-next/
+.cf-build-skip/
 out/
 
 # dependencies

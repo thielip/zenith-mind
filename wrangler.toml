@@ -16,12 +16,17 @@ service = "zenith-mind"
 
 # 可提交 Git 的環境變數（部署時寫入 Worker，不會被清空）
 [vars]
-NEXT_PUBLIC_SITE_URL = "https://zenith-mind.com"
+# 後台 Vercel 網址（公開站 /admin/* 302 導向；請改為實際 Vercel 網域）
+ADMIN_DEPLOYMENT_URL = "https://zenith-mind.vercel.app"
+NEXT_PUBLIC_SITE_URL = "https://www.getzenithmind.com"
 NEXT_PUBLIC_SUPABASE_URL = "https://qhutexisyfbclxntgkvx.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_FogU-AYv-rXBblU77k4dUw_AZTH9qPh"
 NEXT_PUBLIC_GA4_MEASUREMENT_ID = "G-4C955FQCZ2"
 GA4_CLIENT_EMAIL = "ga4-api-reader@my-blog-analytics-495817.iam.gserviceaccount.com"
-GA4_PROPERTY_ID = "533209763"
+GA4_PROPERTY_ID = "536903218"
 GOOGLE_ADS_CUSTOMER_ID = "8702788584"
 GOOGLE_ADS_LOGIN_CUSTOMER_ID = "4708073999"
 ALERT_EMAIL_TO = "tvb2001thielip@yahoo.com.tw"
+GOOGLE_SEARCH_CONSOLE_SITE_URL = "https://www.getzenithmind.com"
+GOOGLE_MERCHANT_CENTER_ACCOUNT_ID = "5788433025"
+BIGQUERY_DATASET_ID = "my_getzenithmind"

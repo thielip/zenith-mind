@@ -3,7 +3,7 @@
 
 import type { Metadata } from "next";
 import { env } from "@/env";
-import { getSiteSettings } from "@/lib/site/queries";
+import { getSafeSiteSettings } from "@/lib/site/safe-site-settings";
 
 export const revalidate = 86400;
 
@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function AboutPage({ params }: Props) {
   const { locale } = await params;
   const isEn = locale === "en";
-  const siteSettings = await getSiteSettings();
+  const siteSettings = await getSafeSiteSettings();
   const sections = siteSettings.aboutSections;
   const heading = isEn
     ? (sections[0]?.titleEn || "About Zenith Mind")

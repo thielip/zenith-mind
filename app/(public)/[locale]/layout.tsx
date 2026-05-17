@@ -10,7 +10,6 @@ import { routing } from "@/lib/i18n/routing";
 import { env } from "@/env";
 import ConsentBanner  from "@/components/analytics/ConsentBanner";
 import Ga4Events      from "@/components/analytics/Ga4Events";
-import SilentRefresh  from "@/components/analytics/SilentRefresh";
 import SkipToMain     from "@/components/layout/SkipToMain";
 import Header         from "@/components/layout/Header";
 import Footer         from "@/components/layout/Footer";
@@ -18,10 +17,10 @@ import BackToTop      from "@/components/layout/BackToTop";
 import SocialSidebar  from "@/components/layout/SocialSidebar";
 import { buildOrganizationSchema } from "@/lib/seo/schemas/article.schema";
 import JsonLd from "@/components/seo/JsonLd";
-import { getSiteSettings } from "@/lib/site/queries";
+import { getSafeSiteSettings } from "@/lib/site/safe-site-settings";
 
-// 避免建置階段無 DATABASE_URL 時 Prisma 查詢失敗（執行期仍可用 revalidate）
-export const dynamic = "force-dynamic";
+/** 與子頁 revalidate 一致；版型設定透過 unstable_cache + tag 失效 */
+export const revalidate = 3600;
 
 interface Props {
   children: React.ReactNode;
@@ -35,10 +34,14 @@ export default async function PublicLocaleLayout({ children, params }: Props) {
     notFound();
   }
 
-  const [messages, siteSettings] = await Promise.all([
-    getMessages(),
-    getSiteSettings(),
-  ]);
+  let messages: Awaited<ReturnType<typeof getMessages>> = {};
+  try {
+    messages = await getMessages();
+  } catch {
+    messages = {};
+  }
+
+  const siteSettings = await getSafeSiteSettings();
   const h        = await headers();
   const nonce    = h.get("x-nonce") ?? "";
   const ga4Id    = env.NEXT_PUBLIC_GA4_MEASUREMENT_ID;
@@ -74,8 +77,6 @@ export default async function PublicLocaleLayout({ children, params }: Props) {
           {/* GDPR Consent Mode */}
           <ConsentBanner />
 
-          {/* Token 靜默刷新（Admin 登入時啟動）*/}
-          <SilentRefresh />
         </NextIntlClientProvider>
 
         {/* GTM：行銷可於容器內自行加碼（含 GA4 事件），不需改 repo */}

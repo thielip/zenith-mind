@@ -6,7 +6,8 @@ SKIP_ENV_VALIDATION=true
 NEXTJS_ENV=development
 
 # ── 公開（可與 wrangler.toml [vars] 相同）──────────────────
-NEXT_PUBLIC_SITE_URL=https://zenith-mind.com
+NEXT_PUBLIC_SITE_URL=https://www.getzenithmind.com
+ADMIN_DEPLOYMENT_URL=https://your-project.vercel.app
 NEXT_PUBLIC_SUPABASE_URL=https://qhutexisyfbclxntgkvx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_xxx
 NEXT_PUBLIC_GA4_MEASUREMENT_ID=G-4C955FQCZ2
@@ -25,7 +26,11 @@ TOTP_ENCRYPTION_KEY=
 # ── GA4（私鑰用 secret put 上線；本機可貼在 .dev.vars）──
 GA4_CLIENT_EMAIL=ga4-api-reader@my-blog-analytics-495817.iam.gserviceaccount.com
 GA4_PRIVATE_KEY=
-GA4_PROPERTY_ID=533209763
+GA4_PROPERTY_ID=536903218
+GA4_ACCOUNT_ID=394118928
+# 僅本機授權腳本用（勿提交、勿上線）
+GA4_OAUTH_CLIENT_ID=
+GA4_OAUTH_CLIENT_SECRET=
 
 # ── Google Ads ───────────────────────────────────────────
 GOOGLE_ADS_CLIENT_ID=
@@ -48,3 +53,6 @@ GEMINI_API_KEY=
 ALERT_EMAIL_USER=
 ALERT_EMAIL_PASS=
 ALERT_EMAIL_TO=tvb2001thielip@yahoo.com.tw
+GOOGLE_SEARCH_CONSOLE_SITE_URL=https://www.getzenithmind.com
+GOOGLE_MERCHANT_CENTER_ACCOUNT_ID=
+BIGQUERY_DATASET_ID=

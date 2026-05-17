@@ -113,7 +113,7 @@ export default function Footer({ locale, settings }: Props) {
             {sitemapGroups.map((group) => (
               <section key={group.title}>
                 <h2 className="text-sm font-semibold text-white">{group.title}</h2>
-                <ul className="mt-3 space-y-2 text-sm text-gray-300" role="list">
+                <ul className="mt-3 space-y-2 text-sm text-gray-300">
                   {group.links.map((link) => (
                     <li key={`${group.title}-${link.href}-${link.label}`}>
                       <a

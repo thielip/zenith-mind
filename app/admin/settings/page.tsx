@@ -2,7 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { ShieldCheck, SlidersHorizontal, UserCog } from "lucide-react";
+import { ShieldCheck, SlidersHorizontal, UserCog, Users } from "lucide-react";
+import { ChangePasswordForm } from "@/components/admin/ChangePasswordForm";
 import { verifyAccessToken } from "@/lib/auth/jwt";
 import { prisma } from "@/infrastructure/db/prisma";
 
@@ -38,7 +39,7 @@ export default async function SettingsPage({ searchParams }: Props) {
         </p>
       )}
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+      <div className="mt-6 grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
         <article className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
           <UserCog className="text-blue-600" size={24} aria-hidden="true" />
           <h2 className="mt-4 text-base font-semibold text-gray-900">帳號資訊</h2>
@@ -46,6 +47,20 @@ export default async function SettingsPage({ searchParams }: Props) {
             <div><dt className="inline font-medium">Email：</dt><dd className="inline">{user.email}</dd></div>
             <div><dt className="inline font-medium">角色：</dt><dd className="inline">{user.role}</dd></div>
           </dl>
+          <h3 className="mt-4 text-sm font-semibold text-gray-900">變更密碼</h3>
+          <ChangePasswordForm />
+        </article>
+
+        <article className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <Users className="text-indigo-600" size={24} aria-hidden="true" />
+          <h2 className="mt-4 text-base font-semibold text-gray-900">使用者管理</h2>
+          <p className="mt-2 text-sm text-gray-500">新增後台帳號、重設他人密碼或停用使用者。</p>
+          <Link
+            href="/admin/users"
+            className="mt-4 inline-flex rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+          >
+            管理使用者
+          </Link>
         </article>
 
         <article className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">

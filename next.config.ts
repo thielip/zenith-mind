@@ -4,12 +4,33 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin("./lib/i18n/request.ts");
 
+const isCfPublicOnly = process.env["CF_PUBLIC_ONLY"] === "1";
+
 const nextConfig: NextConfig = {
+  // GA4 / gRPC 僅能在 Node 跑；避免 webpack 打包後在 dev 出現詭異 gRPC 錯誤
+  serverExternalPackages: [
+    "@google-analytics/data",
+    "google-gax",
+    "@grpc/grpc-js",
+    ...(isCfPublicOnly
+      ? ["googleapis", "google-auth-library", "@google/generative-ai"]
+      : []),
+  ],
+
+  // 本機用區網 IP 開 admin（例：192.168.0.x:3000）時避免 dev 跨來源與 middleware 載入異常
+  allowedDevOrigins: [
+    "192.168.0.128",
+    "192.168.0.126",
+  ],
+
   // Server Action 上傳圖檔：預設約 1MB 會截斷 FormData；需大於 infrastructure/storage 的 5MB 上限＋multipart 開銷
   experimental: {
     serverActions: {
       bodySizeLimit: "8mb",
     },
+    ...(isCfPublicOnly
+      ? { optimizePackageImports: ["lucide-react"] }
+      : {}),
   },
 
   images: {

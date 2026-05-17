@@ -3,6 +3,10 @@
 // 執行順序：語系根路徑 → SEO 301 → IP Guard → Auth Guard → Security Headers
 
 import { NextRequest, NextResponse } from "next/server";
+import {
+  buildAdminExternalUrl,
+  shouldProxyAdminToExternal,
+} from "@/lib/deploy/admin-origin";
 import { isCloudflareIP } from "@/lib/middleware/ip-guard";
 import { adminAuthGuard } from "@/lib/middleware/auth-guard";
 import { redirectGuard } from "@/lib/middleware/redirect-guard";
@@ -15,6 +19,14 @@ import {
 export async function middleware(request: NextRequest): Promise<NextResponse> {
   const isProd = process.env["NODE_ENV"] === "production";
   const pathname = request.nextUrl.pathname;
+
+  // Cloudflare 公開站：後台與後台 API 導向 Vercel（ADMIN_DEPLOYMENT_URL）
+  if (shouldProxyAdminToExternal(pathname)) {
+    const target = buildAdminExternalUrl(pathname, request.nextUrl.search);
+    if (target) {
+      return NextResponse.redirect(target, 302);
+    }
+  }
 
   // 根目錄導向預設語系首頁（/ -> /zh-TW）
   if (pathname === "/") {
@@ -36,9 +48,11 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     }
   }
 
-  // ── Step 3：Admin JWT 路由守衛 ────────────────────────
-  const authResponse = await adminAuthGuard(request);
-  if (authResponse) return authResponse;
+  // ── Step 3：Admin JWT 路由守衛（拆分部署時由 Vercel 處理）──
+  if (!shouldProxyAdminToExternal(pathname)) {
+    const authResponse = await adminAuthGuard(request);
+    if (authResponse) return authResponse;
+  }
 
   // ── Step 4：注入 nonce + 安全標頭 ────────────────────
   const nonce = generateNonce();

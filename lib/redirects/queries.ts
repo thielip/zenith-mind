@@ -4,12 +4,14 @@ import {
   postArticlePath,
   postDeleteRedirectTarget,
 } from "@/lib/redirects/paths";
+import { resolveSafeFirstRedirectHop } from "@/lib/redirects/cycle";
 import { logRedirectWarn } from "@/lib/redirects/log";
 import {
   isSelfRedirect,
-  normalizeRedirectPathname,
   parseRedirectPath,
 } from "@/lib/redirects/normalize";
+import { assertRedirectSafeToWrite } from "@/lib/redirects/redirect-write-guard";
+import { setRedirectCache } from "@/lib/redirects/redis-cache";
 
 export type ActiveRedirect = {
   newPath: string;
@@ -47,10 +49,35 @@ export async function findActiveRedirect(
     return null;
   }
 
-  return {
-    newPath,
-    statusCode: row.statusCode === 302 ? 302 : 301,
+  const safe = await resolveSafeFirstRedirectHop(oldPath, async (pathname) => {
+    if (pathname !== oldPath) {
+      const nested = await prisma.redirect.findFirst({
+        where: { oldPath: pathname, isActive: true },
+        select: { newPath: true, statusCode: true },
+      });
+      if (!nested?.newPath?.trim()) return null;
+      return {
+        newPath: normalizeStoredNewPath(nested.newPath.trim()),
+        statusCode: nested.statusCode === 302 ? 302 : 301,
+      };
+    }
+    return {
+      newPath,
+      statusCode: row.statusCode === 302 ? 302 : 301,
+    };
+  });
+
+  if (!safe) {
+    logRedirectWarn("redirect cycle ignored on read", { oldPath, newPath });
+    return null;
+  }
+
+  const redirect: ActiveRedirect = {
+    newPath: safe.newPath,
+    statusCode: safe.statusCode === 302 ? 302 : 301,
   };
+  await setRedirectCache(oldPath, redirect);
+  return redirect;
 }
 
 export async function upsertPostDeleteRedirects(
@@ -64,8 +91,7 @@ export async function upsertPostDeleteRedirects(
       postDeleteRedirectTarget(locale, categorySlug)
     );
 
-    if (isSelfRedirect(oldPath, newPath)) {
-      logRedirectWarn("skip self-redirect write", { oldPath, newPath });
+    if (!(await assertRedirectSafeToWrite(oldPath, newPath))) {
       continue;
     }
 
@@ -74,5 +100,8 @@ export async function upsertPostDeleteRedirects(
       create: { oldPath, newPath, statusCode: 301, isActive: true },
       update: { newPath, statusCode: 301, isActive: true },
     });
+
+    const redirect: ActiveRedirect = { newPath, statusCode: 301 };
+    await setRedirectCache(oldPath, redirect);
   }
 }

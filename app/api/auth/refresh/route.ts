@@ -2,7 +2,7 @@
 // Silent Refresh API Route（fetch.client.ts 呼叫）
 // ⚠ export const dynamic = 'force-dynamic'（Route Handler 專用）
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { refreshTokens } from "@/domain/auth/auth.service";
 import {
@@ -20,7 +20,7 @@ const COOKIE_BASE = {
   path:     "/",
 };
 
-export async function POST(_req: NextRequest): Promise<NextResponse> {
+export async function POST(): Promise<NextResponse> {
   try {
     const jar          = await cookies();
     const refreshToken = jar.get("refresh_token")?.value;

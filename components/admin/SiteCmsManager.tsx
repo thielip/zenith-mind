@@ -154,7 +154,10 @@ export default function SiteCmsManager({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const activeHeroSlides = heroSlides[activeLocale] ?? [];
+  const activeHeroSlides = useMemo(
+    () => heroSlides[activeLocale] ?? [],
+    [heroSlides, activeLocale]
+  );
   const activeCarouselItems = carouselItems[activeLocale] ?? [];
   const previewSlides = useMemo(
     () => activeHeroSlides.filter((slide) => slide.imageUrl),
@@ -348,7 +351,7 @@ export default function SiteCmsManager({
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
           <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-            <label className="block text-sm font-semibold text-gray-800">自訂 LOGO</label>
+            <p className="text-sm font-semibold text-gray-800">自訂 LOGO</p>
             <div className="mt-3 flex min-h-24 items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white p-4">
               {settings.logoUrl ? (
                 <Image
@@ -391,7 +394,7 @@ export default function SiteCmsManager({
           <div className="space-y-5">
             <div>
               <div className="mb-2 flex items-center justify-between">
-                <label className="text-sm font-semibold text-gray-800">Quick Access Bar</label>
+                <span className="text-sm font-semibold text-gray-800">Quick Access Bar</span>
                 <button
                   type="button"
                   onClick={() =>

@@ -228,6 +228,7 @@ function asTopicClusterCards(value: unknown): TopicClusterCardCopy[] {
 
 export function asHomepageCopy(value: unknown): HomepageCopy {
   if (!value || typeof value !== "object") return DEFAULT_HOMEPAGE_COPY;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- CMS JSON 結構動態
   const record = value as Record<string, any>;
   const sp = record["socialProof"] ?? {};
   const tc = record["topicClusters"] ?? {};
@@ -360,7 +361,12 @@ export async function getSiteSettings(): Promise<SiteSettingsData> {
           : DEFAULT_SITE_SETTINGS.carouselAutoplaySeconds,
     };
   } catch (e) {
-    if (!isPrismaMissingColumnError(e)) throw e;
+    if (!isPrismaMissingColumnError(e)) {
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[getSiteSettings] degraded to defaults", e);
+      }
+      return DEFAULT_SITE_SETTINGS;
+    }
 
     type LegacyRow = {
       id: string;

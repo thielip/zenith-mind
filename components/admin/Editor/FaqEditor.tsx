@@ -64,8 +64,9 @@ export default function FaqEditor({ value, onChange }: Props) {
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">問題（繁中）</label>
+            <label htmlFor={`faq-q-${index}`} className="mb-1 block text-xs font-medium text-gray-600">問題（繁中）</label>
             <input
+              id={`faq-q-${index}`}
               value={item.question}
               onChange={(e) => updateItem(index, { question: e.target.value })}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
@@ -73,8 +74,9 @@ export default function FaqEditor({ value, onChange }: Props) {
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">答案（繁中）</label>
+            <label htmlFor={`faq-a-${index}`} className="mb-1 block text-xs font-medium text-gray-600">答案（繁中）</label>
             <textarea
+              id={`faq-a-${index}`}
               rows={4}
               value={item.answer}
               onChange={(e) => updateItem(index, { answer: e.target.value })}
@@ -83,8 +85,9 @@ export default function FaqEditor({ value, onChange }: Props) {
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">問題（英文，選填）</label>
+            <label htmlFor={`faq-qen-${index}`} className="mb-1 block text-xs font-medium text-gray-600">問題（英文，選填）</label>
             <input
+              id={`faq-qen-${index}`}
               value={item.questionEn ?? ""}
               onChange={(e) => updateItem(index, { questionEn: e.target.value })}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
@@ -92,8 +95,9 @@ export default function FaqEditor({ value, onChange }: Props) {
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">答案（英文，選填）</label>
+            <label htmlFor={`faq-aen-${index}`} className="mb-1 block text-xs font-medium text-gray-600">答案（英文，選填）</label>
             <textarea
+              id={`faq-aen-${index}`}
               rows={3}
               value={item.answerEn ?? ""}
               onChange={(e) => updateItem(index, { answerEn: e.target.value })}

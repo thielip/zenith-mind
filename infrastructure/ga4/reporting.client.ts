@@ -7,32 +7,74 @@ import { BetaAnalyticsDataClient } from "@google-analytics/data";
 import { env } from "@/env";
 
 let _client: BetaAnalyticsDataClient | null = null;
+let _clientFingerprint: string | null = null;
+
+/** Next dev 可能快取舊 env 物件；以 process.env 為準（與 checkGa4Env / CLI 一致） */
+function ga4RuntimeEnv() {
+  const clientEmail =
+    process.env["GA4_CLIENT_EMAIL"]?.trim() || env.GA4_CLIENT_EMAIL;
+  const privateKeyRaw =
+    process.env["GA4_PRIVATE_KEY"]?.trim() || env.GA4_PRIVATE_KEY;
+  const propertyId =
+    process.env["GA4_PROPERTY_ID"]?.trim() || env.GA4_PROPERTY_ID;
+  return {
+    clientEmail,
+    privateKey: privateKeyRaw.replace(/\\n/g, "\n"),
+    propertyId,
+  };
+}
+
+function buildCredentials() {
+  const { clientEmail, privateKey } = ga4RuntimeEnv();
+  return {
+    client_email: clientEmail,
+    private_key: privateKey,
+  };
+}
+
+function credentialsFingerprint() {
+  const creds = buildCredentials();
+  const { propertyId } = ga4RuntimeEnv();
+  return `${creds.client_email}|${propertyId}|${creds.private_key.length}|${creds.private_key.slice(-24)}`;
+}
+
+export function ga4PropertyResourceName() {
+  return `properties/${ga4RuntimeEnv().propertyId}`;
+}
 
 function getClient(): BetaAnalyticsDataClient {
-  _client ??= new BetaAnalyticsDataClient({
-    credentials: {
-      client_email: env.GA4_CLIENT_EMAIL,
-      // Vercel 環境變數中 \n 需還原
-      private_key:  env.GA4_PRIVATE_KEY.replace(/\\n/g, "\n"),
-    },
-  });
+  const fp = credentialsFingerprint();
+  // dev / HMR 時避免沿用舊憑證 singleton（常導致 CLI 成功但儀表板失敗）
+  if (
+    !_client ||
+    process.env.NODE_ENV === "development" ||
+    _clientFingerprint !== fp
+  ) {
+    _client = new BetaAnalyticsDataClient({ credentials: buildCredentials() });
+    _clientFingerprint = fp;
+  }
   return _client;
+}
+
+/** 測試或更新 .env 後可手動清除（一般重啟 dev server 即可） */
+export function resetGa4ReportingClient() {
+  _client = null;
+  _clientFingerprint = null;
 }
 
 // ── 型別 ──────────────────────────────────────────────────
 
 export interface TrafficDataPoint {
-  date:      string; // YYYYMMDD
-  sessions:  number;
+  date: string;
+  sessions: number;
   pageViews: number;
-  users:     number;
+  users: number;
 }
 
-/** 過去 7 天（7daysAgo〜today）加總摘要 */
 export interface BasicStatsLast7Days {
-  sessions:        number;
+  sessions: number;
   screenPageViews: number;
-  activeUsers:     number;
+  activeUsers: number;
 }
 
 export interface TopPageMetric {
@@ -42,13 +84,11 @@ export interface TopPageMetric {
   users: number;
 }
 
-// ── 過去 7 天摘要 ─────────────────────────────────────────
-
 export async function fetchBasicStatsLast7Days(): Promise<BasicStatsLast7Days> {
   const [response] = await getClient().runReport({
-    property:   `properties/${env.GA4_PROPERTY_ID}`,
+    property: ga4PropertyResourceName(),
     dateRanges: [{ startDate: "7daysAgo", endDate: "today" }],
-    metrics:    [
+    metrics: [
       { name: "sessions" },
       { name: "screenPageViews" },
       { name: "activeUsers" },
@@ -57,23 +97,21 @@ export async function fetchBasicStatsLast7Days(): Promise<BasicStatsLast7Days> {
 
   const row = response.rows?.[0];
   return {
-    sessions:        parseInt(row?.metricValues?.[0]?.value ?? "0", 10),
+    sessions: parseInt(row?.metricValues?.[0]?.value ?? "0", 10),
     screenPageViews: parseInt(row?.metricValues?.[1]?.value ?? "0", 10),
-    activeUsers:     parseInt(row?.metricValues?.[2]?.value ?? "0", 10),
+    activeUsers: parseInt(row?.metricValues?.[2]?.value ?? "0", 10),
   };
 }
 
-// ── 流量趨勢（Recharts 用）────────────────────────────────
-
 export async function fetchTrafficTrend(p: {
   startDate: string;
-  endDate:   string;
+  endDate: string;
 }): Promise<TrafficDataPoint[]> {
   const [response] = await getClient().runReport({
-    property:   `properties/${env.GA4_PROPERTY_ID}`,
+    property: ga4PropertyResourceName(),
     dateRanges: [{ startDate: p.startDate, endDate: p.endDate }],
     dimensions: [{ name: "date" }],
-    metrics:    [
+    metrics: [
       { name: "sessions" },
       { name: "screenPageViews" },
       { name: "totalUsers" },
@@ -82,16 +120,16 @@ export async function fetchTrafficTrend(p: {
   });
 
   return (response.rows ?? []).map((row) => ({
-    date:      row.dimensionValues?.[0]?.value ?? "",
-    sessions:  parseInt(row.metricValues?.[0]?.value ?? "0", 10),
+    date: row.dimensionValues?.[0]?.value ?? "",
+    sessions: parseInt(row.metricValues?.[0]?.value ?? "0", 10),
     pageViews: parseInt(row.metricValues?.[1]?.value ?? "0", 10),
-    users:     parseInt(row.metricValues?.[2]?.value ?? "0", 10),
+    users: parseInt(row.metricValues?.[2]?.value ?? "0", 10),
   }));
 }
 
 export async function fetchRealtimeActiveUsers(): Promise<number> {
   const [response] = await getClient().runRealtimeReport({
-    property: `properties/${env.GA4_PROPERTY_ID}`,
+    property: ga4PropertyResourceName(),
     metrics: [{ name: "activeUsers" }],
   });
 
@@ -100,7 +138,7 @@ export async function fetchRealtimeActiveUsers(): Promise<number> {
 
 export async function fetchTopPagesLast7Days(limit = 8): Promise<TopPageMetric[]> {
   const [response] = await getClient().runReport({
-    property: `properties/${env.GA4_PROPERTY_ID}`,
+    property: ga4PropertyResourceName(),
     dateRanges: [{ startDate: "7daysAgo", endDate: "today" }],
     dimensions: [{ name: "pagePath" }, { name: "pageTitle" }],
     metrics: [{ name: "screenPageViews" }, { name: "activeUsers" }],

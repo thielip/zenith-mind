@@ -262,6 +262,7 @@ async function getMeta() {
 }
 
 function revalidatePublicPages() {
+  revalidateTag("site-settings");
   revalidatePath("/zh-TW", "layout");
   revalidatePath("/en", "layout");
   revalidatePath("/zh-TW", "page");

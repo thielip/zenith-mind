@@ -56,7 +56,7 @@ export default function Header({ locale, settings }: Props) {
             <span className="shrink-0 font-semibold uppercase tracking-[0.18em] text-amber-200/95">
               {isEn ? "Quick Access" : "快速導覽"}
             </span>
-            <ul className="flex shrink-0 items-center gap-3 sm:gap-4" role="list">
+            <ul className="flex shrink-0 items-center gap-3 sm:gap-4">
               {quickLinks.map((link) => (
                 <li key={`${link.label}-${link.href}`}>
                   <Link
@@ -123,7 +123,7 @@ export default function Header({ locale, settings }: Props) {
         </div>
 
         {/* 桌面導覽 */}
-        <ul className="hidden items-center justify-end gap-6 text-sm sm:flex" role="list">
+        <ul className="hidden items-center justify-end gap-6 text-sm sm:flex">
           {navItems.map(({ href, label }) => (
             <li key={href}>
               <Link
@@ -153,7 +153,7 @@ export default function Header({ locale, settings }: Props) {
             isOpen ? "mt-3 block border-t border-gray-100 pt-3" : "hidden",
           ].join(" ")}
         >
-          <ul className="space-y-1 text-sm" role="list">
+          <ul className="space-y-1 text-sm">
             {navItems.map(({ href, label }) => (
               <li key={href}>
                 <Link

@@ -77,7 +77,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!post) return {};
 
   const title       = isEn ? (post.titleEn ?? post.title) : post.title;
-  const description = isEn ? (post.excerptEn ?? "") : (post.excerpt ?? "");
   const metaTitle = isEn
     ? (post.seoMetadata?.metaTitleEn ?? post.titleEn ?? post.title)
     : (post.seoMetadata?.metaTitle ?? post.title);

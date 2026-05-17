@@ -7,8 +7,6 @@ import { prisma } from "@/infrastructure/db/prisma";
 export const revalidate = 3600;
 const SITEMAP_POST_LIMIT = 5000;
 
-export const dynamic = "force-dynamic";
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = getPublicSiteUrl();
 

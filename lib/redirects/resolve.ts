@@ -1,8 +1,6 @@
 import { permanentRedirect } from "next/navigation";
 import { postArticlePath, type PublicLocale } from "@/lib/redirects/paths";
 import { findActiveRedirect } from "@/lib/redirects/queries";
-import { logRedirectWarn } from "@/lib/redirects/log";
-import { isSelfRedirect } from "@/lib/redirects/normalize";
 
 function toPublicLocale(locale: string): PublicLocale {
   return locale === "en" ? "en" : "zh-TW";
@@ -16,11 +14,6 @@ export async function redirectArchivedPostIfNeeded(
   const from = postArticlePath(toPublicLocale(locale), slug);
   const hit = await findActiveRedirect(from);
   if (!hit) return;
-
-  if (isSelfRedirect(from, hit.newPath)) {
-    logRedirectWarn("resolve self-redirect skipped", { from, to: hit.newPath });
-    return;
-  }
 
   permanentRedirect(hit.newPath);
 }

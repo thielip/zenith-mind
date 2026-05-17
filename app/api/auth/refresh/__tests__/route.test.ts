@@ -22,7 +22,7 @@ describe("POST /api/auth/refresh", () => {
   it("returns 401 when refresh cookie is missing", async () => {
     cookiesMock.mockResolvedValue(createCookieJar());
 
-    const response = await POST(new Request("http://localhost/api/auth/refresh") as never);
+    const response = await POST();
     const body = await response.json();
 
     expect(response.status).toBe(401);
@@ -37,7 +37,7 @@ describe("POST /api/auth/refresh", () => {
       refreshToken: "new-refresh",
     });
 
-    const response = await POST(new Request("http://localhost/api/auth/refresh") as never);
+    const response = await POST();
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -51,7 +51,7 @@ describe("POST /api/auth/refresh", () => {
     cookiesMock.mockResolvedValue(jar);
     refreshTokensMock.mockRejectedValue(new Error("REFRESH_TOKEN_REVOKED"));
 
-    const response = await POST(new Request("http://localhost/api/auth/refresh") as never);
+    const response = await POST();
     const body = await response.json();
 
     expect(response.status).toBe(401);
