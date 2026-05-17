@@ -39,8 +39,9 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   const redirectResponse = await redirectGuard(request);
   if (redirectResponse) return redirectResponse;
 
-  // ── Step 2：Cloudflare 源站 IP 保護（僅 production）──
-  if (isProd) {
+  // ── Step 2：Cloudflare 源站 IP 保護（僅 CF Worker；Vercel 直連不檢查）──
+  const onVercel = Boolean(process.env["VERCEL"]);
+  if (isProd && !onVercel) {
     const cfIp = request.headers.get("CF-Connecting-IP") ?? "";
     if (!isCloudflareIP(cfIp)) {
       // 403，不暴露原因
