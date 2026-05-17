@@ -4,6 +4,12 @@
 name = "zenith-mind"
 main = ".open-next/worker.js"
 compatibility_date = "2024-12-30"
+
+# Cloudflare Workers「連線 Git」建置（Dashboard Latest build）
+[build]
+command = "npm run build:cf"
+cwd = "."
+watch_dir = ["app", "lib", "components", "middleware.ts", "next.config.ts", "open-next.config.ts", "scripts/cf-public-build.mjs"]
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 
 [assets]

@@ -28,7 +28,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     }
   }
 
-  // 根目錄導向預設語系首頁（/ -> /zh-TW）
+  // 根目錄導向預設語系（localePrefix: always → /zh-TW）
   if (pathname === "/") {
     const url = request.nextUrl.clone();
     url.pathname = `/${routing.defaultLocale}`;

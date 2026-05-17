@@ -68,17 +68,9 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // SEO：裸網域 → www 永久轉址（正式站：https://www.getzenithmind.com）
-  async redirects() {
-    return [
-      {
-        source: "/:path*",
-        has: [{ type: "host", value: "getzenithmind.com" }],
-        destination: "https://www.getzenithmind.com/:path*",
-        permanent: true,
-      },
-    ];
-  },
+  // 裸網域 → www 請只在 Cloudflare Redirect Rules 設定（見 cloudflare/DASHBOARD_STEPS.txt）。
+  // 勿在此寫 redirects()：OpenNext on Workers 可能無法正確套用 has:host，
+  // 會把 destination 的 `:path*` 當字面路徑，導致 www 全站 308 迴圈（Location: /:path*）。
 
   webpack(config) {
     // 確保 Node-only 模組不進入 Edge bundle
