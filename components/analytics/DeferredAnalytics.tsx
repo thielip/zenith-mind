@@ -51,7 +51,7 @@ export function LazyGoogleTagManager({ gtmId, nonce }: LazyGtmProps) {
           src={`https://www.googletagmanager.com/ns.html?id=${gtmId}`}
           height="0"
           width="0"
-          style={{ display: "none", visibility: "hidden" }}
+          className="hidden"
           title="Google Tag Manager"
         />
       </noscript>

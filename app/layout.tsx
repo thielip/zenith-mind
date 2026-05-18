@@ -16,6 +16,9 @@ export const metadata: Metadata = {
     siteName: "巔峰思維 Zenith Mind",
   },
   twitter: { card: "summary_large_image" },
+  verification: {
+    google: "google0276434467af2dd0",
+  },
 };
 
 export default function RootLayout({

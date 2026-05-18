@@ -31,7 +31,8 @@ function buildCsp(nonce: string, isProd: boolean): string {
     "script-src": scriptSrc,
     "style-src":  styleSrc,
     "style-src-elem": styleSrc,
-    "style-src-attr": isProd ? "'none'" : "'unsafe-inline'",
+    // next/image、Hero 浮層定位等需 style 屬性；hash 無法涵蓋 CMS 動態座標
+    "style-src-attr": "'unsafe-inline'",
 
     // 圖片：允許 Supabase Storage + data URI
     "img-src": "'self' data: https:",
@@ -44,11 +45,15 @@ function buildCsp(nonce: string, isProd: boolean): string {
       "'self'",
       "https://*.google-analytics.com",
       "https://www.google-analytics.com",
+      "https://www.googletagmanager.com",
       "https://c.clarity.ms",         // Clarity 數據上傳（必填）
       "https://www.clarity.ms",
       "https://region.upstash.io",    // Upstash Redis
       "*.supabase.co",                // Supabase
     ].join(" "),
+
+    "require-trusted-types-for": "'script'",
+    "trusted-types": "default",
 
     "frame-src": [
       "'self'",

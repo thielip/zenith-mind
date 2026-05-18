@@ -72,6 +72,6 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 // 與 lib/redirects/matcher.ts 互補：matcher 先擋靜態檔，redirectGuard 再擋 api/_next 等
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|css|js|map)).*)",
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|google[0-9a-f]+\\.html|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|css|js|map)).*)",
   ],
 };

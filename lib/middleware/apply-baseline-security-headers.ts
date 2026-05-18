@@ -12,6 +12,7 @@ export function applyBaselineSecurityHeaders(headers: Headers): void {
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  headers.set("Cross-Origin-Opener-Policy", "same-origin");
 }
 
 /** 對 redirect / 403 等提早返回的 Response 注入基線標頭 */

@@ -54,8 +54,9 @@ export default function HeroSlider({ slides, locale, autoplaySeconds = 0 }: Prop
       alt={slide.imageAlt || slide.title}
       fill
       priority
+      fetchPriority="high"
       unoptimized={slide.imageUrl.endsWith(".svg")}
-      sizes="100vw"
+      sizes="(max-width: 768px) 100vw, 1400px"
       className="object-cover"
     />
   );
@@ -130,12 +131,18 @@ export default function HeroSlider({ slides, locale, autoplaySeconds = 0 }: Prop
                 key={item.id}
                 type="button"
                 onClick={() => setIndex(itemIndex)}
-                className={[
-                  "h-2 rounded-full transition-all",
-                  itemIndex === index ? "w-8 bg-white" : "w-2 bg-white/50",
-                ].join(" ")}
+                className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-full p-3 focus:outline-none focus:ring-2 focus:ring-amber-300/70"
                 aria-label={`${isEn ? "Go to slide" : "切換到第"} ${itemIndex + 1}`}
-              />
+                aria-current={itemIndex === index ? "true" : undefined}
+              >
+                <span
+                  className={[
+                    "block h-2 rounded-full transition-all",
+                    itemIndex === index ? "w-8 bg-white" : "w-2 bg-white/50",
+                  ].join(" ")}
+                  aria-hidden="true"
+                />
+              </button>
             ))}
           </div>
           <button

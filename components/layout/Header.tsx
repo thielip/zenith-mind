@@ -102,10 +102,12 @@ export default function Header({ locale, settings }: Props) {
             <Image
               src={resolveSiteLogoSrc(settings.logoUrl)}
               alt={settings.logoAlt || (isEn ? "Zenith Mind" : "巔峰思維")}
-              width={200}
-              height={56}
+              width={168}
+              height={48}
+              sizes="(max-width: 640px) 132px, 168px"
               className="relative z-[1] h-8 w-auto max-w-[132px] object-contain sm:h-10 sm:max-w-[168px]"
               priority
+              fetchPriority="high"
             />
           </Link>
 

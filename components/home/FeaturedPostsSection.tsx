@@ -45,7 +45,7 @@ export default function FeaturedPostsSection({ locale, posts, copy }: Props) {
           </Link>
         </header>
 
-        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3" role="list">
+        <ul className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {posts.map((post) => {
             const title = isEn ? (post.titleEn ?? post.title) : post.title;
             const excerpt = isEn ? post.excerptEn : post.excerpt;
@@ -54,9 +54,8 @@ export default function FeaturedPostsSection({ locale, posts, copy }: Props) {
               : post.category?.name;
 
             return (
+              <li key={post.id}>
               <article
-                key={post.id}
-                role="listitem"
                 className="flex min-h-72 flex-col rounded-2xl border border-gray-200 bg-white p-6 shadow-sm shadow-blue-100/30 transition duration-200 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-100/70"
               >
                 {category && (
@@ -84,9 +83,10 @@ export default function FeaturedPostsSection({ locale, posts, copy }: Props) {
                   </span>
                 </div>
               </article>
+              </li>
             );
           })}
-        </div>
+        </ul>
       </div>
     </section>
   );

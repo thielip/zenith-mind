@@ -119,18 +119,19 @@ export default function SocialSidebar({ settings, locale }: Props) {
               {lineQrCode ? (
                 <Image
                   src={lineQrCode}
-                  alt={lineLabel || "官方帳號"}
+                  alt=""
                   width={180}
                   height={180}
                   unoptimized
                   className="mx-auto rounded-xl bg-white p-2"
+                  aria-hidden
                 />
               ) : (
                 <span className="mx-auto flex h-40 items-center justify-center rounded-xl bg-white text-xs text-green-700">
                   LINE
                 </span>
               )}
-              <span className="mt-2 block">{lineLabel || "官方帳號"}</span>
+              <span className="mt-2 block">{lineLabel || (isEn ? "Official LINE" : "官方帳號")}</span>
             </a>
           )}
         </div>

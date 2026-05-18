@@ -5,7 +5,10 @@ import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { GoogleAnalytics, GoogleTagManager } from "@next/third-parties/google";
+import {
+  LazyGoogleAnalytics,
+  LazyGoogleTagManager,
+} from "@/components/analytics/DeferredAnalytics";
 import { routing } from "@/lib/i18n/routing";
 import { env } from "@/env";
 import ConsentBanner  from "@/components/analytics/ConsentBanner";
@@ -79,11 +82,12 @@ export default async function PublicLocaleLayout({ children, params }: Props) {
 
         </NextIntlClientProvider>
 
-        {/* GTM：行銷可於容器內自行加碼（含 GA4 事件），不需改 repo */}
-        {gtmId && <GoogleTagManager gtmId={gtmId} nonce={nonce} />}
-
-        {/* GA4（lazyOnload 不阻塞 LCP；若僅用 GTM 載入 GA4 可省略此段）*/}
-        {ga4Id && <GoogleAnalytics gaId={ga4Id} nonce={nonce} />}
+        {/* 分析：lazyOnload，避免阻塞 LCP；GTM 與 GA4 擇一以免重複載入 */}
+        {gtmId ? (
+          <LazyGoogleTagManager gtmId={gtmId} nonce={nonce} />
+        ) : (
+          ga4Id && <LazyGoogleAnalytics gaId={ga4Id} nonce={nonce} />
+        )}
         {ga4Id && <Ga4Events />}
     </>
   );

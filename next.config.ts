@@ -41,8 +41,20 @@ const nextConfig: NextConfig = {
         hostname: "**.supabase.co",
         pathname: "/storage/v1/object/public/**",
       },
+      {
+        protocol: "https",
+        hostname: "www.getzenithmind.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "getzenithmind.com",
+        pathname: "/**",
+      },
     ],
     formats: ["image/avif", "image/webp"],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1400, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
 
   typescript: { ignoreBuildErrors: false },
@@ -52,6 +64,15 @@ const nextConfig: NextConfig = {
   // 僅 DNS prefetch；X-Content-Type-Options 等由 middleware 單一注入（避免重複值導致掃描失敗）
   async headers() {
     return [
+      {
+        source: "/_next/image",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
       {
         source: "/(.*)",
         headers: [{ key: "X-DNS-Prefetch-Control", value: "on" }],

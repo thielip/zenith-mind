@@ -97,7 +97,8 @@ export default function ImageCarousel({ locale, items, autoplaySeconds = 0, copy
           ref={scrollRef}
           className="mt-8 flex snap-x gap-5 overflow-x-auto pb-4 [scrollbar-width:thin]"
         >
-          {activeItems.map((item) => {
+          {activeItems.map((item, itemIndex) => {
+            const isLcpCandidate = itemIndex === 0;
             const card = (
               <article
                 data-carousel-card
@@ -108,9 +109,11 @@ export default function ImageCarousel({ locale, items, autoplaySeconds = 0, copy
                   alt={item.imageAlt || item.title}
                   fill
                   unoptimized={item.imageUrl.endsWith(".svg")}
-                  sizes="(min-width: 640px) 20rem, 18rem"
+                  sizes="(max-width: 640px) 18rem, (max-width: 1024px) 20rem, 320px"
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  loading="lazy"
+                  priority={isLcpCandidate}
+                  fetchPriority={isLcpCandidate ? "high" : "auto"}
+                  loading={isLcpCandidate ? undefined : "lazy"}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-blue-950/30 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-5">

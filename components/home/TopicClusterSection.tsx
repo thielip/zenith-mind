@@ -36,12 +36,11 @@ export default function TopicClusterSection({ locale, topics, copy }: Props) {
         </Link>
       </header>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" role="list">
+      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {topics.map((topic) => (
+          <li key={topic.slug}>
           <Link
-            key={topic.slug}
             href={`${prefix}/blog?category=${topic.slug}`}
-            role="listitem"
             className="group flex min-h-64 flex-col rounded-2xl border border-gray-200 bg-white p-6 shadow-sm shadow-blue-100/30 transition duration-200 hover:-translate-y-1.5 hover:border-blue-300 hover:shadow-2xl hover:shadow-blue-200/60"
           >
             {(() => {
@@ -62,8 +61,9 @@ export default function TopicClusterSection({ locale, topics, copy }: Props) {
               {isEn ? copy.exploreEn : copy.explore} →
             </span>
           </Link>
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }
