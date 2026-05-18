@@ -37,21 +37,33 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const body = await req.json() as {
       type?: "path" | "tag";
       value?: string;
+      items?: Array<{ type: "path" | "tag"; value: string }>;
     };
 
-    const { type = "path", value } = body;
+    const items =
+      Array.isArray(body.items) && body.items.length > 0
+        ? body.items
+        : body.value && typeof body.value === "string"
+          ? [{ type: body.type ?? "path", value: body.value }]
+          : [];
 
-    if (!value || typeof value !== "string") {
+    if (items.length === 0) {
       return NextResponse.json({ error: "MISSING_VALUE" }, { status: 400 });
     }
 
-    if (type === "tag") {
-      revalidateTag(value);
-    } else {
-      revalidatePath(value);
+    for (const item of items) {
+      if (!item.value || typeof item.value !== "string") continue;
+      if (item.type === "tag") {
+        revalidateTag(item.value);
+      } else {
+        revalidatePath(item.value);
+      }
     }
 
-    return NextResponse.json({ success: true, revalidated: value });
+    return NextResponse.json({
+      success: true,
+      revalidated: items.map((i) => i.value),
+    });
 
   } catch (e: unknown) {
     console.error("[Revalidate] Error:", e);

@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
+import { fetchPostViewTotal } from "@/lib/analytics/post-view-totals";
 import type {
   BlogPostDetail,
   BlogPostFaq,
@@ -9,7 +10,6 @@ const postInclude = {
   category: { select: { id: true, name: true, nameEn: true, slug: true } },
   tags: { include: { tag: { select: { name: true, slug: true } } } },
   seoMetadata: true,
-  _count: { select: { pageViews: true } },
 } as const;
 
 function mapFaq(raw: unknown): BlogPostFaq[] | null {
@@ -63,7 +63,7 @@ export async function loadBlogPostBySlugPrisma(
           noFollow: post.seoMetadata.noFollow,
         }
       : null,
-    _count: post._count,
+    _count: { pageViews: await fetchPostViewTotal(post.id) },
   };
 }
 

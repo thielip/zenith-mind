@@ -7,6 +7,7 @@
 import { z } from "zod";
 import { cookies, headers } from "next/headers";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { purgePublicSiteAfterPostChange } from "@/lib/revalidate/purge-public-site";
 import { prisma } from "@/infrastructure/db/prisma";
 import { verifyAccessToken } from "@/lib/auth/jwt";
 import { sanitizeRichText, sanitizeText } from "@/lib/sanitize/html";
@@ -190,6 +191,7 @@ export async function updatePostAction(
     revalidatePath(`/en/blog/${post.slug}`);
     revalidatePath("/zh-TW/blog");
     revalidatePath("/en/blog");
+    void purgePublicSiteAfterPostChange(post.slug);
 
     return { success: true, data: { id: post.id }, error: null };
 
@@ -304,6 +306,7 @@ export async function deletePostAction(
     revalidatePath(`/zh-TW/blog/${post.slug}`);
     revalidatePath(`/en/blog/${post.slug}`);
     revalidatePath("/admin/posts");
+    void purgePublicSiteAfterPostChange(post.slug);
 
     return { success: true, data: undefined, error: null };
 

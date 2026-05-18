@@ -2,7 +2,8 @@
  * 部落格列表（Cloudflare Worker）：僅 Supabase PostgREST。
  * 禁止 import @/infrastructure/db/prisma。
  */
-import { supabaseCount, supabaseRest } from "@/lib/db/supabase-rest";
+import { fetchPostViewTotalsMap } from "@/lib/analytics/post-view-totals";
+import { supabaseCount, supabaseRestWithFallback } from "@/lib/db/supabase-rest";
 import { safeQuery } from "@/lib/db/safe-query";
 import type {
   BlogListCategory,
@@ -71,7 +72,8 @@ function buildListParams(filters: BlogListFilters): Record<string, string> {
 
 function mapPostRow(
   row: BlogPostRow,
-  tagsByPostId: Map<string, { tag: BlogListTag }[]>
+  tagsByPostId: Map<string, { tag: BlogListTag }[]>,
+  viewTotals: Map<string, number>
 ): BlogListPost {
   const cat = row.categories;
   return {
@@ -87,8 +89,16 @@ function mapPostRow(
     readingTime: row.readingTime ?? 0,
     category: cat ? { name: cat.name, nameEn: cat.nameEn, slug: cat.slug } : null,
     tags: tagsByPostId.get(row.id) ?? [],
-    _count: { pageViews: 0 },
+    _count: { pageViews: viewTotals.get(row.id) ?? 0 },
   };
+}
+
+function mapPostRows(
+  rows: BlogPostRow[],
+  tagsByPostId: Map<string, { tag: BlogListTag }[]>,
+  viewTotals: Map<string, number>
+): BlogListPost[] {
+  return rows.map((row) => mapPostRow(row, tagsByPostId, viewTotals));
 }
 
 async function fetchTagsForPosts(
@@ -98,12 +108,13 @@ async function fetchTagsForPosts(
   if (postIds.length === 0) return byPost;
 
   const inList = postIds.map((id) => `"${id}"`).join(",");
-  const rows = await supabaseRest<PostTagRow[]>(
+  const rows = await supabaseRestWithFallback<PostTagRow[]>(
     "post_tags",
     {
       select: "postId,tags(slug,name,nameEn)",
       postId: `in.(${inList})`,
     },
+    [],
     undefined,
     { kind: "public", revalidate: 3600, tags: ["posts"] }
   );
@@ -128,13 +139,18 @@ export async function fetchBlogListPostsViaSupabase(
   params.limit = String(take);
   params.offset = String(skip);
 
-  const rows = await supabaseRest<BlogPostRow[]>("posts", params);
+  const rows = await supabaseRestWithFallback<BlogPostRow[]>("posts", params, []);
   const tagsByPostId = await safeQuery(
     "blog.postTags",
     () => fetchTagsForPosts(rows.map((r) => r.id)),
     new Map<string, { tag: BlogListTag }[]>()
   );
-  return rows.map((row) => mapPostRow(row, tagsByPostId));
+  const viewTotals = await safeQuery(
+    "blog.viewTotals",
+    () => fetchPostViewTotalsMap(rows.map((r) => r.id)),
+    new Map<string, number>()
+  );
+  return mapPostRows(rows, tagsByPostId, viewTotals);
 }
 
 export async function countBlogListPostsViaSupabase(
@@ -149,21 +165,29 @@ export async function countBlogListPostsViaSupabase(
 }
 
 export async function fetchBlogCategoriesViaSupabase(): Promise<BlogListCategory[]> {
-  return supabaseRest<BlogListCategory[]>("categories", {
-    select: "slug,name,nameEn",
-    deletedAt: "is.null",
-    order: "name.asc",
-    limit: "50",
-  });
+  return supabaseRestWithFallback<BlogListCategory[]>(
+    "categories",
+    {
+      select: "slug,name,nameEn",
+      deletedAt: "is.null",
+      order: "name.asc",
+      limit: "50",
+    },
+    []
+  );
 }
 
 export async function fetchBlogTagsViaSupabase(): Promise<BlogListTag[]> {
-  return supabaseRest<BlogListTag[]>("tags", {
-    select: "slug,name,nameEn",
-    deletedAt: "is.null",
-    order: "name.asc",
-    limit: "18",
-  });
+  return supabaseRestWithFallback<BlogListTag[]>(
+    "tags",
+    {
+      select: "slug,name,nameEn",
+      deletedAt: "is.null",
+      order: "name.asc",
+      limit: "18",
+    },
+    []
+  );
 }
 
 export async function loadBlogListDataViaSupabase(

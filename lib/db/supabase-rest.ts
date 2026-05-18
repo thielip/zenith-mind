@@ -46,11 +46,17 @@ function restHeaders(
   cfg: SupabaseRestConfig,
   extra?: HeadersInit
 ): HeadersInit {
-  return {
+  const headers: Record<string, string> = {
     apikey: cfg.key,
-    Authorization: `Bearer ${cfg.key}`,
-    ...extra,
+    Accept: "application/json",
+    "Accept-Profile": "public",
+    "Content-Profile": "public",
   };
+
+  // PostgREST：apikey 必填；Bearer 與 apikey 相同時，sb_secret_ / eyJ 皆可使用
+  headers.Authorization = `Bearer ${cfg.key}`;
+
+  return { ...headers, ...(extra as Record<string, string> | undefined) };
 }
 
 function mergeFetchInit(

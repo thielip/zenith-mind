@@ -41,6 +41,8 @@ GOOGLE_ADS_CUSTOMER_ID=8702788584
 GOOGLE_ADS_LOGIN_CUSTOMER_ID=4708073999
 
 # ── Supabase / Webhook / Cron ────────────────────────────
+# 後端 REST：建議用 Dashboard → API Keys → Secret keys（sb_secret_…）
+# 若仍 403，改用 Legacy 分頁的 service_role JWT（eyJ… 開頭）
 SUPABASE_SERVICE_ROLE_KEY=
 WEBHOOK_SECRET=
 REVALIDATE_SECRET=

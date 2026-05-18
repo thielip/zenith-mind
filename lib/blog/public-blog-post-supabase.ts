@@ -2,6 +2,7 @@
  * 部落格文章詳頁（Cloudflare Worker）：僅 Supabase PostgREST。
  * 禁止 import @/infrastructure/db/prisma。
  */
+import { fetchPostViewTotal } from "@/lib/analytics/post-view-totals";
 import { supabaseRestWithFallback } from "@/lib/db/supabase-rest";
 import type {
   BlogPostDetail,
@@ -36,7 +37,6 @@ const POST_DETAIL_SELECT = [
   "categories(id,name,nameEn,slug)",
   "post_tags(tags(name,slug))",
   "seo_metadata(metaTitle,metaTitleEn,metaDescription,metaDescriptionEn,ogTitle,ogDescription,ogImage,noIndex,noFollow)",
-  "page_views(count)",
 ].join(",");
 
 type PostDetailRow = {
@@ -78,7 +78,6 @@ type PostDetailRow = {
     noIndex: boolean | null;
     noFollow: boolean | null;
   } | null;
-  page_views?: { count: number }[];
 };
 
 type RecommendedRow = {
@@ -129,8 +128,6 @@ function mapPostDetailRow(row: PostDetailRow): BlogPostDetail {
   }
 
   const cat = row.categories;
-  const pageViews = row.page_views?.[0]?.count ?? 0;
-
   return {
     id: row.id,
     slug: row.slug,
@@ -157,7 +154,7 @@ function mapPostDetailRow(row: PostDetailRow): BlogPostDetail {
       : null,
     tags,
     seoMetadata: mapSeo(row.seo_metadata),
-    _count: { pageViews: Number(pageViews) || 0 },
+    _count: { pageViews: 0 },
   };
 }
 
@@ -180,7 +177,11 @@ export async function fetchBlogPostBySlugViaSupabase(
     postCache
   );
   const row = rows[0];
-  return row ? mapPostDetailRow(row) : null;
+  if (!row) return null;
+
+  const post = mapPostDetailRow(row);
+  const pageViews = await fetchPostViewTotal(post.id);
+  return { ...post, _count: { pageViews } };
 }
 
 export async function fetchRecommendedPostsViaSupabase(

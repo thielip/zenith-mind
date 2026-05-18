@@ -1,4 +1,5 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
+import { fetchPostViewTotalsMap } from "@/lib/analytics/post-view-totals";
 import type {
   BlogListData,
   BlogListFilters,
@@ -46,7 +47,6 @@ export async function loadBlogListDataWithPrisma(
         coverImageAlt: true,
         publishedAt: true,
         readingTime: true,
-        _count: { select: { pageViews: true } },
         category: { select: { name: true, nameEn: true, slug: true } },
         tags: {
           take: 3,
@@ -71,7 +71,13 @@ export async function loadBlogListDataWithPrisma(
     }),
   ]);
 
-  return { posts, total, categories, tags };
+  const viewTotals = await fetchPostViewTotalsMap(posts.map((p) => p.id));
+  const postsWithViews = posts.map((post) => ({
+    ...post,
+    _count: { pageViews: viewTotals.get(post.id) ?? 0 },
+  }));
+
+  return { posts: postsWithViews, total, categories, tags };
 }
 
 export async function loadBlogListDataPrisma(

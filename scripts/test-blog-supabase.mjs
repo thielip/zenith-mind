@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs";
-import { neon } from "@neondatabase/serverless";
 
 function loadDevVars() {
   const out = {};
@@ -20,48 +19,47 @@ if (!key) {
   process.exit(1);
 }
 
+const headers = {
+  apikey: key,
+  Authorization: `Bearer ${key}`,
+  Accept: "application/json",
+  "Accept-Profile": "public",
+  "Content-Profile": "public",
+};
+
 const queries = [
   {
     name: "featured",
+    table: "posts",
     select:
       "id,slug,title,titleEn,excerpt,excerptEn,publishedAt,readingTime,categories(name,nameEn,slug)",
   },
   {
-    name: "blog-list",
-    select:
-      "id,slug,title,titleEn,excerpt,excerptEn,publishedAt,readingTime,coverImage,coverImageAlt,categories(name,nameEn,slug)",
+    name: "view-totals",
+    table: "v_post_view_totals",
+    select: "post_id,view_count",
+    extra: { limit: "3" },
   },
 ];
 
 for (const q of queries) {
-  const url = new URL(`${base.replace(/\/$/, "")}/rest/v1/posts`);
+  const url = new URL(`${base.replace(/\/$/, "")}/rest/v1/${q.table}`);
   url.searchParams.set("select", q.select);
-  url.searchParams.set("status", "eq.PUBLISHED");
-  url.searchParams.set("deletedAt", "is.null");
-  url.searchParams.set("order", "publishedAt.desc,createdAt.desc");
-  url.searchParams.set("limit", "3");
+  if (q.table === "posts") {
+    url.searchParams.set("status", "eq.PUBLISHED");
+    url.searchParams.set("deletedAt", "is.null");
+    url.searchParams.set("order", "publishedAt.desc,createdAt.desc");
+  }
+  if (q.extra) {
+    for (const [k, v] of Object.entries(q.extra)) url.searchParams.set(k, v);
+  }
 
-  const res = await fetch(url, {
-    headers: { apikey: key, Authorization: `Bearer ${key}` },
-  });
+  const res = await fetch(url, { headers });
   const text = await res.text();
   console.log(`\n[${q.name}] ${res.status}`);
   console.log(text.slice(0, 400));
 }
 
-for (const label of ["DIRECT_URL", "DATABASE_URL"]) {
-  const url = env[label];
-  if (!url) continue;
-  try {
-    const sql = neon(url);
-    const rows = await sql.query(
-      `SELECT id, slug, title FROM posts
-       WHERE status::text = 'PUBLISHED' AND "deletedAt" IS NULL
-       ORDER BY "publishedAt" DESC NULLS LAST LIMIT 3`,
-      []
-    );
-    console.log(`\n[neon-sql ${label}] ok`, rows.length, rows[0]?.slug);
-  } catch (e) {
-    console.log(`\n[neon-sql ${label}] error`, e.message);
-  }
-}
+console.log(
+  "\nNote: wrangler secret put only updates Cloudflare Worker. Sync .dev.vars for local tests."
+);

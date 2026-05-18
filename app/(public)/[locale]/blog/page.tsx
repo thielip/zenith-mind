@@ -3,6 +3,7 @@
 // CF Worker：Supabase REST（見 lib/blog/load-blog-list-data.ts）
 
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import Image from "next/image";
 import Link from "next/link";
@@ -10,6 +11,12 @@ import { Clock } from "lucide-react";
 import { env } from "@/env";
 import { loadBlogListData } from "@/lib/blog/load-blog-list-data";
 import BlogSearchFilters from "@/components/blog/BlogSearchFilters";
+import PublicDataDegradedBanner from "@/components/public/PublicDataDegradedBanner";
+import {
+  isPublicDataDegraded,
+  probePublicPostsHealth,
+} from "@/lib/db/public-data-health";
+import { isSearchEngineCrawler } from "@/lib/seo/crawler";
 import { sortDefaultCategories } from "@/lib/categories/defaults";
 
 export const revalidate = 3600;
@@ -25,6 +32,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const isEn = locale === "en";
   const siteUrl = env.NEXT_PUBLIC_SITE_URL;
+  const health = await probePublicPostsHealth();
+  const degraded = isPublicDataDegraded(health);
 
   return {
     title: isEn ? "Blog" : "精選文章",
@@ -38,6 +47,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         en:      `${siteUrl}/en/blog`,
       },
     },
+    ...(degraded
+      ? { robots: { index: false, follow: false } }
+      : {}),
   };
 }
 
@@ -45,6 +57,13 @@ export default async function BlogListPage({ params, searchParams }: Props) {
   const { locale } = await params;
   const sp    = await searchParams;
   const isEn  = locale === "en";
+  const health = await probePublicPostsHealth();
+  const dataDegraded = isPublicDataDegraded(health);
+  const h = await headers();
+  if (dataDegraded && isSearchEngineCrawler(h.get("user-agent"))) {
+    const { redirect } = await import("next/navigation");
+    redirect("/api/health/public-data");
+  }
   const page  = Math.max(1, parseInt(sp.page ?? "1", 10));
   const skip  = (page - 1) * PER_PAGE;
   const t     = await getTranslations("blog");
@@ -79,6 +98,10 @@ export default async function BlogListPage({ params, searchParams }: Props) {
         {isEn ? "Featured articles" : "精選文章"}
       </h1>
 
+      {dataDegraded && posts.length === 0 && (
+        <PublicDataDegradedBanner locale={locale} />
+      )}
+
       <BlogSearchFilters
         locale={locale}
         basePath={basePath}
@@ -91,9 +114,11 @@ export default async function BlogListPage({ params, searchParams }: Props) {
       <div className="flex flex-col gap-8 lg:flex-row">
         <main className="min-w-0 flex-1" id="post-list">
           {posts.length === 0 ? (
-            <p className="text-gray-500">
-              {isEn ? "No featured articles found." : "目前沒有精選文章。"}
-            </p>
+            dataDegraded ? null : (
+              <p className="text-gray-500">
+                {isEn ? "No featured articles found." : "目前沒有精選文章。"}
+              </p>
+            )
           ) : (
             <ol className="space-y-8" aria-label={isEn ? "Featured article list" : "精選文章列表"}>
               {posts.map((post) => {

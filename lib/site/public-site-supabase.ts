@@ -202,14 +202,8 @@ export async function countCategoriesViaSupabase(): Promise<number> {
 export async function countHomePageViewsViaSupabase(
   locale: SiteLocale
 ): Promise<number> {
-  return supabaseCount(
-    "page_views",
-    {
-      postId: "is.null",
-      locale: `eq.${locale}`,
-    },
-    { kind: "public", revalidate: 3600, tags: ["homepage-stats"] }
-  );
+  const { fetchSiteViewTotal } = await import("@/lib/analytics/post-view-totals");
+  return fetchSiteViewTotal(locale);
 }
 
 export async function getHeroSlidesViaSupabase(

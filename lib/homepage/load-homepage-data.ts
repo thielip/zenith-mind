@@ -98,10 +98,8 @@ export async function loadHomepageData(
 
   const loadPageViews = async () => {
     if (isCfPublicRuntime()) return countHomePageViewsViaSupabase(siteLocale);
-    const { prisma } = await import("@/infrastructure/db/prisma");
-    return prisma.pageView.count({
-      where: { postId: null, locale: siteLocale },
-    });
+    const { fetchSiteViewTotal } = await import("@/lib/analytics/post-view-totals");
+    return fetchSiteViewTotal(siteLocale);
   };
 
   const [

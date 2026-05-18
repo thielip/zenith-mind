@@ -10,6 +10,7 @@ import { verifyAccessToken } from "@/lib/auth/jwt";
 import { sanitizeText } from "@/lib/sanitize/html";
 import { writeAuditLog } from "@/infrastructure/db/adapters/audit.prisma-adapter";
 import { revalidateTag } from "next/cache";
+import { purgePublicSiteAfterPostChange } from "@/lib/revalidate/purge-public-site";
 import type { ActionResult } from "@/domain/shared/core.types";
 import { Errors } from "@/domain/shared/core.types";
 
@@ -107,6 +108,7 @@ export async function createPostAction(
     });
 
     revalidateTag("posts");
+    void purgePublicSiteAfterPostChange(post.slug);
 
     return { success: true, data: { id: post.id }, error: null };
 

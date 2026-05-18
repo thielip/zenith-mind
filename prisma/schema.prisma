@@ -356,6 +356,19 @@ model DailyAggregate {
   @@map("daily_aggregates")
 }
 
+// 首頁瀏覽（page_views.postId IS NULL）日彙總
+model SiteDailyAggregate {
+  id             String   @id @default(cuid())
+  date           DateTime @db.Date
+  locale         String   @default("zh-TW")
+  views          Int      @default(0)
+  uniqueVisitors Int      @default(0)
+
+  @@unique([date, locale])
+  @@index([locale, date(sort: Desc)])
+  @@map("site_daily_aggregates")
+}
+
 // ═══════════════════════════════════════════════
 // AFFILIATE_LINK（聯盟行銷連結）
 // ═══════════════════════════════════════════════
