@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { verifyAccessToken } from "@/lib/auth/jwt";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
+import GuestReadOnlyBanner from "@/components/admin/GuestReadOnlyBanner";
 import { AdminMainFrame } from "@/components/admin/AdminMainFrame";
 import SilentRefresh from "@/components/analytics/SilentRefresh";
 import type { Metadata } from "next";
@@ -23,10 +24,12 @@ export default async function AdminLayout({ children }: Props) {
   const token = jar.get("access_token")?.value;
 
   let userEmail = "";
+  let readOnly = false;
   if (token) {
     try {
       const payload = await verifyAccessToken(token);
       userEmail = payload.email;
+      readOnly = payload.role === "GUEST";
     } catch {
       return <>{children}</>;
     }
@@ -37,16 +40,20 @@ export default async function AdminLayout({ children }: Props) {
   return (
     <>
       <SilentRefresh />
-      <AdminShell userEmail={userEmail}>{children}</AdminShell>
+      <AdminShell userEmail={userEmail} readOnly={readOnly}>
+        {children}
+      </AdminShell>
     </>
   );
 }
 
 function AdminShell({
   userEmail,
+  readOnly,
   children,
 }: {
   userEmail: string;
+  readOnly: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -54,7 +61,10 @@ function AdminShell({
       <AdminSidebar />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <AdminHeader userEmail={userEmail} />
-        <AdminMainFrame>{children}</AdminMainFrame>
+        <AdminMainFrame>
+          {readOnly && <GuestReadOnlyBanner />}
+          {children}
+        </AdminMainFrame>
       </div>
     </div>
   );

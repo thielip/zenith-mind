@@ -1,12 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { z } from "zod";
 import { prisma } from "@/infrastructure/db/prisma";
 import { writeAuditLog } from "@/infrastructure/db/adapters/audit.prisma-adapter";
 import { deleteSiteAssetByPublicUrl } from "@/infrastructure/storage/supabase-storage";
-import { verifyAccessToken } from "@/lib/auth/jwt";
+import { gateAdminWrite } from "@/lib/auth/resolve-admin-action";
 import type { ActionResult } from "@/domain/shared/core.types";
 import { Errors } from "@/domain/shared/core.types";
 
@@ -16,13 +16,6 @@ const deleteMediaSchema = z.object({
   url: z.string().min(1).max(800),
   entityId: z.string().min(1).max(120).optional(),
 });
-
-async function requireAdmin() {
-  const jar = await cookies();
-  const token = jar.get("access_token")?.value;
-  if (!token) throw new Error("UNAUTHORIZED");
-  return verifyAccessToken(token);
-}
 
 async function getMeta() {
   const h = await headers();
@@ -45,8 +38,9 @@ export async function deleteMediaItemAction(input: unknown): Promise<ActionResul
   const meta = await getMeta();
 
   try {
-    const admin = await requireAdmin().catch(() => null);
-    if (!admin) return { success: false, data: null, error: Errors.auth() };
+    const gate = await gateAdminWrite("media");
+    if (!gate.ok) return gate.result;
+    const admin = gate.session;
 
     const parsed = deleteMediaSchema.safeParse(input);
     if (!parsed.success) {

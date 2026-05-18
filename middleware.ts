@@ -11,6 +11,7 @@ import { isCloudflareProxiedRequest } from "@/lib/middleware/ip-guard";
 import { adminAuthGuard } from "@/lib/middleware/auth-guard";
 import { redirectGuard } from "@/lib/middleware/redirect-guard";
 import { routing } from "@/lib/i18n/routing";
+import { secureEarlyNextResponse } from "@/lib/middleware/apply-baseline-security-headers";
 import {
   generateNonce,
   injectSecurityHeaders,
@@ -24,7 +25,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   if (shouldProxyAdminToExternal(pathname)) {
     const target = buildAdminExternalUrl(pathname, request.nextUrl.search);
     if (target) {
-      return NextResponse.redirect(target, 302);
+      return secureEarlyNextResponse(NextResponse.redirect(target, 302));
     }
   }
 
@@ -32,24 +33,24 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   if (pathname === "/") {
     const url = request.nextUrl.clone();
     url.pathname = `/${routing.defaultLocale}`;
-    return NextResponse.redirect(url);
+    return secureEarlyNextResponse(NextResponse.redirect(url));
   }
 
   // ── Step 1：資料庫 301 轉址（封存文章舊 URL）──
   const redirectResponse = await redirectGuard(request);
-  if (redirectResponse) return redirectResponse;
+  if (redirectResponse) return secureEarlyNextResponse(redirectResponse);
 
   // ── Step 2：Cloudflare 源站 IP 保護（僅 CF Worker；Vercel 直連不檢查）──
   const onVercel = Boolean(process.env["VERCEL"]);
   if (isProd && !onVercel && !isCloudflareProxiedRequest(request.headers)) {
     // 阻擋 workers.dev 直連等繞過 CF 代理的請求
-    return new NextResponse(null, { status: 403 });
+    return secureEarlyNextResponse(new NextResponse(null, { status: 403 }));
   }
 
   // ── Step 3：Admin JWT 路由守衛（拆分部署時由 Vercel 處理）──
   if (!shouldProxyAdminToExternal(pathname)) {
     const authResponse = await adminAuthGuard(request);
-    if (authResponse) return authResponse;
+    if (authResponse) return secureEarlyNextResponse(authResponse);
   }
 
   // ── Step 4：注入 nonce + 安全標頭 ────────────────────

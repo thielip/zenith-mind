@@ -48,6 +48,7 @@ export async function loadBlogPostBySlugPrisma(
     updatedAt: post.updatedAt,
     categoryId: post.categoryId,
     readingTime: post.readingTime,
+    isPasswordProtected: post.isPasswordProtected,
     category: post.category,
     tags: post.tags,
     seoMetadata: post.seoMetadata

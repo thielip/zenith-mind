@@ -49,21 +49,12 @@ const nextConfig: NextConfig = {
   // CI / Cloudflare 建置：lint 在 npm run lint 執行，避免 build 因 parser 設定失敗
   eslint: { ignoreDuringBuilds: true },
 
-  // 靜態安全標頭（Middleware 為主要注入點，此為備援）
+  // 僅 DNS prefetch；X-Content-Type-Options 等由 middleware 單一注入（避免重複值導致掃描失敗）
   async headers() {
     return [
       {
         source: "/(.*)",
-        headers: [
-          { key: "X-DNS-Prefetch-Control", value: "on" },
-          { key: "X-Frame-Options", value: "DENY" },
-          { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          {
-            key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
-          },
-        ],
+        headers: [{ key: "X-DNS-Prefetch-Control", value: "on" }],
       },
     ];
   },

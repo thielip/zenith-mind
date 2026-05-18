@@ -4,7 +4,9 @@
 
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
 import { prisma } from "@/infrastructure/db/prisma";
+import { verifyAccessToken } from "@/lib/auth/jwt";
 import PostEditor from "@/components/admin/Editor/PostEditor";
 import { sortDefaultCategories } from "@/lib/categories/defaults";
 
@@ -44,9 +46,22 @@ export default async function EditPostPage({ params }: Props) {
 
   if (!post) notFound();
 
+  const jar = await cookies();
+  const token = jar.get("access_token")?.value;
+  let readOnly = false;
+  if (token) {
+    try {
+      const payload = await verifyAccessToken(token);
+      readOnly = payload.role === "GUEST";
+    } catch {
+      readOnly = false;
+    }
+  }
+
   // Server Component 把資料序列化傳給 Client Component
   return (
     <PostEditor
+      readOnly={readOnly}
       post={{
         id:           post.id,
         slug:         post.slug,
@@ -65,6 +80,8 @@ export default async function EditPostPage({ params }: Props) {
         coverImageBlurHash: post.coverImageBlurHash ?? "",
         categoryId:   post.categoryId ?? "",
         scheduledAt:  post.scheduledAt?.toISOString() ?? null,
+        isPasswordProtected: post.isPasswordProtected,
+        hasAccessPassword: Boolean(post.accessPasswordHash),
         faq:          toJsonArray(post.faq),
         seo: post.seoMetadata
           ? {

@@ -22,6 +22,7 @@ datasource db {
 
 enum UserRole {
   ADMIN
+  GUEST
 }
 
 enum PostStatus {
@@ -185,6 +186,10 @@ model Post {
   // 排程發文
   publishedAt DateTime?
   scheduledAt DateTime?
+
+  // 文章密碼保護（bcrypt 雜湊；前台以密碼解鎖後讀取全文）
+  isPasswordProtected Boolean @default(false)
+  accessPasswordHash  String?
 
   // pSEO 識別
   isProgrammatic Boolean @default(false)

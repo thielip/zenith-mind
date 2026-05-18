@@ -5,26 +5,19 @@
 "use server";
 
 import { z } from "zod";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { purgePublicSiteAfterPostChange } from "@/lib/revalidate/purge-public-site";
 import { prisma } from "@/infrastructure/db/prisma";
-import { verifyAccessToken } from "@/lib/auth/jwt";
+import { hashPassword } from "@/lib/auth/password";
+import { gateAdminWrite } from "@/lib/auth/resolve-admin-action";
 import { sanitizeRichText, sanitizeText } from "@/lib/sanitize/html";
+import { optionalTrustedMediaUrl } from "@/lib/security/allowed-media-url";
 import { convertMarkdownImagesToHtml } from "@/lib/markdown/images";
 import { writeAuditLog } from "@/infrastructure/db/adapters/audit.prisma-adapter";
 import { upsertPostDeleteRedirects } from "@/lib/redirects/queries";
 import type { ActionResult } from "@/domain/shared/core.types";
 import { Errors } from "@/domain/shared/core.types";
-
-// ── Auth 驗證工具 ─────────────────────────────────────────
-
-async function requireAdmin(): Promise<{ userId: string; email: string }> {
-  const jar   = await cookies();
-  const token = jar.get("access_token")?.value;
-  if (!token) throw new Error("UNAUTHORIZED");
-  return verifyAccessToken(token);
-}
 
 async function getRequestMeta() {
   const h = await headers();
@@ -53,7 +46,7 @@ const updatePostSchema = z.object({
   content:     z.string(),
   contentEn:   z.string().optional(),
   categoryId:  z.string().cuid().optional().or(z.literal("")),
-  coverImage:  z.string().url().optional().or(z.literal("")),
+  coverImage:  optionalTrustedMediaUrl,
   coverImageAlt: z.string().max(300).optional().or(z.literal("")),
   coverImageWidth: z.number().int().positive().optional(),
   coverImageHeight: z.number().int().positive().optional(),
@@ -67,6 +60,9 @@ const updatePostSchema = z.object({
     answerEn: z.string().max(5000).optional(),
   })).optional(),
   status:      z.enum(["DRAFT", "PUBLISHED", "SCHEDULED", "ARCHIVED"]),
+  isPasswordProtected: z.boolean().optional().default(false),
+  accessPassword: z.string().min(4).max(128).optional().or(z.literal("")),
+  clearAccessPassword: z.boolean().optional(),
 });
 
 const seoText = (max: number) => z.string().trim().max(max).optional();
@@ -93,8 +89,9 @@ export async function updatePostAction(
   const meta = await getRequestMeta();
 
   try {
-    const admin = await requireAdmin().catch(() => null);
-    if (!admin) return { success: false, data: null, error: Errors.auth() };
+    const gate = await gateAdminWrite("post");
+    if (!gate.ok) return gate.result;
+    const admin = gate.session;
 
     // Step 3：Zod Validation
     const parsed = updatePostSchema.safeParse(input);
@@ -107,6 +104,45 @@ export async function updatePostAction(
     const visibleContent = d.content.replace(/<[^>]+>/g, "").trim();
     if (d.status === "PUBLISHED" && visibleContent.length === 0) {
       return { success: false, data: null, error: Errors.validation("Published posts require content") };
+    }
+
+    const scheduledAt = d.scheduledAt ? new Date(d.scheduledAt) : null;
+    if (d.status === "SCHEDULED") {
+      if (!scheduledAt || Number.isNaN(scheduledAt.getTime())) {
+        return {
+          success: false,
+          data: null,
+          error: Errors.validation("排程發布需設定未來的發布時間"),
+        };
+      }
+      if (scheduledAt.getTime() <= Date.now()) {
+        return {
+          success: false,
+          data: null,
+          error: Errors.validation("排程時間必須晚於現在"),
+        };
+      }
+    }
+
+    const existing = await prisma.post.findUnique({
+      where: { id: d.id, deletedAt: null },
+      select: { accessPasswordHash: true },
+    });
+    if (!existing) {
+      return { success: false, data: null, error: Errors.notFound("Post") };
+    }
+
+    let accessPasswordHash: string | null | undefined = undefined;
+    if (d.clearAccessPassword || !d.isPasswordProtected) {
+      accessPasswordHash = null;
+    } else if (d.accessPassword && d.accessPassword.length > 0) {
+      accessPasswordHash = await hashPassword(d.accessPassword);
+    } else if (d.isPasswordProtected && !existing.accessPasswordHash) {
+      return {
+        success: false,
+        data: null,
+        error: Errors.validation("啟用文章密碼保護時請設定密碼"),
+      };
     }
 
     // Step 4：資料清洗
@@ -143,9 +179,12 @@ export async function updatePostAction(
     const wordCount   = cleanContent.replace(/<[^>]+>/g, "").length;
     const readingTime = Math.max(1, Math.round(wordCount / 250));
 
-    // 排程時間處理
-    const scheduledAt = d.scheduledAt ? new Date(d.scheduledAt) : null;
-    const publishedAt = d.status === "PUBLISHED" ? new Date() : undefined;
+    const publishedAt =
+      d.status === "PUBLISHED"
+        ? new Date()
+        : d.status === "SCHEDULED"
+          ? undefined
+          : undefined;
 
     // Step 6：Business Logic
     const post = await prisma.post.update({
@@ -166,8 +205,12 @@ export async function updatePostAction(
         coverImageHeight: d.coverImageHeight ?? null,
         coverImageBlurHash: cleanBlur,
         contentDoc: contentDocForDb,
-        scheduledAt,
+        scheduledAt: d.status === "SCHEDULED" ? scheduledAt : null,
         publishedAt,
+        isPasswordProtected: d.isPasswordProtected,
+        ...(accessPasswordHash !== undefined
+          ? { accessPasswordHash }
+          : {}),
         faq: cleanFaq,
         faqUpdatedAt: cleanFaq.length > 0 ? new Date() : null,
         readingTime,
@@ -211,8 +254,9 @@ export async function updateSeoAction(
   const meta = await getRequestMeta();
 
   try {
-    const admin = await requireAdmin().catch(() => null);
-    if (!admin) return { success: false, data: null, error: Errors.auth() };
+    const gate = await gateAdminWrite("post");
+    if (!gate.ok) return gate.result;
+    const admin = gate.session;
 
     const parsed = updateSeoSchema.safeParse(input);
     if (!parsed.success) {
@@ -265,8 +309,9 @@ export async function deletePostAction(
   const meta = await getRequestMeta();
 
   try {
-    const admin = await requireAdmin().catch(() => null);
-    if (!admin) return { success: false, data: null, error: Errors.auth() };
+    const gate = await gateAdminWrite("post");
+    if (!gate.ok) return gate.result;
+    const admin = gate.session;
 
     const parsed = z.string().cuid().safeParse(postId);
     if (!parsed.success) {

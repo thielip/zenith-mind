@@ -26,6 +26,8 @@ import PostArticleBody from "@/components/blog/PostArticleBody";
 import TableOfContents  from "@/components/blog/TableOfContents";
 import RecommendedPosts from "@/components/blog/RecommendedPosts";
 import PageViewTracker from "@/components/analytics/PageViewTracker";
+import PostPasswordGate from "@/components/blog/PostPasswordGate";
+import { hasPostAccess } from "@/lib/blog/post-access-cookie";
 
 export const revalidate = 3600;
 
@@ -130,8 +132,11 @@ export default async function BlogPostPage({ params }: Props) {
   }
 
   const title   = isEn ? (post.titleEn   ?? post.title)   : post.title;
-  const content = isEn ? (post.contentEn ?? post.content) : post.content;
-  const safeContent = typeof content === "string" ? content : "";
+  const unlocked =
+    !post.isPasswordProtected || (await hasPostAccess(slug, post.id));
+  const rawContent = isEn ? (post.contentEn ?? post.content) : post.content;
+  const safeContent =
+    unlocked && typeof rawContent === "string" ? rawContent : "";
   const catName = isEn
     ? (post.category?.nameEn ?? post.category?.name)
     : post.category?.name;
@@ -254,14 +259,18 @@ export default async function BlogPostPage({ params }: Props) {
 
         <div className="flex gap-10">
           <div className="min-w-0 flex-1">
-            <PostArticleBody
-              locale={locale}
-              content={safeContent}
-              contentType={post.contentType}
-              contentBlocks={post.contentBlocks}
-            />
+            {!unlocked ? (
+              <PostPasswordGate slug={slug} locale={locale} />
+            ) : (
+              <PostArticleBody
+                locale={locale}
+                content={safeContent}
+                contentType={post.contentType}
+                contentBlocks={post.contentBlocks}
+              />
+            )}
 
-            {faqs.length > 0 && (
+            {unlocked && faqs.length > 0 && (
               <section
                 aria-labelledby="faq-heading"
                 className="mt-14 border-t pt-10"

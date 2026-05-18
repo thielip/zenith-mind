@@ -18,7 +18,11 @@ import {
   isRefreshTokenBlacklisted,
 } from "@/infrastructure/redis/token-blacklist";
 import { randomUUID } from "crypto";
-import { seedBootstrapAdminIfEmpty } from "@/domain/auth/bootstrap";
+import {
+  normalizeLoginEmail,
+  seedBootstrapAdminIfEmpty,
+  seedGuestUserIfMissing,
+} from "@/domain/auth/bootstrap";
 
 export interface TokenPair {
   accessToken:  string;
@@ -37,9 +41,10 @@ export async function loginWithEmail(
   email: string,
   password: string
 ): Promise<LoginResult> {
-  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedEmail = normalizeLoginEmail(email);
 
   await seedBootstrapAdminIfEmpty();
+  await seedGuestUserIfMissing();
 
   const user = await prisma.user.findFirst({
     where: { email: normalizedEmail, deletedAt: null },
@@ -56,11 +61,11 @@ export async function loginWithEmail(
     throw new Error("AUTH_FAILED");
   }
 
-  if (user.totpEnabled && user.totpSecret) {
+  if (user.role !== "GUEST" && user.totpEnabled && user.totpSecret) {
     return { requireTotp: true, tempToken: await signTempToken(user.id) };
   }
 
-  return { requireTotp: false, tokens: await issueTokenPair(user.id, user.email) };
+  return { requireTotp: false, tokens: await issueTokenPair(user.id, user.email, user.role) };
 }
 
 // ── Step 2：TOTP 驗證 → 換發正式 Token ───────────────────
@@ -88,7 +93,7 @@ export async function verifyTotpAndIssue(
     data:  { totpVerifiedAt: new Date() },
   });
 
-  return issueTokenPair(user.id, user.email);
+  return issueTokenPair(user.id, user.email, user.role);
 }
 
 // ── Silent Refresh ────────────────────────────────────────
@@ -108,7 +113,7 @@ export async function refreshTokens(refreshToken: string): Promise<TokenPair> {
 
   // Refresh Token Rotation：舊的進黑名單，換發新的
   await blacklistRefreshToken(payload.tokenId);
-  return issueTokenPair(user.id, user.email);
+  return issueTokenPair(user.id, user.email, user.role);
 }
 
 // ── Logout ────────────────────────────────────────────────
@@ -124,10 +129,14 @@ export async function logout(refreshToken: string): Promise<void> {
 
 // ── 內部工具 ──────────────────────────────────────────────
 
-async function issueTokenPair(userId: string, email: string): Promise<TokenPair> {
+async function issueTokenPair(
+  userId: string,
+  email: string,
+  role: "ADMIN" | "GUEST"
+): Promise<TokenPair> {
   const tokenId = randomUUID();
   const [accessToken, refreshToken] = await Promise.all([
-    signAccessToken({ userId, email, role: "ADMIN" }),
+    signAccessToken({ userId, email, role }),
     signRefreshToken({ userId, tokenId }),
   ]);
   return { accessToken, refreshToken };

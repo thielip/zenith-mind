@@ -12,6 +12,10 @@
     {
       "path": "/api/cron/aggregate-views",
       "schedule": "5 2 * * *"
+    },
+    {
+      "path": "/api/cron/publish-scheduled",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

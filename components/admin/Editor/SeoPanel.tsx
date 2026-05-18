@@ -23,6 +23,7 @@ interface SeoData {
 interface Props {
   postId:     string;
   initialSeo: SeoData | null;
+  readOnly?:  boolean;
 }
 
 const optionalSeoText = (max: number, label: string) =>
@@ -45,7 +46,7 @@ const seoSchema = z.object({
 type FormInput = z.input<typeof seoSchema>;
 type FormValues = z.output<typeof seoSchema>;
 
-export default function SeoPanel({ postId, initialSeo }: Props) {
+export default function SeoPanel({ postId, initialSeo, readOnly = false }: Props) {
   const [saveMsg, setSaveMsg]   = useState("");
   const [isPending, startTransition] = useTransition();
 
@@ -68,6 +69,8 @@ export default function SeoPanel({ postId, initialSeo }: Props) {
       const result = await updateSeoAction({ postId, ...values });
       if (result.success) {
         setSaveMsg("✓ SEO 設定已儲存");
+      } else if (result.error.code === "FORBIDDEN") {
+        setSaveMsg("✗ 參訪帳號僅能檢視，無法修改");
       } else if (result.error.code === "VALIDATION_ERROR") {
         setSaveMsg("✗ 欄位格式錯誤：請檢查字數上限與特殊字元，修正紅字提示後再儲存。");
       } else {
@@ -226,7 +229,7 @@ export default function SeoPanel({ postId, initialSeo }: Props) {
       <div className="flex justify-end">
         <button
           type="submit"
-          disabled={isPending}
+          disabled={isPending || readOnly}
           className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
         >
           {isPending ? "儲存中…" : "儲存 SEO 設定"}

@@ -1,5 +1,7 @@
 /** Supabase PostgREST（fetch only，Edge / Worker 安全） */
 
+import { assertAllowedSupabaseTable } from "@/lib/db/supabase-rest-tables";
+
 export type SupabaseFetchCache =
   /** 公開內容：配合頁面 revalidate=3600，降低重複 egress */
   | { kind: "public"; revalidate?: number; tags?: string[] }
@@ -97,6 +99,7 @@ export async function supabaseRest<T>(
   init?: RequestInit,
   cachePolicy: SupabaseFetchCache = SUPABASE_PUBLIC_CACHE
 ): Promise<T> {
+  assertAllowedSupabaseTable(table);
   const cfg = getSupabaseRestConfig();
   if (!cfg) {
     throw new SupabaseRestError(table, 0, "Supabase REST is not configured");
@@ -154,6 +157,7 @@ export async function supabaseCount(
   params: Record<string, string>,
   cachePolicy: SupabaseFetchCache = SUPABASE_PUBLIC_CACHE
 ): Promise<number> {
+  assertAllowedSupabaseTable(table);
   const cfg = getSupabaseRestConfig();
   if (!cfg) {
     console.error(`[supabase-rest] ${table} count skipped: not configured`);

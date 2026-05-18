@@ -12,10 +12,12 @@ function requiredEnv(name: string) {
   return value;
 }
 
+export type AccessTokenRole = "ADMIN" | "GUEST";
+
 export interface AccessTokenPayload extends JWTPayload {
   userId: string;
   email:  string;
-  role:   "ADMIN";
+  role:   AccessTokenRole;
   tokenType: "access";
 }
 
@@ -53,9 +55,10 @@ export async function verifyAccessToken(token: string): Promise<AccessTokenPaylo
 }
 
 export function isAccessPayload(payload: JWTPayload): payload is AccessTokenPayload {
+  const role = payload["role"];
   return (
     payload["tokenType"] === "access" &&
-    payload["role"] === "ADMIN" &&
+    (role === "ADMIN" || role === "GUEST") &&
     typeof payload["userId"] === "string" &&
     typeof payload["email"] === "string" &&
     !("purpose" in payload)

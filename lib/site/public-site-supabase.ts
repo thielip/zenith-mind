@@ -2,7 +2,11 @@
  * 公開站資料（Cloudflare Worker）：僅 Supabase PostgREST + fetch。
  * 禁止 import @/infrastructure/db/prisma。
  */
-import { supabaseCount, supabaseRest } from "@/lib/db/supabase-rest";
+import {
+  supabaseCount,
+  supabaseRest,
+  supabaseRestWithFallback,
+} from "@/lib/db/supabase-rest";
 import {
   DEFAULT_SITE_SETTINGS,
   mapSiteSettingsRow,
@@ -145,7 +149,7 @@ function mapAdSlot(row: AdSlotRow): AdSlotPublic {
 }
 
 export async function getSiteSettingsViaSupabase(): Promise<SiteSettingsData> {
-  const rows = await supabaseRest<SiteSettingsDbRow[]>(
+  const rows = await supabaseRestWithFallback<SiteSettingsDbRow[]>(
     "site_settings",
     {
       select:
@@ -153,6 +157,7 @@ export async function getSiteSettingsViaSupabase(): Promise<SiteSettingsData> {
       id: "eq.site",
       limit: "1",
     },
+    [],
     undefined,
     { kind: "public", revalidate: 3600, tags: ["site-settings"] }
   );
@@ -219,9 +224,10 @@ export async function getHeroSlidesViaSupabase(
   };
   if (!includeInactive) params.isActive = "eq.true";
 
-  const rows = await supabaseRest<HeroSlideRow[]>(
+  const rows = await supabaseRestWithFallback<HeroSlideRow[]>(
     "hero_slides",
     params,
+    [],
     undefined,
     { kind: "public", revalidate: 3600, tags: ["hero-slides"] }
   );
@@ -241,9 +247,10 @@ export async function getHomeCarouselItemsViaSupabase(
   };
   if (!includeInactive) params.isActive = "eq.true";
 
-  const rows = await supabaseRest<CarouselRow[]>(
+  const rows = await supabaseRestWithFallback<CarouselRow[]>(
     "home_carousel_items",
     params,
+    [],
     undefined,
     { kind: "public", revalidate: 3600, tags: ["home-carousel"] }
   );
@@ -264,10 +271,14 @@ export async function getActiveAdSlotViaSupabase(
   };
 
   for (const loc of [locale, "all"] as const) {
-    const rows = await supabaseRest<AdSlotRow[]>("ad_slots", {
-      ...base,
-      locale: `eq.${loc}`,
-    });
+    const rows = await supabaseRestWithFallback<AdSlotRow[]>(
+      "ad_slots",
+      {
+        ...base,
+        locale: `eq.${loc}`,
+      },
+      []
+    );
     const row = rows[0];
     if (row) return mapAdSlot(row);
   }

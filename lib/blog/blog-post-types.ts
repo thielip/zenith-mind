@@ -40,6 +40,7 @@ export type BlogPostDetail = {
   updatedAt: Date;
   categoryId: string | null;
   readingTime: number;
+  isPasswordProtected: boolean;
   category: {
     id: string;
     name: string;

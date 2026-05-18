@@ -4,8 +4,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { timingSafeEqual } from "crypto";
+import { applyBaselineSecurityHeaders } from "@/lib/middleware/apply-baseline-security-headers";
+import { assertRevalidateTarget } from "@/lib/security/revalidate-target";
 
 export const dynamic = "force-dynamic";
+
+function jsonResponse(
+  body: Record<string, unknown>,
+  status: number
+): NextResponse {
+  const res = NextResponse.json(body, { status });
+  applyBaselineSecurityHeaders(res.headers);
+  return res;
+}
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
@@ -14,12 +25,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const token      = authHeader.replace("Bearer ", "");
 
     if (!token) {
-      return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+      return jsonResponse({ error: "UNAUTHORIZED" }, 401);
     }
 
     const expectedSecret = process.env["REVALIDATE_SECRET"] ?? process.env["WEBHOOK_SECRET"];
     if (!expectedSecret) {
-      return NextResponse.json({ error: "REVALIDATE_SECRET_REQUIRED" }, { status: 401 });
+      return jsonResponse({ error: "REVALIDATE_SECRET_REQUIRED" }, 401);
     }
 
     const tokenBuf    = Buffer.from(token);
@@ -30,7 +41,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       timingSafeEqual(tokenBuf, expectedBuf);
 
     if (!isValid) {
-      return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+      return jsonResponse({ error: "UNAUTHORIZED" }, 401);
     }
 
     // ── 解析目標 ────────────────────────────────────────
@@ -48,25 +59,31 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           : [];
 
     if (items.length === 0) {
-      return NextResponse.json({ error: "MISSING_VALUE" }, { status: 400 });
+      return jsonResponse({ error: "MISSING_VALUE" }, 400);
     }
 
+    const revalidated: string[] = [];
     for (const item of items) {
       if (!item.value || typeof item.value !== "string") continue;
-      if (item.type === "tag") {
+      const type = item.type === "tag" ? "tag" : "path";
+      if (!assertRevalidateTarget(type, item.value)) {
+        return jsonResponse({ error: "INVALID_TARGET", target: item.value }, 400);
+      }
+      if (type === "tag") {
         revalidateTag(item.value);
       } else {
         revalidatePath(item.value);
       }
+      revalidated.push(item.value);
     }
 
-    return NextResponse.json({
+    return jsonResponse({
       success: true,
-      revalidated: items.map((i) => i.value),
-    });
+      revalidated,
+    }, 200);
 
   } catch (e: unknown) {
     console.error("[Revalidate] Error:", e);
-    return NextResponse.json({ error: "INTERNAL_ERROR" }, { status: 500 });
+    return jsonResponse({ error: "INTERNAL_ERROR" }, 500);
   }
 }

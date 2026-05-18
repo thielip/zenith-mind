@@ -1,13 +1,13 @@
 "use server";
 
 import { revalidatePath, revalidateTag } from "next/cache";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/infrastructure/db/prisma";
 import { writeAuditLog } from "@/infrastructure/db/adapters/audit.prisma-adapter";
 import { uploadSiteAsset } from "@/infrastructure/storage/supabase-storage";
-import { verifyAccessToken } from "@/lib/auth/jwt";
+import { gateAdminWrite } from "@/lib/auth/resolve-admin-action";
 import { sanitizeText } from "@/lib/sanitize/html";
 import { getHeroSlides, getHomeCarouselItems } from "@/lib/site/hero-carousel-queries";
 import { asHomepageCopy, getSiteSettings } from "@/lib/site/queries";
@@ -245,13 +245,6 @@ const carouselItemSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
-async function requireAdmin() {
-  const jar = await cookies();
-  const token = jar.get("access_token")?.value;
-  if (!token) throw new Error("UNAUTHORIZED");
-  return verifyAccessToken(token);
-}
-
 async function getMeta() {
   const h = await headers();
   return {
@@ -276,8 +269,9 @@ export async function uploadSiteAssetAction(
   const meta = await getMeta();
 
   try {
-    const admin = await requireAdmin().catch(() => null);
-    if (!admin) return { success: false, data: null, error: Errors.auth() };
+    const gate = await gateAdminWrite("site");
+    if (!gate.ok) return gate.result;
+    const admin = gate.session;
 
     const raw = formData.get("file");
     const folder = String(formData.get("folder") ?? "cms");
@@ -382,8 +376,9 @@ export async function updateSiteSettingsAction(
   const meta = await getMeta();
 
   try {
-    const admin = await requireAdmin().catch(() => null);
-    if (!admin) return { success: false, data: null, error: Errors.auth() };
+    const gate = await gateAdminWrite("site");
+    if (!gate.ok) return gate.result;
+    const admin = gate.session;
 
     const inputRecord = input && typeof input === "object" ? (input as Record<string, unknown>) : {};
     const parsed = siteSettingsSchema.safeParse({
@@ -461,8 +456,9 @@ export async function saveHeroSlidesAction(
   const meta = await getMeta();
 
   try {
-    const admin = await requireAdmin().catch(() => null);
-    if (!admin) return { success: false, data: null, error: Errors.auth() };
+    const gate = await gateAdminWrite("site");
+    if (!gate.ok) return gate.result;
+    const admin = gate.session;
 
     const parsedLocale = localeSchema.safeParse(locale);
     if (!parsedLocale.success) {
@@ -544,8 +540,9 @@ export async function saveHomeCarouselItemsAction(
   const meta = await getMeta();
 
   try {
-    const admin = await requireAdmin().catch(() => null);
-    if (!admin) return { success: false, data: null, error: Errors.auth() };
+    const gate = await gateAdminWrite("site");
+    if (!gate.ok) return gate.result;
+    const admin = gate.session;
 
     const parsedLocale = localeSchema.safeParse(locale);
     if (!parsedLocale.success) {

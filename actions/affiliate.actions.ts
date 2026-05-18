@@ -7,7 +7,7 @@ import { z } from "zod";
 import { cookies, headers } from "next/headers";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { prisma } from "@/infrastructure/db/prisma";
-import { verifyAccessToken } from "@/lib/auth/jwt";
+import { gateAdminWrite } from "@/lib/auth/resolve-admin-action";
 import { sanitizeText } from "@/lib/sanitize/html";
 import { writeAuditLog } from "@/infrastructure/db/adapters/audit.prisma-adapter";
 import type { ActionResult } from "@/domain/shared/core.types";
@@ -41,13 +41,6 @@ const updateSchema = z.object({
   isActive:   z.boolean(),
 });
 
-async function requireAdmin() {
-  const jar   = await cookies();
-  const token = jar.get("access_token")?.value;
-  if (!token) throw new Error("UNAUTHORIZED");
-  return verifyAccessToken(token);
-}
-
 async function getMeta() {
   const h = await headers();
   return {
@@ -65,8 +58,9 @@ export async function createAffiliateLinkAction(
   const meta = await getMeta();
 
   try {
-    const admin = await requireAdmin().catch(() => null);
-    if (!admin) return { success: false, data: null, error: Errors.auth() };
+    const gate = await gateAdminWrite("affiliate");
+    if (!gate.ok) return gate.result;
+    const admin = gate.session;
 
     const parsed = createSchema.safeParse(input);
     if (!parsed.success) {
@@ -134,8 +128,9 @@ export async function updateAffiliateLinkAction(
   const meta = await getMeta();
 
   try {
-    const admin = await requireAdmin().catch(() => null);
-    if (!admin) return { success: false, data: null, error: Errors.auth() };
+    const gate = await gateAdminWrite("affiliate");
+    if (!gate.ok) return gate.result;
+    const admin = gate.session;
 
     const parsed = updateSchema.safeParse(input);
     if (!parsed.success) {
@@ -196,8 +191,9 @@ export async function deleteAffiliateLinkAction(
   const meta = await getMeta();
 
   try {
-    const admin = await requireAdmin().catch(() => null);
-    if (!admin) return { success: false, data: null, error: Errors.auth() };
+    const gate = await gateAdminWrite("affiliate");
+    if (!gate.ok) return gate.result;
+    const admin = gate.session;
 
     const parsed = z.string().cuid().safeParse(id);
     if (!parsed.success) {

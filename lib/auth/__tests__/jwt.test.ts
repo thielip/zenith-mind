@@ -5,6 +5,16 @@ jest.mock("@/env", () => ({
 import { signAccessToken, signTempToken, verifyAccessToken, verifyTempToken } from "../jwt";
 
 describe("JWT helpers", () => {
+  it("accepts guest access tokens", async () => {
+    const token = await signAccessToken({
+      userId: "guest-1",
+      email: "guest@getzenithmind.com",
+      role: "GUEST",
+    });
+    const payload = await verifyAccessToken(token);
+    expect(payload.role).toBe("GUEST");
+  });
+
   it("accepts only typed admin access tokens", async () => {
     const token = await signAccessToken({
       userId: "user-1",

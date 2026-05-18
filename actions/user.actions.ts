@@ -1,6 +1,6 @@
 "use server";
 
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { z } from "zod";
 import type { ActionResult } from "@/domain/shared/core.types";
 import { Errors } from "@/domain/shared/core.types";
@@ -10,15 +10,8 @@ import {
   listAdminUsers,
   softDeleteAdminUser,
 } from "@/domain/auth/user.service";
-import { verifyAccessToken } from "@/lib/auth/jwt";
+import { gateAdminRead, gateAdminWrite } from "@/lib/auth/resolve-admin-action";
 import { writeAuditLog } from "@/infrastructure/db/adapters/audit.prisma-adapter";
-
-async function requireAdmin() {
-  const jar = await cookies();
-  const token = jar.get("access_token")?.value;
-  if (!token) throw new Error("AUTH");
-  return verifyAccessToken(token);
-}
 
 async function getRequestMeta() {
   const h = await headers();
@@ -55,7 +48,8 @@ export async function listUsersAction(): Promise<
   >
 > {
   try {
-    await requireAdmin();
+    const gate = await gateAdminRead();
+    if (!gate.ok) return gate.result;
     const users = await listAdminUsers();
     return {
       success: true,
@@ -75,7 +69,8 @@ export async function createUserAction(
 ): Promise<ActionResult<{ email: string }>> {
   const meta = await getRequestMeta();
   try {
-    await requireAdmin();
+    const gate = await gateAdminWrite("user");
+    if (!gate.ok) return gate.result;
     const parsed = createUserSchema.safeParse(input);
     if (!parsed.success) {
       return { success: false, data: null, error: Errors.validation(parsed.error.flatten()) };
@@ -101,18 +96,21 @@ export async function changePasswordAction(
 ): Promise<ActionResult<void>> {
   const meta = await getRequestMeta();
   try {
-    const admin = await requireAdmin();
     const parsed = changePasswordSchema.safeParse(input);
     if (!parsed.success) {
       return { success: false, data: null, error: Errors.validation(parsed.error.flatten()) };
     }
 
-    const targetId = parsed.data.userId ?? admin.userId;
-    const isSelf = targetId === admin.userId;
+    const gate = await gateAdminWrite("user", parsed.data.userId);
+    if (!gate.ok) return gate.result;
+    const admin = gate.session;
+
+    const resolvedTargetId = parsed.data.userId ?? admin.userId;
+    const isSelf = resolvedTargetId === admin.userId;
 
     if (!isSelf && parsed.data.userId) {
       // 管理員重設他人密碼，不需舊密碼
-      await changeUserPassword(targetId, parsed.data.newPassword);
+      await changeUserPassword(resolvedTargetId, parsed.data.newPassword);
     } else {
       if (!parsed.data.currentPassword) {
         return {
@@ -122,7 +120,7 @@ export async function changePasswordAction(
         };
       }
       await changeUserPassword(
-        targetId,
+        resolvedTargetId,
         parsed.data.newPassword,
         parsed.data.currentPassword
       );
@@ -130,7 +128,7 @@ export async function changePasswordAction(
 
     void writeAuditLog({
       action: "UPDATE",
-      metadata: { entity: "user_password", userId: targetId, byAdmin: !isSelf },
+      metadata: { entity: "user_password", userId: resolvedTargetId, byAdmin: !isSelf },
       ...meta,
     });
     return { success: true, data: undefined, error: null };
@@ -150,7 +148,9 @@ export async function deleteUserAction(
 ): Promise<ActionResult<void>> {
   const meta = await getRequestMeta();
   try {
-    const admin = await requireAdmin();
+    const gate = await gateAdminWrite("user");
+    if (!gate.ok) return gate.result;
+    const admin = gate.session;
     const id = z.string().cuid().parse(userId);
     if (id === admin.userId) {
       return { success: false, data: null, error: Errors.forbidden() };

@@ -13,7 +13,8 @@ import type {
 
 const POST_TAGS = ["posts", "blog"] as const;
 
-const POST_DETAIL_SELECT = [
+/** 勿內嵌 post_tags / seo_metadata（單表 403 會讓整筆 posts 查詢失敗） */
+const POST_DETAIL_CORE_SELECT = [
   "id",
   "slug",
   "title",
@@ -34,9 +35,8 @@ const POST_DETAIL_SELECT = [
   "updatedAt",
   "categoryId",
   "readingTime",
+  "isPasswordProtected",
   "categories(id,name,nameEn,slug)",
-  "post_tags(tags(name,slug))",
-  "seo_metadata(metaTitle,metaTitleEn,metaDescription,metaDescriptionEn,ogTitle,ogDescription,ogImage,noIndex,noFollow)",
 ].join(",");
 
 type PostDetailRow = {
@@ -60,24 +60,29 @@ type PostDetailRow = {
   updatedAt: string;
   categoryId: string | null;
   readingTime: number | null;
+  isPasswordProtected: boolean | null;
   categories: {
     id: string;
     name: string;
     nameEn: string | null;
     slug: string;
   } | null;
-  post_tags?: { tags: { name: string; slug: string } | null }[];
-  seo_metadata: {
-    metaTitle: string | null;
-    metaTitleEn: string | null;
-    metaDescription: string | null;
-    metaDescriptionEn: string | null;
-    ogTitle: string | null;
-    ogDescription: string | null;
-    ogImage: string | null;
-    noIndex: boolean | null;
-    noFollow: boolean | null;
-  } | null;
+};
+
+type PostTagJoinRow = {
+  tags: { name: string; slug: string } | null;
+};
+
+type SeoMetadataRow = {
+  metaTitle: string | null;
+  metaTitleEn: string | null;
+  metaDescription: string | null;
+  metaDescriptionEn: string | null;
+  ogTitle: string | null;
+  ogDescription: string | null;
+  ogImage: string | null;
+  noIndex: boolean | null;
+  noFollow: boolean | null;
 };
 
 type RecommendedRow = {
@@ -105,7 +110,7 @@ function mapFaq(raw: unknown): BlogPostFaq[] | null {
   return raw as BlogPostFaq[];
 }
 
-function mapSeo(row: PostDetailRow["seo_metadata"]): BlogPostSeo | null {
+function mapSeo(row: SeoMetadataRow): BlogPostSeo | null {
   if (!row) return null;
   return {
     metaTitle: row.metaTitle,
@@ -120,13 +125,20 @@ function mapSeo(row: PostDetailRow["seo_metadata"]): BlogPostSeo | null {
   };
 }
 
-function mapPostDetailRow(row: PostDetailRow): BlogPostDetail {
+function mapPostTags(rows: PostTagJoinRow[]): { tag: { name: string; slug: string } }[] {
   const tags: { tag: { name: string; slug: string } }[] = [];
-  for (const pt of row.post_tags ?? []) {
+  for (const pt of rows) {
     const t = pt.tags;
     if (t?.slug) tags.push({ tag: { name: t.name, slug: t.slug } });
   }
+  return tags;
+}
 
+function mapPostDetailRow(
+  row: PostDetailRow,
+  tags: { tag: { name: string; slug: string } }[],
+  seoMetadata: BlogPostSeo | null
+): BlogPostDetail {
   const cat = row.categories;
   return {
     id: row.id,
@@ -149,16 +161,49 @@ function mapPostDetailRow(row: PostDetailRow): BlogPostDetail {
     updatedAt: new Date(row.updatedAt),
     categoryId: row.categoryId,
     readingTime: row.readingTime ?? 0,
+    isPasswordProtected: Boolean(row.isPasswordProtected),
     category: cat
       ? { id: cat.id, name: cat.name, nameEn: cat.nameEn, slug: cat.slug }
       : null,
     tags,
-    seoMetadata: mapSeo(row.seo_metadata),
+    seoMetadata,
     _count: { pageViews: 0 },
   };
 }
 
 const postCache = { kind: "public" as const, revalidate: 3600, tags: [...POST_TAGS] };
+
+async function fetchPostTagsForPost(
+  postId: string
+): Promise<{ tag: { name: string; slug: string } }[]> {
+  const rows = await supabaseRestWithFallback<PostTagJoinRow[]>(
+    "post_tags",
+    {
+      select: "tags(name,slug)",
+      postId: `eq.${postId}`,
+    },
+    [],
+    undefined,
+    postCache
+  );
+  return mapPostTags(rows);
+}
+
+async function fetchSeoForPost(postId: string): Promise<BlogPostSeo | null> {
+  const rows = await supabaseRestWithFallback<SeoMetadataRow[]>(
+    "seo_metadata",
+    {
+      select:
+        "metaTitle,metaTitleEn,metaDescription,metaDescriptionEn,ogTitle,ogDescription,ogImage,noIndex,noFollow",
+      postId: `eq.${postId}`,
+      limit: "1",
+    },
+    [],
+    undefined,
+    postCache
+  );
+  return rows[0] ? mapSeo(rows[0]) : null;
+}
 
 export async function fetchBlogPostBySlugViaSupabase(
   slug: string
@@ -166,7 +211,7 @@ export async function fetchBlogPostBySlugViaSupabase(
   const rows = await supabaseRestWithFallback<PostDetailRow[]>(
     "posts",
     {
-      select: POST_DETAIL_SELECT,
+      select: POST_DETAIL_CORE_SELECT,
       slug: `eq.${slug}`,
       status: "eq.PUBLISHED",
       deletedAt: "is.null",
@@ -179,8 +224,18 @@ export async function fetchBlogPostBySlugViaSupabase(
   const row = rows[0];
   if (!row) return null;
 
-  const post = mapPostDetailRow(row);
-  const pageViews = await fetchPostViewTotal(post.id);
+  const [tags, seoMetadata] = await Promise.all([
+    fetchPostTagsForPost(row.id),
+    fetchSeoForPost(row.id),
+  ]);
+
+  const post = mapPostDetailRow(row, tags, seoMetadata);
+  let pageViews = 0;
+  try {
+    pageViews = await fetchPostViewTotal(post.id);
+  } catch (error) {
+    console.error("[blog.post] view total failed", error);
+  }
   return { ...post, _count: { pageViews } };
 }
 

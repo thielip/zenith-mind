@@ -26,9 +26,10 @@ async function verifyJwt(token: string): Promise<boolean> {
     );
     if (!process.env["JWT_ACCESS_SECRET"]) return false;
     const { payload } = await jwtVerify(token, secret, { algorithms: ["HS256"] });
+    const role = payload["role"];
     return (
       payload["tokenType"] === "access" &&
-      payload["role"] === "ADMIN" &&
+      (role === "ADMIN" || role === "GUEST") &&
       typeof payload["userId"] === "string" &&
       typeof payload["email"] === "string" &&
       !("purpose" in payload)

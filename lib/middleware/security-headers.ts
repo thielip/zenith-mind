@@ -1,6 +1,8 @@
 // lib/middleware/security-headers.ts — Edge Runtime
 // CSP nonce 產生 + 完整安全標頭注入
 
+import { applyBaselineSecurityHeaders } from "@/lib/middleware/apply-baseline-security-headers";
+
 /** 使用 Edge Web Crypto API 產生 nonce（非 Node.js crypto 模組）*/
 export function generateNonce(): string {
   const array = new Uint8Array(16);
@@ -80,14 +82,7 @@ export function injectSecurityHeaders(
   } else {
     headers.delete("Content-Security-Policy");
   }
-  headers.set(
-    "Strict-Transport-Security",
-    "max-age=31536000; includeSubDomains; preload"
-  );
-  headers.set("X-Frame-Options", "DENY");
-  headers.set("X-Content-Type-Options", "nosniff");
-  headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  applyBaselineSecurityHeaders(headers);
 
   // nonce 傳遞給 Server Component（讀取 headers()）
   headers.set("x-nonce", nonce);

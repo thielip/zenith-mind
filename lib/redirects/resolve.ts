@@ -1,5 +1,7 @@
 import { permanentRedirect } from "next/navigation";
+import { isCfPublicRuntime } from "@/lib/db/cf-public-runtime";
 import { postArticlePath, type PublicLocale } from "@/lib/redirects/paths";
+import { findActiveRedirectViaSupabase } from "@/lib/redirects/edge-lookup";
 import { findActiveRedirect } from "@/lib/redirects/queries";
 
 function toPublicLocale(locale: string): PublicLocale {
@@ -11,9 +13,15 @@ export async function redirectArchivedPostIfNeeded(
   locale: string,
   slug: string
 ): Promise<void> {
-  const from = postArticlePath(toPublicLocale(locale), slug);
-  const hit = await findActiveRedirect(from);
-  if (!hit) return;
+  try {
+    const from = postArticlePath(toPublicLocale(locale), slug);
+    const hit = isCfPublicRuntime()
+      ? await findActiveRedirectViaSupabase(from)
+      : await findActiveRedirect(from);
+    if (!hit) return;
 
-  permanentRedirect(hit.newPath);
+    permanentRedirect(hit.newPath);
+  } catch (error) {
+    console.error("[redirect] redirectArchivedPostIfNeeded failed", error);
+  }
 }

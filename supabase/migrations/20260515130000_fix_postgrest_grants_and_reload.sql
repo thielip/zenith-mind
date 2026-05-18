@@ -12,8 +12,13 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon, authenticated;
 -- 2) 新物件明確授權（避免 ALL TABLES 在建立前已執行過）
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.posts TO service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.post_tags TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.seo_metadata TO service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.tags TO service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.site_settings TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.hero_slides TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.home_carousel_items TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.ad_slots TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.affiliate_links TO service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.categories TO service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.page_views TO service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.daily_aggregates TO service_role;

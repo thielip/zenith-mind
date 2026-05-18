@@ -4,10 +4,10 @@
 "use server";
 
 import { z } from "zod";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { prisma } from "@/infrastructure/db/prisma";
 import { verifyTotpToken } from "@/lib/auth/totp";
-import { verifyAccessToken } from "@/lib/auth/jwt";
+import { gateAdminWrite } from "@/lib/auth/resolve-admin-action";
 import { writeAuditLog } from "@/infrastructure/db/adapters/audit.prisma-adapter";
 import type { ActionResult } from "@/domain/shared/core.types";
 import { Errors } from "@/domain/shared/core.types";
@@ -35,17 +35,15 @@ export async function activateTotpAction(
     }
 
     const { userId, encryptedSecret, code } = parsed.data;
-    const jar = await cookies();
-    const token = jar.get("access_token")?.value ?? "";
-    const payload = token ? await verifyAccessToken(token).catch(() => null) : null;
-    if (!payload || payload.userId !== userId) {
+    const gate = await gateAdminWrite("settings", userId);
+    if (!gate.ok) {
       void writeAuditLog({
         action: "TOTP_SETUP",
         userId,
         metadata: { step: "failed", reason: "unauthorized_user" },
         ...meta,
       });
-      return { success: false, data: null, error: Errors.auth() };
+      return gate.result;
     }
 
     const user = await prisma.user.findUnique({

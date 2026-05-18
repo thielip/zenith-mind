@@ -4,9 +4,9 @@
 "use server";
 
 import { z } from "zod";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { prisma } from "@/infrastructure/db/prisma";
-import { verifyAccessToken } from "@/lib/auth/jwt";
+import { gateAdminWrite } from "@/lib/auth/resolve-admin-action";
 import { sanitizeText } from "@/lib/sanitize/html";
 import { writeAuditLog } from "@/infrastructure/db/adapters/audit.prisma-adapter";
 import { revalidateTag } from "next/cache";
@@ -43,12 +43,9 @@ export async function createPostAction(
   };
 
   try {
-    // Auth
-    const jar   = await cookies();
-    const token = jar.get("access_token")?.value;
-    if (!token) return { success: false, data: null, error: Errors.auth() };
-    const admin = await verifyAccessToken(token).catch(() => null);
-    if (!admin)  return { success: false, data: null, error: Errors.auth() };
+    const gate = await gateAdminWrite("post");
+    if (!gate.ok) return gate.result;
+    const admin = gate.session;
 
     // Zod
     const parsed = createSchema.safeParse(input);

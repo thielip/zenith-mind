@@ -34,8 +34,18 @@ const COOKIE_BASE = {
 // ── Zod Schema ────────────────────────────────────────────
 
 const loginSchema = z.object({
-  email:    z.string().email(),
-  password: z.string().min(8).max(128),
+  email: z
+    .string()
+    .min(1)
+    .max(200)
+    .refine(
+      (v) => {
+        const e = v.trim().toLowerCase();
+        return e === "guest" || z.string().email().safeParse(e).success;
+      },
+      { message: "請輸入有效 Email，或參訪帳號 guest" }
+    ),
+  password: z.string().min(4).max(128),
 });
 
 const totpSchema = z.object({
