@@ -332,34 +332,48 @@ function asSocialLinks(value: unknown): SocialLinks {
   };
 }
 
+export type SiteSettingsDbRow = {
+  logoUrl: string | null;
+  logoAlt: string | null;
+  quickLinks: unknown;
+  socialLinks: unknown;
+  homepageCopy: unknown;
+  aboutSections: unknown;
+  instagramEmbedUrl: string | null;
+  socialSidebarActive: boolean;
+  heroAutoplaySeconds?: number | null;
+  carouselAutoplaySeconds?: number | null;
+};
+
+/** 供 Prisma / Supabase REST 共用（公開站 Edge 映射） */
+export function mapSiteSettingsRow(row: SiteSettingsDbRow): SiteSettingsData {
+  return {
+    logoUrl: row.logoUrl ?? "",
+    logoAlt: row.logoAlt ?? DEFAULT_SITE_SETTINGS.logoAlt,
+    quickLinks: asQuickLinks(row.quickLinks),
+    socialLinks: asSocialLinks(row.socialLinks),
+    homepageCopy: asHomepageCopy(row.homepageCopy),
+    aboutSections: asAboutSections(row.aboutSections),
+    instagramEmbedUrl: row.instagramEmbedUrl ?? "",
+    socialSidebarActive: row.socialSidebarActive,
+    heroAutoplaySeconds:
+      typeof row.heroAutoplaySeconds === "number" && row.heroAutoplaySeconds >= 0
+        ? Math.min(120, Math.floor(row.heroAutoplaySeconds))
+        : DEFAULT_SITE_SETTINGS.heroAutoplaySeconds,
+    carouselAutoplaySeconds:
+      typeof row.carouselAutoplaySeconds === "number" &&
+      row.carouselAutoplaySeconds >= 0
+        ? Math.min(120, Math.floor(row.carouselAutoplaySeconds))
+        : DEFAULT_SITE_SETTINGS.carouselAutoplaySeconds,
+  };
+}
+
 export async function getSiteSettings(): Promise<SiteSettingsData> {
   try {
     const settings = await prisma.siteSettings.findUnique({ where: { id: "site" } });
     if (!settings) return DEFAULT_SITE_SETTINGS;
 
-    const st = settings as typeof settings & {
-      heroAutoplaySeconds?: number | null;
-      carouselAutoplaySeconds?: number | null;
-    };
-
-    return {
-      logoUrl: settings.logoUrl ?? "",
-      logoAlt: settings.logoAlt ?? DEFAULT_SITE_SETTINGS.logoAlt,
-      quickLinks: asQuickLinks(settings.quickLinks),
-      socialLinks: asSocialLinks(settings.socialLinks),
-      homepageCopy: asHomepageCopy(settings.homepageCopy),
-      aboutSections: asAboutSections(settings.aboutSections),
-      instagramEmbedUrl: settings.instagramEmbedUrl ?? "",
-      socialSidebarActive: settings.socialSidebarActive,
-      heroAutoplaySeconds:
-        typeof st.heroAutoplaySeconds === "number" && st.heroAutoplaySeconds >= 0
-          ? Math.min(120, Math.floor(st.heroAutoplaySeconds))
-          : DEFAULT_SITE_SETTINGS.heroAutoplaySeconds,
-      carouselAutoplaySeconds:
-        typeof st.carouselAutoplaySeconds === "number" && st.carouselAutoplaySeconds >= 0
-          ? Math.min(120, Math.floor(st.carouselAutoplaySeconds))
-          : DEFAULT_SITE_SETTINGS.carouselAutoplaySeconds,
-    };
+    return mapSiteSettingsRow(settings as SiteSettingsDbRow);
   } catch (e) {
     if (!isPrismaMissingColumnError(e)) {
       if (process.env.NODE_ENV === "development") {
@@ -390,18 +404,7 @@ export async function getSiteSettings(): Promise<SiteSettingsData> {
     const row = rows[0];
     if (!row) return DEFAULT_SITE_SETTINGS;
 
-    return {
-      logoUrl: row.logoUrl ?? "",
-      logoAlt: row.logoAlt ?? DEFAULT_SITE_SETTINGS.logoAlt,
-      quickLinks: asQuickLinks(row.quickLinks),
-      socialLinks: asSocialLinks(row.socialLinks),
-      homepageCopy: asHomepageCopy(row.homepageCopy),
-      aboutSections: asAboutSections(row.aboutSections),
-      instagramEmbedUrl: row.instagramEmbedUrl ?? "",
-      socialSidebarActive: row.socialSidebarActive,
-      heroAutoplaySeconds: DEFAULT_SITE_SETTINGS.heroAutoplaySeconds,
-      carouselAutoplaySeconds: DEFAULT_SITE_SETTINGS.carouselAutoplaySeconds,
-    };
+    return mapSiteSettingsRow(row);
   }
 }
 

@@ -1,8 +1,8 @@
-import type { ActiveRedirect } from "@/lib/redirects/queries";
+import type { ActiveRedirect } from "@/lib/redirects/shared";
 import {
   normalizeStoredNewPath,
   normalizeStoredOldPath,
-} from "@/lib/redirects/queries";
+} from "@/lib/redirects/shared";
 import { isSelfRedirect } from "@/lib/redirects/normalize";
 import { logRedirectWarn } from "@/lib/redirects/log";
 

@@ -7,7 +7,7 @@ import {
   buildAdminExternalUrl,
   shouldProxyAdminToExternal,
 } from "@/lib/deploy/admin-origin";
-import { isCloudflareIP } from "@/lib/middleware/ip-guard";
+import { isCloudflareProxiedRequest } from "@/lib/middleware/ip-guard";
 import { adminAuthGuard } from "@/lib/middleware/auth-guard";
 import { redirectGuard } from "@/lib/middleware/redirect-guard";
 import { routing } from "@/lib/i18n/routing";
@@ -41,12 +41,9 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
   // ── Step 2：Cloudflare 源站 IP 保護（僅 CF Worker；Vercel 直連不檢查）──
   const onVercel = Boolean(process.env["VERCEL"]);
-  if (isProd && !onVercel) {
-    const cfIp = request.headers.get("CF-Connecting-IP") ?? "";
-    if (!isCloudflareIP(cfIp)) {
-      // 403，不暴露原因
-      return new NextResponse(null, { status: 403 });
-    }
+  if (isProd && !onVercel && !isCloudflareProxiedRequest(request.headers)) {
+    // 阻擋 workers.dev 直連等繞過 CF 代理的請求
+    return new NextResponse(null, { status: 403 });
   }
 
   // ── Step 3：Admin JWT 路由守衛（拆分部署時由 Vercel 處理）──

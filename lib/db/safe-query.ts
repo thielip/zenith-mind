@@ -9,6 +9,8 @@ export async function safeQuery<T>(
   } catch (error) {
     if (process.env.NODE_ENV === "development") {
       console.warn(`[safeQuery] ${label} failed`, error);
+    } else {
+      console.error(`[safeQuery] ${label} failed`, error);
     }
     return fallback;
   }

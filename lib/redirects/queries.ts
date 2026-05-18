@@ -6,28 +6,17 @@ import {
 } from "@/lib/redirects/paths";
 import { resolveSafeFirstRedirectHop } from "@/lib/redirects/cycle";
 import { logRedirectWarn } from "@/lib/redirects/log";
-import {
-  isSelfRedirect,
-  parseRedirectPath,
-} from "@/lib/redirects/normalize";
+import { isSelfRedirect } from "@/lib/redirects/normalize";
 import { assertRedirectSafeToWrite } from "@/lib/redirects/redirect-write-guard";
 import { setRedirectCache } from "@/lib/redirects/redis-cache";
+import type { ActiveRedirect } from "@/lib/redirects/shared";
+import {
+  normalizeStoredNewPath,
+  normalizeStoredOldPath,
+} from "@/lib/redirects/shared";
 
-export type ActiveRedirect = {
-  newPath: string;
-  statusCode: number;
-};
-
-/** 寫入 DB 前正規化 oldPath（無 query、無尾斜線） */
-export function normalizeStoredOldPath(path: string): string {
-  return parseRedirectPath(path).pathname;
-}
-
-/** 保留 newPath 的 query，僅正規化 pathname 部分 */
-export function normalizeStoredNewPath(path: string): string {
-  const { pathname, search } = parseRedirectPath(path);
-  return `${pathname}${search}`;
-}
+export type { ActiveRedirect } from "@/lib/redirects/shared";
+export { normalizeStoredNewPath, normalizeStoredOldPath } from "@/lib/redirects/shared";
 
 export async function findActiveRedirect(
   rawPath: string

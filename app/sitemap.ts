@@ -1,11 +1,9 @@
 // app/sitemap.ts — 動態 sitemap
 import type { MetadataRoute } from "next";
-import { isDatabaseAvailable } from "@/lib/build/runtime-env";
 import { getPublicSiteUrl } from "@/lib/site/url";
-import { prisma } from "@/infrastructure/db/prisma";
+import { loadSitemapPosts } from "@/lib/sitemap/load-sitemap-posts";
 
 export const revalidate = 3600;
-const SITEMAP_POST_LIMIT = 5000;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = getPublicSiteUrl();
@@ -19,20 +17,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/en/about`,   lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
   ];
 
-  if (!isDatabaseAvailable()) {
-    return staticRoutes;
-  }
-
-  const posts = await prisma.post.findMany({
-    where:   { status: "PUBLISHED", deletedAt: null },
-    select:  { slug: true, updatedAt: true },
-    orderBy: { updatedAt: "desc" },
-    take: SITEMAP_POST_LIMIT,
-  });
+  const posts = await loadSitemapPosts();
 
   const postRoutes: MetadataRoute.Sitemap = posts.flatMap((p) => [
-    { url: `${base}/zh-TW/blog/${p.slug}`, lastModified: p.updatedAt, changeFrequency: "weekly" as const, priority: 0.8 },
-    { url: `${base}/en/blog/${p.slug}`,    lastModified: p.updatedAt, changeFrequency: "weekly" as const, priority: 0.7 },
+    {
+      url: `${base}/zh-TW/blog/${p.slug}`,
+      lastModified: p.updatedAt,
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    },
+    {
+      url: `${base}/en/blog/${p.slug}`,
+      lastModified: p.updatedAt,
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    },
   ]);
 
   return [...staticRoutes, ...postRoutes];

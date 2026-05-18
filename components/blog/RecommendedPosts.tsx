@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { prisma } from "@/infrastructure/db/prisma";
+import { loadRecommendedPosts } from "@/lib/blog/load-blog-post-data";
 
 interface Props {
   currentPostId: string;
@@ -19,20 +19,7 @@ export default async function RecommendedPosts({
   const isEn = locale === "en";
   const basePath = `/${isEn ? "en" : "zh-TW"}/blog`;
 
-  const posts = await prisma.post.findMany({
-    where: {
-      status:    "PUBLISHED",
-      deletedAt: null,
-      id:        { not: currentPostId },
-      ...(categoryId ? { categoryId } : {}),
-    },
-    select: {
-      slug: true, title: true, titleEn: true,
-      coverImage: true, coverImageAlt: true, publishedAt: true,
-    },
-    orderBy: { publishedAt: "desc" },
-    take:    3,
-  });
+  const posts = await loadRecommendedPosts(currentPostId, categoryId, locale);
 
   if (posts.length === 0) return null;
 

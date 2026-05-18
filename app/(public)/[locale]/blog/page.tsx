@@ -1,14 +1,14 @@
 // app/(public)/[locale]/blog/page.tsx — 文章列表
 // Cache 模式 A：revalidate=3600
+// CF Worker：Supabase REST（見 lib/blog/load-blog-list-data.ts）
 
 import type { Metadata } from "next";
-import type { Prisma } from "@prisma/client";
 import { getTranslations } from "next-intl/server";
 import Image from "next/image";
 import Link from "next/link";
 import { Clock } from "lucide-react";
-import { prisma } from "@/infrastructure/db/prisma";
 import { env } from "@/env";
+import { loadBlogListData } from "@/lib/blog/load-blog-list-data";
 import BlogSearchFilters from "@/components/blog/BlogSearchFilters";
 import { sortDefaultCategories } from "@/lib/categories/defaults";
 
@@ -51,55 +51,15 @@ export default async function BlogListPage({ params, searchParams }: Props) {
   const query = (sp.q ?? "").trim();
   const basePath   = `/${isEn ? "en" : "zh-TW"}/blog`;
 
-  // 分類篩選
-  const where: Prisma.PostWhereInput = {
-    status:    "PUBLISHED" as const,
-    deletedAt: null,
-    ...(sp.category ? { category: { slug: sp.category } } : {}),
-    ...(sp.tag      ? { tags: { some: { tag: { slug: sp.tag } } } } : {}),
-    ...(query
-      ? {
-          OR: [
-            { title: { contains: query, mode: "insensitive" } },
-            { titleEn: { contains: query, mode: "insensitive" } },
-            { excerpt: { contains: query, mode: "insensitive" } },
-            { excerptEn: { contains: query, mode: "insensitive" } },
-          ],
-        }
-      : {}),
-  };
-
-  const [posts, total, categories, tags] = await Promise.all([
-    prisma.post.findMany({
-      where,
-      select: {
-        id: true, slug: true, title: true, titleEn: true,
-        excerpt: true, excerptEn: true, coverImage: true,
-        coverImageAlt: true, publishedAt: true, readingTime: true,
-        _count: { select: { pageViews: true } },
-        category: { select: { name: true, nameEn: true, slug: true } },
-        tags: {
-          take: 3,
-          include: { tag: { select: { name: true, nameEn: true, slug: true } } },
-        },
-      },
-      orderBy: { publishedAt: "desc" },
-      skip,
-      take:    PER_PAGE,
-    }),
-    prisma.post.count({ where }),
-    prisma.category.findMany({
-      where:   { deletedAt: null },
-      select:  { slug: true, name: true, nameEn: true },
-      orderBy: { name: "asc" },
-    }),
-    prisma.tag.findMany({
-      where: { deletedAt: null },
-      select: { slug: true, name: true, nameEn: true },
-      orderBy: { posts: { _count: "desc" } },
-      take: 18,
-    }),
-  ]);
+  const { posts, total, categories, tags } = await loadBlogListData(
+    {
+      category: sp.category,
+      tag: sp.tag,
+      query: query || undefined,
+    },
+    skip,
+    PER_PAGE
+  );
 
   const sortedCategories = sortDefaultCategories(categories);
 
@@ -129,7 +89,6 @@ export default async function BlogListPage({ params, searchParams }: Props) {
       />
 
       <div className="flex flex-col gap-8 lg:flex-row">
-        {/* 主內容 */}
         <main className="min-w-0 flex-1" id="post-list">
           {posts.length === 0 ? (
             <p className="text-gray-500">
@@ -159,6 +118,7 @@ export default async function BlogListPage({ params, searchParams }: Props) {
                             alt={post.coverImageAlt ?? title}
                             width={200}
                             height={130}
+                            loading="lazy"
                             className="h-32 w-48 rounded-lg object-cover"
                           />
                         </Link>
@@ -184,10 +144,20 @@ export default async function BlogListPage({ params, searchParams }: Props) {
                           {excerpt?.trim() ? excerpt : "\u00a0"}
                         </p>
                         <div className="mt-auto flex flex-wrap items-center gap-3 pt-3 text-xs text-gray-600">
-                          <time dateTime={post.publishedAt?.toISOString()}>
-                            {post.publishedAt?.toLocaleDateString(
-                              isEn ? "en-US" : "zh-TW"
-                            )}
+                          <time
+                            dateTime={
+                              post.publishedAt &&
+                              !Number.isNaN(post.publishedAt.getTime())
+                                ? post.publishedAt.toISOString()
+                                : undefined
+                            }
+                          >
+                            {post.publishedAt &&
+                            !Number.isNaN(post.publishedAt.getTime())
+                              ? post.publishedAt.toLocaleDateString(
+                                  isEn ? "en-US" : "zh-TW"
+                                )
+                              : null}
                           </time>
                           <span aria-hidden="true">·</span>
                           <span className="inline-flex items-center gap-1.5">
@@ -222,7 +192,6 @@ export default async function BlogListPage({ params, searchParams }: Props) {
             </ol>
           )}
 
-          {/* 分頁 */}
           {totalPages > 1 && (
             <nav
               aria-label={isEn ? "Pagination" : "分頁導覽"}
@@ -248,7 +217,6 @@ export default async function BlogListPage({ params, searchParams }: Props) {
           )}
         </main>
 
-        {/* 側邊欄：分類篩選 */}
         <aside
           className="w-full shrink-0 lg:w-56"
           aria-label={isEn ? "Filter by category" : "依分類篩選"}

@@ -82,6 +82,10 @@ const nextConfig: NextConfig = {
       tls: false,
       crypto: false,
     };
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "pg-native": false,
+    };
     return config;
   },
 };

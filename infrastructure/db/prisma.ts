@@ -1,10 +1,7 @@
 // infrastructure/db/prisma.ts
 // Prisma Client 單例（防止開發環境熱重載產生多個實例）
 // ⚠ Node Runtime Only — 禁止在 Edge Middleware 引入
-//
-// 開發時若在「已建立 singleton 之後」才執行 prisma generate（新增 model），
-// global 上會殘留沒有 adSlot 等 delegate 的舊 client，導致 prisma.adSlot 為 undefined。
-// 此處在 dev 偵測到即捨棄舊實例並重建。
+// ⚠ Cloudflare 公開站請用 lib/site/public-site-supabase.ts，勿靜態 import 本檔
 
 import { PrismaClient } from "@prisma/client";
 

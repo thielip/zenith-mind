@@ -1,8 +1,6 @@
 // app/(public)/[locale]/blog/[slug]/page.tsx — 文章詳頁
 // Cache 模式 A：revalidate=3600
-// ✓ generateMetadata（含 OGP、Twitter Card、canonical）
-// ✓ JSON-LD：Article + FAQPage + BreadcrumbList
-// ✓ WCAG：語意 HTML、heading 層級、aria-*
+// CF Worker：Supabase REST（見 lib/blog/load-blog-post-data.ts）
 
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -12,9 +10,11 @@ import { headers } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
 import { Clock } from "lucide-react";
-import { cache } from "react";
-import { prisma } from "@/infrastructure/db/prisma";
 import { env } from "@/env";
+import {
+  loadBlogPostBySlug,
+  loadPublishedPostSlugsForStaticParams,
+} from "@/lib/blog/load-blog-post-data";
 import {
   buildArticleSchema,
   buildFaqSchema,
@@ -26,7 +26,6 @@ import PostArticleBody from "@/components/blog/PostArticleBody";
 import TableOfContents  from "@/components/blog/TableOfContents";
 import RecommendedPosts from "@/components/blog/RecommendedPosts";
 import PageViewTracker from "@/components/analytics/PageViewTracker";
-import { isDatabaseAvailable } from "@/lib/build/runtime-env";
 
 export const revalidate = 3600;
 
@@ -34,35 +33,14 @@ interface Props {
   params: Promise<{ locale: string; slug: string }>;
 }
 
-const getPublishedPostBySlug = cache((slug: string) =>
-  prisma.post.findFirst({
-    where: { slug, status: "PUBLISHED", deletedAt: null },
-    include: {
-      author:   { select: { email: true } },
-      category: { select: { id: true, name: true, nameEn: true, slug: true } },
-      tags:     { include: { tag: { select: { name: true, slug: true } } } },
-      seoMetadata: true,
-      _count: { select: { pageViews: true } },
-    },
-  })
-);
-
 // ── ISR 預生成：最近 100 篇文章 ─────────────────────────
 
 export async function generateStaticParams(): Promise<
   Array<{ locale: string; slug: string }>
 > {
-  // Cloudflare 建置若未注入 DATABASE_URL，略過預生成（首訪時 ISR 再產生）
-  if (!isDatabaseAvailable()) return [];
-
-  const posts = await prisma.post.findMany({
-    where:   { status: "PUBLISHED", deletedAt: null },
-    select:  { slug: true },
-    orderBy: { publishedAt: "desc" },
-    take:    100,
-  });
+  const slugs = await loadPublishedPostSlugsForStaticParams(100);
   return ["zh-TW", "en"].flatMap((locale) =>
-    posts.map((p) => ({ locale, slug: p.slug }))
+    slugs.map((slug) => ({ locale, slug }))
   );
 }
 
@@ -73,7 +51,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const isEn = locale === "en";
   const siteUrl = env.NEXT_PUBLIC_SITE_URL;
 
-  const post = await getPublishedPostBySlug(slug);
+  const post = await loadBlogPostBySlug(slug);
   if (!post) return {};
 
   const title       = isEn ? (post.titleEn ?? post.title) : post.title;
@@ -145,7 +123,7 @@ export default async function BlogPostPage({ params }: Props) {
   const nonce  = h.get("x-nonce") ?? "";
   const siteUrl = env.NEXT_PUBLIC_SITE_URL;
 
-  const post = await getPublishedPostBySlug(slug);
+  const post = await loadBlogPostBySlug(slug);
   if (!post) {
     await redirectArchivedPostIfNeeded(locale, slug);
     notFound();
@@ -161,10 +139,8 @@ export default async function BlogPostPage({ params }: Props) {
   const canonical = `${siteUrl}/${isEn ? "en" : "zh-TW"}/blog/${slug}`;
   const blogBasePath = `/${isEn ? "en" : "zh-TW"}/blog`;
 
-  // ── FAQ（從 Post.faq JSON 欄位讀取）─────────────────────
-  const faqs = (post.faq as Array<{ question: string; questionEn?: string; answer: string; answerEn?: string }> | null) ?? [];
+  const faqs = post.faq ?? [];
 
-  // ── JSON-LD ───────────────────────────────────────────────
   const articleSchema = buildArticleSchema({
     title,
     description: (isEn ? post.excerptEn : post.excerpt) ?? "",
@@ -193,6 +169,11 @@ export default async function BlogPostPage({ params }: Props) {
     { name: title, url: canonical },
   ];
 
+  const publishedIso =
+    post.publishedAt && !Number.isNaN(post.publishedAt.getTime())
+      ? post.publishedAt.toISOString()
+      : undefined;
+
   return (
     <>
       <JsonLd data={articleSchema} nonce={nonce} />
@@ -208,7 +189,6 @@ export default async function BlogPostPage({ params }: Props) {
           <Breadcrumb items={breadcrumbItems} />
         </div>
 
-        {/* 文章標頭 */}
         <header className="mb-8">
           {catName && (
             <Link
@@ -225,8 +205,10 @@ export default async function BlogPostPage({ params }: Props) {
             {title}
           </h1>
           <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600">
-            <time dateTime={post.publishedAt?.toISOString()}>
-              {post.publishedAt?.toLocaleDateString(isEn ? "en-US" : "zh-TW")}
+            <time dateTime={publishedIso}>
+              {publishedIso
+                ? post.publishedAt?.toLocaleDateString(isEn ? "en-US" : "zh-TW")
+                : null}
             </time>
             <span className="hidden sm:inline" aria-hidden="true">
               ·
@@ -259,7 +241,6 @@ export default async function BlogPostPage({ params }: Props) {
           )}
         </header>
 
-        {/* 封面圖（LCP 關鍵路徑，不 lazy load）*/}
         {post.coverImage && (
           <Image
             src={post.coverImage}
@@ -272,7 +253,6 @@ export default async function BlogPostPage({ params }: Props) {
         )}
 
         <div className="flex gap-10">
-          {/* 文章主體 */}
           <div className="min-w-0 flex-1">
             <PostArticleBody
               locale={locale}
@@ -281,7 +261,6 @@ export default async function BlogPostPage({ params }: Props) {
               contentBlocks={post.contentBlocks}
             />
 
-            {/* FAQ 區塊 */}
             {faqs.length > 0 && (
               <section
                 aria-labelledby="faq-heading"
@@ -312,7 +291,6 @@ export default async function BlogPostPage({ params }: Props) {
             )}
           </div>
 
-          {/* 目錄（桌面端側欄）*/}
           <aside
             className="hidden w-60 shrink-0 xl:block"
             aria-label={isEn ? "Table of Contents" : "文章目錄"}
@@ -323,7 +301,6 @@ export default async function BlogPostPage({ params }: Props) {
           </aside>
         </div>
 
-        {/* 相關文章 */}
         <RecommendedPosts
           currentPostId={post.id}
           categoryId={post.categoryId ?? undefined}

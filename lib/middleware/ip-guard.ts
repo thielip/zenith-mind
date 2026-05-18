@@ -28,3 +28,11 @@ export function isCloudflareIP(ip: string): boolean {
   if (!ip) return false;
   return CF_CIDRS.some((cidr) => ipInCidr(ip, cidr));
 }
+
+/**
+ * 請求是否經 Cloudflare 代理（Orange Cloud / Workers 自訂網域）。
+ * CF-Connecting-IP 是訪客真實 IP，不可用 CIDR 判斷；經代理時必有 CF-Ray。
+ */
+export function isCloudflareProxiedRequest(headers: Headers): boolean {
+  return Boolean(headers.get("CF-Ray") ?? headers.get("cf-ray"));
+}

@@ -3,6 +3,7 @@
 .env*.local
 .dev.vars
 .env.import.tmp
+.env.vercel-import
 
 # Next.js
 .next/
@@ -16,6 +17,7 @@ node_modules/
 # misc
 .DS_Store
 *.log
+lighthouse*.json
 coverage/
 test-results/
 tsconfig.tsbuildinfo

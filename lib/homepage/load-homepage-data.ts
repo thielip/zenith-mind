@@ -1,15 +1,34 @@
-import { prisma } from "@/infrastructure/db/prisma";
+import { isCfPublicRuntime } from "@/lib/db/cf-public-runtime";
 import { safeQuery } from "@/lib/db/safe-query";
 import {
   getHeroSlidesForHomepage,
   getHomeCarouselForHomepage,
 } from "@/lib/site/homepage-data-cache";
 import { getSafeSiteSettings } from "@/lib/site/safe-site-settings";
+import {
+  countCategoriesViaSupabase,
+  countHomePageViewsViaSupabase,
+  countPublishedPostsViaSupabase,
+  fetchAffiliateLinksViaSupabase,
+  fetchFeaturedPostsViaSupabase,
+} from "@/lib/site/public-site-supabase";
+import type { HomePostCard } from "@/components/home/FeaturedPostsSection";
 import type { SiteLocale, SiteSettingsData } from "@/lib/site/types";
 
-const EMPTY_POSTS: Awaited<ReturnType<typeof loadFeaturedPosts>> = [];
+export type FeaturedPostItem = HomePostCard;
 
-async function loadFeaturedPosts() {
+export type AffiliateLinkItem = {
+  name: string;
+  slug: string;
+  platform: string | null;
+  commission: string | null;
+};
+
+const EMPTY_POSTS: FeaturedPostItem[] = [];
+const EMPTY_AFFILIATES: AffiliateLinkItem[] = [];
+
+async function loadFeaturedPostsPrisma(): Promise<FeaturedPostItem[]> {
+  const { prisma } = await import("@/infrastructure/db/prisma");
   return prisma.post.findMany({
     where: { status: "PUBLISHED", deletedAt: null },
     select: {
@@ -28,18 +47,8 @@ async function loadFeaturedPosts() {
   });
 }
 
-export type HomepageData = {
-  featuredPosts: Awaited<ReturnType<typeof loadFeaturedPosts>>;
-  heroSlides: Awaited<ReturnType<typeof getHeroSlidesForHomepage>>;
-  carouselItems: Awaited<ReturnType<typeof getHomeCarouselForHomepage>>;
-  publishedPostCount: number;
-  categoryCount: number;
-  affiliateLinks: Awaited<ReturnType<typeof loadAffiliateLinks>>;
-  siteSettings: SiteSettingsData;
-  homePageViews: number;
-};
-
-async function loadAffiliateLinks() {
+async function loadAffiliateLinksPrisma(): Promise<AffiliateLinkItem[]> {
+  const { prisma } = await import("@/infrastructure/db/prisma");
   return prisma.affiliateLink.findMany({
     where: { isActive: true },
     select: { name: true, slug: true, platform: true, commission: true },
@@ -48,10 +57,53 @@ async function loadAffiliateLinks() {
   });
 }
 
-/** 首頁區塊各自降級；任一 Prisma / GA 相關查詢失敗不白屏 */
+async function loadFeaturedPosts(): Promise<FeaturedPostItem[]> {
+  if (isCfPublicRuntime()) return fetchFeaturedPostsViaSupabase();
+  return loadFeaturedPostsPrisma();
+}
+
+async function loadAffiliateLinks(): Promise<AffiliateLinkItem[]> {
+  if (isCfPublicRuntime()) return fetchAffiliateLinksViaSupabase();
+  return loadAffiliateLinksPrisma();
+}
+
+export type HomepageData = {
+  featuredPosts: FeaturedPostItem[];
+  heroSlides: Awaited<ReturnType<typeof getHeroSlidesForHomepage>>;
+  carouselItems: Awaited<ReturnType<typeof getHomeCarouselForHomepage>>;
+  publishedPostCount: number;
+  categoryCount: number;
+  affiliateLinks: AffiliateLinkItem[];
+  siteSettings: SiteSettingsData;
+  homePageViews: number;
+};
+
+/** 首頁區塊各自降級；CF Worker 不載入 Prisma */
 export async function loadHomepageData(
   siteLocale: SiteLocale
 ): Promise<HomepageData> {
+  const loadPostCount = async () => {
+    if (isCfPublicRuntime()) return countPublishedPostsViaSupabase();
+    const { prisma } = await import("@/infrastructure/db/prisma");
+    return prisma.post.count({
+      where: { status: "PUBLISHED", deletedAt: null },
+    });
+  };
+
+  const loadCategoryCount = async () => {
+    if (isCfPublicRuntime()) return countCategoriesViaSupabase();
+    const { prisma } = await import("@/infrastructure/db/prisma");
+    return prisma.category.count({ where: { deletedAt: null } });
+  };
+
+  const loadPageViews = async () => {
+    if (isCfPublicRuntime()) return countHomePageViewsViaSupabase(siteLocale);
+    const { prisma } = await import("@/infrastructure/db/prisma");
+    return prisma.pageView.count({
+      where: { postId: null, locale: siteLocale },
+    });
+  };
+
   const [
     featuredPosts,
     heroSlides,
@@ -69,29 +121,11 @@ export async function loadHomepageData(
       () => getHomeCarouselForHomepage(siteLocale),
       []
     ),
-    safeQuery(
-      "homepage.postCount",
-      () =>
-        prisma.post.count({
-          where: { status: "PUBLISHED", deletedAt: null },
-        }),
-      0
-    ),
-    safeQuery(
-      "homepage.categoryCount",
-      () => prisma.category.count({ where: { deletedAt: null } }),
-      0
-    ),
-    safeQuery("homepage.affiliateLinks", loadAffiliateLinks, []),
+    safeQuery("homepage.postCount", loadPostCount, 0),
+    safeQuery("homepage.categoryCount", loadCategoryCount, 0),
+    safeQuery("homepage.affiliateLinks", loadAffiliateLinks, EMPTY_AFFILIATES),
     getSafeSiteSettings(),
-    safeQuery(
-      "homepage.pageViews",
-      () =>
-        prisma.pageView.count({
-          where: { postId: null, locale: siteLocale },
-        }),
-      0
-    ),
+    safeQuery("homepage.pageViews", loadPageViews, 0),
   ]);
 
   return {

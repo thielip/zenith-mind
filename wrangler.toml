@@ -4,13 +4,15 @@
 name = "zenith-mind"
 main = ".open-next/worker.js"
 compatibility_date = "2024-12-30"
+# 必須在根層級（不可放在 [build]）；否則 deploy 無法解析 Node 內建模組 util/assert/zlib/http/https
+compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 
 # Cloudflare Workers「連線 Git」建置（Dashboard Latest build）
+# 本機：先 npm run build:cf，再 npx wrangler deploy（deploy 時勿重跑 build 可加 --no-bundle）
 [build]
 command = "npm run build:cf"
 cwd = "."
 watch_dir = ["app", "lib", "components", "middleware.ts", "next.config.ts", "open-next.config.ts", "scripts/cf-public-build.mjs"]
-compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 
 [assets]
 directory = ".open-next/assets"
@@ -22,6 +24,10 @@ service = "zenith-mind"
 
 # 可提交 Git 的環境變數（部署時寫入 Worker，不會被清空）
 [vars]
+# 執行期略過 t3-env 全量驗證（公開 Worker 不需 GEMINI/TOTP/GA4_PRIVATE_KEY 格式檢查）
+SKIP_ENV_VALIDATION = "true"
+# 公開 Worker 執行期標記（Prisma 使用 Neon serverless adapter）
+CF_WORKER_RUNTIME = "1"
 # 後台 Vercel 網址（公開站 /admin/* 302 導向；請改為實際 Vercel 網域）
 ADMIN_DEPLOYMENT_URL = "https://zenith-mind.vercel.app"
 NEXT_PUBLIC_SITE_URL = "https://www.getzenithmind.com"
