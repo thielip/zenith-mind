@@ -1,13 +1,15 @@
 // app/robots.ts — 動態 robots（禁止使用靜態 robots.txt）
 import type { MetadataRoute } from "next";
-import { env } from "@/env";
+import { getPublicSiteUrl } from "@/lib/site/url";
 
 export default function robots(): MetadataRoute.Robots {
-  const base = env.NEXT_PUBLIC_SITE_URL;
+  const base = getPublicSiteUrl();
   const isVercelPreview = process.env["VERCEL_ENV"] === "preview";
+  const onVercelProduction =
+    process.env["VERCEL_ENV"] === "production" && Boolean(process.env["VERCEL"]);
 
-  // 預覽網址不應被索引（編輯／審核用）
-  if (isVercelPreview) {
+  // 預覽網址、Vercel 預設網域：不應被索引（正式權重集中在 www）
+  if (isVercelPreview || onVercelProduction) {
     return {
       rules: [{ userAgent: "*", disallow: ["/"] }],
       sitemap: `${base}/sitemap.xml`,

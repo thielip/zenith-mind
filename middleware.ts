@@ -16,10 +16,17 @@ import {
   generateNonce,
   injectSecurityHeaders,
 } from "@/lib/middleware/security-headers";
+import { canonicalHostRedirect } from "@/lib/middleware/canonical-host-redirect";
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
   const isProd = process.env["NODE_ENV"] === "production";
   const pathname = request.nextUrl.pathname;
+
+  // *.vercel.app / *.workers.dev 公開頁 → www（避免重複內容；/admin 除外）
+  const canonicalRedirect = canonicalHostRedirect(request);
+  if (canonicalRedirect) {
+    return secureEarlyNextResponse(canonicalRedirect);
+  }
 
   // Cloudflare 公開站：後台與後台 API 導向 Vercel（ADMIN_DEPLOYMENT_URL）
   if (shouldProxyAdminToExternal(pathname)) {

@@ -87,9 +87,9 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // 裸網域 → www 請只在 Cloudflare Redirect Rules 設定（見 cloudflare/DASHBOARD_STEPS.txt）。
-  // 勿在此寫 redirects()：OpenNext on Workers 可能無法正確套用 has:host，
-  // 會把 destination 的 `:path*` 當字面路徑，導致 www 全站 308 迴圈（Location: /:path*）。
+  // 裸網域 → www：Cloudflare Redirect Rules（見 cloudflare/DASHBOARD_STEPS.txt）
+  // *.vercel.app 公開頁 → www：middleware `canonical-host-redirect`（/admin 除外，避免與 CF 迴圈）
+  // 勿在此寫 has:host redirects：OpenNext on Workers 可能異常；Vercel 亦由 middleware 統一處理。
 
   webpack(config) {
     // 確保 Node-only 模組不進入 Edge bundle

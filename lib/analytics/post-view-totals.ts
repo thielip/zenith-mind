@@ -1,9 +1,9 @@
 /**
- * 文章／首頁瀏覽量：讀取 v_post_view_totals / v_site_view_totals（DailyAggregate + 當日增量）
- * 禁止對 page_views 做 COUNT(*) 全表掃描。
+ * 瀏覽量：首頁直接數 page_views；文章可讀彙總 view 或日後再簡化。
  */
 import { isCfPublicRuntime } from "@/lib/db/cf-public-runtime";
 import {
+  supabaseCount,
   supabaseRestWithFallback,
   type SupabaseFetchCache,
 } from "@/lib/db/supabase-rest";
@@ -15,83 +15,36 @@ const VIEW_STATS_CACHE: SupabaseFetchCache = {
   tags: ["page-view-stats", "posts"],
 };
 
+const HOMEPAGE_VIEWS_CACHE: SupabaseFetchCache = {
+  kind: "public",
+  revalidate: 60,
+  tags: ["page-view-stats", "homepage-stats"],
+};
+
 type PostTotalRow = {
   post_id: string;
-  /** 舊 migration 欄位名 */
-  total_views?: number;
-  /** 目前 Supabase view 實際欄位名 */
   view_count?: number;
-};
-type SiteTotalRow = {
-  locale: string;
   total_views?: number;
-  view_count?: number;
 };
 
 function readViewCount(row: { total_views?: number; view_count?: number }): number {
   return Number(row.view_count ?? row.total_views) || 0;
 }
 
-function todayUtcDate(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-type SiteDailyAggRow = { date: string; views: number };
-
-/** CF：site_daily_aggregates（歷史）+ 當日 page_views；避免依賴可能未更新的 DB view */
-async function fetchSiteViewTotalFromSupabase(
-  locale: SiteLocale,
-  cache: SupabaseFetchCache
-): Promise<number> {
-  const aggs = await supabaseRestWithFallback<SiteDailyAggRow[]>(
-    "site_daily_aggregates",
-    { select: "date,views", locale: `eq.${locale}` },
-    [],
-    undefined,
-    cache
-  );
-
-  const todayUtc = todayUtcDate();
-  let pastSum = 0;
-  let todayInAgg = 0;
-
-  for (const row of aggs) {
-    const d = String(row.date).slice(0, 10);
-    const v = Number(row.views) || 0;
-    if (d < todayUtc) pastSum += v;
-    else if (d === todayUtc) todayInAgg += v;
+/** 首頁累計瀏覽：postId 為 null 的 page_views 筆數（最直覺、與 DB 一致） */
+export async function fetchSiteViewTotal(locale: SiteLocale): Promise<number> {
+  if (isCfPublicRuntime()) {
+    return supabaseCount(
+      "page_views",
+      { postId: "is.null", locale: `eq.${locale}` },
+      HOMEPAGE_VIEWS_CACHE
+    );
   }
 
-  const { supabaseCount } = await import("@/lib/db/supabase-rest");
-  const todayLive = await supabaseCount(
-    "page_views",
-    {
-      postId: "is.null",
-      locale: `eq.${locale}`,
-      createdAt: `gte.${todayUtc}T00:00:00Z`,
-    },
-    { kind: "fresh" }
-  );
-
-  if (aggs.length > 0) {
-    const todayPart = todayInAgg > 0 ? todayInAgg : todayLive;
-    return pastSum + todayPart;
-  }
-
-  const viewRows = await supabaseRestWithFallback<SiteTotalRow[]>(
-    "v_site_view_totals",
-    { select: "*", locale: `eq.${locale}`, limit: "1" },
-    [],
-    undefined,
-    cache
-  );
-  if (viewRows[0]) return readViewCount(viewRows[0]);
-
-  return supabaseCount(
-    "page_views",
-    { postId: "is.null", locale: `eq.${locale}` },
-    { kind: "fresh" }
-  );
+  const { prisma } = await import("@/infrastructure/db/prisma");
+  return prisma.pageView.count({
+    where: { postId: null, locale },
+  });
 }
 
 export async function fetchPostViewTotalsMap(
@@ -152,42 +105,4 @@ export async function fetchPostViewTotalsMap(
 export async function fetchPostViewTotal(postId: string): Promise<number> {
   const map = await fetchPostViewTotalsMap([postId]);
   return map.get(postId) ?? 0;
-}
-
-export async function fetchSiteViewTotal(locale: SiteLocale): Promise<number> {
-  if (isCfPublicRuntime()) {
-    return fetchSiteViewTotalFromSupabase(locale, {
-      kind: "public",
-      revalidate: 60,
-      tags: ["page-view-stats", "homepage-stats"],
-    });
-  }
-
-  const { prisma } = await import("@/infrastructure/db/prisma");
-
-  const aggs = await prisma.siteDailyAggregate.findMany({
-    where: { locale },
-    select: { date: true, views: true },
-  });
-
-  const todayUtc = todayUtcDate();
-  const todayStart = new Date(`${todayUtc}T00:00:00.000Z`);
-  let pastSum = 0;
-  let todayInAgg = 0;
-
-  for (const row of aggs) {
-    const d = row.date.toISOString().slice(0, 10);
-    if (d < todayUtc) pastSum += row.views;
-    else if (d === todayUtc) todayInAgg += row.views;
-  }
-
-  const todayLive = await prisma.pageView.count({
-    where: { postId: null, locale, createdAt: { gte: todayStart } },
-  });
-
-  if (aggs.length > 0) {
-    return pastSum + (todayInAgg > 0 ? todayInAgg : todayLive);
-  }
-
-  return todayLive;
 }
