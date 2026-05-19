@@ -1,20 +1,24 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import ResponsiveImage from "@/components/ui/ResponsiveImage";
+import {
+  HERO_FALLBACK_WIDTH,
+  HERO_IMAGE_QUALITY,
+  HERO_IMAGE_SIZES,
+  HERO_IMAGE_WIDTHS,
+  heroRenderHeightForWidth,
+} from "@/lib/images/hero-presets";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { HeroSlideData } from "@/lib/site/types";
+import { EXTERNAL_LINK_REL, isExternalHttpUrl } from "@/lib/site/external-link";
 
 interface Props {
   slides: HeroSlideData[];
   locale: string;
   /** 自動切換間隔（秒）；0 或缺省則不自動 */
   autoplaySeconds?: number;
-}
-
-function isExternalHttpUrl(href: string): boolean {
-  return /^https?:\/\//i.test(href.trim());
 }
 
 export default function HeroSlider({ slides, locale, autoplaySeconds = 0 }: Props) {
@@ -47,45 +51,52 @@ export default function HeroSlider({ slides, locale, autoplaySeconds = 0 }: Prop
 
   const imageHref = slide.imageHref?.trim() ?? "";
   const external = imageHref ? isExternalHttpUrl(imageHref) : false;
+  const isFirstSlide = index === 0;
+  /** LCP 圖勿包外部連結，避免瀏覽器對第三方（如 spinrise player API）建立關鍵路徑 */
+  const wrapImageWithLink = Boolean(imageHref) && !(isFirstSlide && external);
 
   const imageEl = (
-    <Image
+    <ResponsiveImage
       src={slide.imageUrl}
       alt={slide.imageAlt || slide.title}
       fill
-      priority
-      fetchPriority="high"
-      unoptimized={slide.imageUrl.endsWith(".svg")}
-      sizes="(max-width: 768px) 100vw, 1400px"
+      priority={isFirstSlide}
+      fetchPriority={isFirstSlide ? "high" : "auto"}
+      responsiveWidths={[...HERO_IMAGE_WIDTHS]}
+      sizes={HERO_IMAGE_SIZES}
+      quality={HERO_IMAGE_QUALITY}
+      supabaseSrcSetOptions={{
+        fallbackWidth: HERO_FALLBACK_WIDTH,
+        heightForWidth: heroRenderHeightForWidth,
+      }}
       className="object-cover"
     />
   );
 
   return (
-    <section className="relative min-h-[560px] overflow-hidden bg-neutral-200 text-white">
+    <section className="relative h-[560px] max-h-[90svh] overflow-hidden bg-neutral-200 text-white">
       <div className="absolute inset-0 z-0">
-        {imageHref ? (
-          external ? (
-            <a
-              href={imageHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="absolute inset-0 block outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
-              aria-label={isEn ? "Open hero image link" : "開啟大圖連結"}
-            >
-              {imageEl}
-            </a>
-          ) : (
-            <Link
-              href={imageHref}
-              className="absolute inset-0 block outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
-              aria-label={isEn ? "Open hero image link" : "開啟大圖連結"}
-            >
-              {imageEl}
-            </Link>
-          )
-        ) : (
+        {!wrapImageWithLink ? (
           imageEl
+        ) : external ? (
+          <a
+            href={imageHref}
+            target="_blank"
+            rel={EXTERNAL_LINK_REL}
+            className="absolute inset-0 block outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+            aria-label={isEn ? "Open hero image link" : "開啟大圖連結"}
+          >
+            {imageEl}
+          </a>
+        ) : (
+          <Link
+            href={imageHref}
+            prefetch={false}
+            className="absolute inset-0 block outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+            aria-label={isEn ? "Open hero image link" : "開啟大圖連結"}
+          >
+            {imageEl}
+          </Link>
         )}
       </div>
 

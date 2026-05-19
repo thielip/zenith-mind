@@ -7,6 +7,7 @@ import type { Metadata } from "next";
 import { env } from "@/env";
 import HeroSection from "@/components/home/HeroSection";
 import HeroSlider from "@/components/home/HeroSlider";
+import { heroLcpPreload } from "@/components/home/HeroLcpPreload";
 import ImageCarousel from "@/components/home/ImageCarousel";
 import SocialProofSection from "@/components/home/SocialProofSection";
 import TopicClusterSection from "@/components/home/TopicClusterSection";
@@ -70,6 +71,11 @@ export default async function HomePage({ params }: Props) {
     siteSettings,
     homePageViews,
   } = await loadHomepageData(siteLocale);
+
+  const firstHeroSlide = heroSlides.find((s) => s.isActive && s.imageUrl);
+  if (firstHeroSlide?.imageUrl) {
+    heroLcpPreload(firstHeroSlide.imageUrl, firstHeroSlide.title);
+  }
 
   const topics = siteSettings.homepageCopy.topicClusters.cards.map((c) => ({
     slug: c.slug,

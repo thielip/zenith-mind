@@ -5,14 +5,11 @@ import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import {
-  LazyGoogleAnalytics,
-  LazyGoogleTagManager,
-} from "@/components/analytics/DeferredAnalytics";
+import ConsentGatedAnalytics from "@/components/analytics/ConsentGatedAnalytics";
+import PerformanceResourceHints from "@/components/seo/PerformanceResourceHints";
 import { routing } from "@/lib/i18n/routing";
 import { env } from "@/env";
 import ConsentBanner  from "@/components/analytics/ConsentBanner";
-import Ga4Events      from "@/components/analytics/Ga4Events";
 import SkipToMain     from "@/components/layout/SkipToMain";
 import Header         from "@/components/layout/Header";
 import Footer         from "@/components/layout/Footer";
@@ -59,6 +56,7 @@ export default async function PublicLocaleLayout({ children, params }: Props) {
 
   return (
     <>
+        <PerformanceResourceHints />
         {/* WCAG：跳過導覽連結 */}
         <SkipToMain />
 
@@ -82,13 +80,8 @@ export default async function PublicLocaleLayout({ children, params }: Props) {
 
         </NextIntlClientProvider>
 
-        {/* 分析：lazyOnload，避免阻塞 LCP；GTM 與 GA4 擇一以免重複載入 */}
-        {gtmId ? (
-          <LazyGoogleTagManager gtmId={gtmId} nonce={nonce} />
-        ) : (
-          ga4Id && <LazyGoogleAnalytics gaId={ga4Id} nonce={nonce} />
-        )}
-        {ga4Id && <Ga4Events />}
+        {/* 分析：同意後 + idle 才載入，降低 PSI 無用 JS */}
+        <ConsentGatedAnalytics ga4Id={ga4Id} gtmId={gtmId} nonce={nonce} />
     </>
   );
 }

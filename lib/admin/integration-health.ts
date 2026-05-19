@@ -5,7 +5,9 @@ import {
   probeGoogleAdsOAuth,
   probeRedis,
   probeSupabaseStorage,
+  withProbeTimeout,
 } from "@/infrastructure/health/probes";
+import { fetchSearchConsoleSummary } from "@/services/google/search-console";
 import {
   deriveGcpProjectId,
   getGoogleIntegrationStatuses,
@@ -155,9 +157,23 @@ export async function runIntegrationHealthChecks(
     status: "missing" as const,
     missing: ["GOOGLE_ADS_CLIENT_ID"],
   };
+  const gscEnv = googleEnv.find((i) => i.id === "search-console") ?? {
+    id: "search-console",
+    name: "Search Console",
+    description: "",
+    status: "missing" as const,
+    missing: ["GOOGLE_SEARCH_CONSOLE_SITE_URL"],
+  };
   const otherGoogle = googleEnv.filter(
-    (i) => i.id !== "ga4" && i.id !== "google-ads"
+    (i) => i.id !== "ga4" && i.id !== "google-ads" && i.id !== "search-console"
   );
+  const gscLiveBase: IntegrationHealthItem = {
+    id: "search-console-live",
+    name: "Search Console API",
+    description: "28 日搜尋成效探測",
+    status: gscEnv.status,
+    missing: gscEnv.missing,
+  };
 
   const postgresBase = envOnlyItem(
     "postgres",
@@ -208,7 +224,18 @@ export async function runIntegrationHealthChecks(
     ? Promise.resolve(mergeProbe(postgresBase, options.databaseProbe))
     : probeItem(postgresBase, probeDatabase);
 
-  const [postgres, redis, supabaseAdmin, gemini, ga4Live, adsLive] =
+  const gscLivePromise = probeItem(gscLiveBase, async () => {
+    const r = await withProbeTimeout(fetchSearchConsoleSummary(), 25_000);
+    if (r.ok) {
+      return {
+        ok: true,
+        message: `28 日點擊 ${r.totals.clicks}、曝光 ${r.totals.impressions}`,
+      };
+    }
+    return { ok: false, message: r.message ?? "Search Console 失敗" };
+  });
+
+  const [postgres, redis, supabaseAdmin, gemini, ga4Live, adsLive, gscLive] =
     await Promise.all([
       postgresPromise,
       probeItem(redisBase, probeRedis),
@@ -216,6 +243,7 @@ export async function runIntegrationHealthChecks(
       probeItem(geminiBase, probeGemini),
       ga4ProbePromise,
       probeItem(adsLiveBase, probeGoogleAdsOAuth),
+      gscLivePromise,
     ]);
 
   const staticItems: IntegrationHealthItem[] = [
@@ -253,6 +281,8 @@ export async function runIntegrationHealthChecks(
     ga4Live,
     adsEnv,
     adsLive,
+    gscEnv,
+    gscLive,
     ...otherGoogle,
     bigQueryItem(),
   ];

@@ -1,11 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import ResponsiveImage from "@/components/ui/ResponsiveImage";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import type { SiteSettingsData } from "@/lib/site/types";
 import { resolveSiteLogoSrc } from "@/lib/site/brand";
+import { EXTERNAL_LINK_REL, isExternalHttpUrl } from "@/lib/site/external-link";
 
 interface Props {
   locale: string;
@@ -59,12 +60,24 @@ export default function Header({ locale, settings }: Props) {
             <ul className="flex shrink-0 items-center gap-3 sm:gap-4">
               {quickLinks.map((link) => (
                 <li key={`${link.label}-${link.href}`}>
-                  <Link
-                    href={link.href}
-                    className="whitespace-nowrap text-gray-200 hover:text-white focus:outline-none focus:ring-2 focus:ring-amber-300/80 focus:ring-offset-2 focus:ring-offset-slate-900"
-                  >
-                    {link.label}
-                  </Link>
+                  {isExternalHttpUrl(link.href) ? (
+                    <a
+                      href={link.href}
+                      target="_blank"
+                      rel={EXTERNAL_LINK_REL}
+                      className="whitespace-nowrap text-gray-200 hover:text-white focus:outline-none focus:ring-2 focus:ring-amber-300/80 focus:ring-offset-2 focus:ring-offset-slate-900"
+                    >
+                      {link.label}
+                    </a>
+                  ) : (
+                    <Link
+                      href={link.href}
+                      prefetch={false}
+                      className="whitespace-nowrap text-gray-200 hover:text-white focus:outline-none focus:ring-2 focus:ring-amber-300/80 focus:ring-offset-2 focus:ring-offset-slate-900"
+                    >
+                      {link.label}
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>
@@ -99,12 +112,14 @@ export default function Header({ locale, settings }: Props) {
               aria-hidden="true"
               className="absolute -bottom-10 -left-4 h-20 w-20 rounded-full border border-indigo-100/70 bg-indigo-50/40"
             />
-            <Image
+            <ResponsiveImage
               src={resolveSiteLogoSrc(settings.logoUrl)}
               alt={settings.logoAlt || (isEn ? "Zenith Mind" : "巔峰思維")}
-              width={168}
-              height={48}
-              sizes="(max-width: 640px) 132px, 168px"
+              width={106}
+              height={32}
+              responsiveWidths={[106, 168, 212]}
+              sizes="106px"
+              quality={80}
               className="relative z-[1] h-8 w-auto max-w-[132px] object-contain sm:h-10 sm:max-w-[168px]"
               priority
               fetchPriority="high"

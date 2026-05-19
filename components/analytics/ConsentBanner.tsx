@@ -5,7 +5,12 @@
 
 import { useState, useEffect } from "react";
 
-const CONSENT_KEY = "analytics_consent";
+import {
+  ANALYTICS_CONSENT_EVENT,
+  ANALYTICS_CONSENT_KEY,
+} from "@/lib/analytics/consent";
+
+const CONSENT_KEY = ANALYTICS_CONSENT_KEY;
 
 export default function ConsentBanner() {
   const [visible, setVisible] = useState(false);
@@ -19,6 +24,7 @@ export default function ConsentBanner() {
   function accept() {
     localStorage.setItem(CONSENT_KEY, "granted");
     loadClarity();
+    window.dispatchEvent(new Event(ANALYTICS_CONSENT_EVENT));
     setVisible(false);
   }
 

@@ -9,6 +9,7 @@ import {
   type TrafficDataPoint,
 } from "@/infrastructure/ga4/reporting.client";
 import type { ProbeResult } from "@/infrastructure/health/probes";
+import { withProbeTimeout } from "@/infrastructure/health/probes";
 
 export interface Ga4DashboardBundle {
   realtimeUsers: number;
@@ -24,7 +25,7 @@ export async function fetchGa4DashboardBundle(): Promise<Ga4DashboardBundle> {
   let reportingProbe: ProbeResult;
 
   try {
-    realtimeUsers = await fetchRealtimeActiveUsers();
+    realtimeUsers = await withProbeTimeout(fetchRealtimeActiveUsers(), 20_000);
     reportingProbe = {
       ok: true,
       message: `Reporting API 正常（即時使用者 ${realtimeUsers}）`,

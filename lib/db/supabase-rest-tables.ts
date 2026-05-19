@@ -14,6 +14,8 @@ const ALLOWED_TABLES = new Set([
   "redirects",
   "v_post_view_totals",
   "v_site_view_totals",
+  "site_daily_aggregates",
+  "page_views",
 ]);
 
 export function assertAllowedSupabaseTable(table: string): void {

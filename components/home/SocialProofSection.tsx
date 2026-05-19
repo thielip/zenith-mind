@@ -1,4 +1,5 @@
 import type { HomepageCopy } from "@/lib/site/types";
+import SocialProofViewCount from "@/components/home/SocialProofViewCount";
 
 interface Props {
   locale: string;
@@ -52,7 +53,13 @@ export default function SocialProofSection({
           <div className="grid gap-4 sm:grid-cols-3">
             {stats.map((stat, idx) => (
               <article key={`stat-${idx}`} className="rounded-2xl border border-white bg-white/85 p-5 text-center shadow-sm">
-                <p className="text-3xl font-bold text-gray-950">{stat.value.toLocaleString()}</p>
+                {idx === 2 ? (
+                  <SocialProofViewCount initial={homePageViews} />
+                ) : (
+                  <p className="min-h-9 text-3xl font-bold tabular-nums text-gray-950">
+                    {stat.value.toLocaleString()}
+                  </p>
+                )}
                 <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
                   {stat.label}
                 </p>

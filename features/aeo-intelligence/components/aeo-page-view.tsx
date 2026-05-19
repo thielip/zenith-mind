@@ -4,6 +4,8 @@ import type { AeoPayload } from "@/server/command-center/load-aeo";
 import { DemoBanner } from "@/shared/ui/demo-banner";
 
 export function AeoPageView({ data }: { data: AeoPayload }) {
+  const hasDemoMetrics = data.metrics.some((m) => m.source === "demo");
+
   return (
     <ModuleShell
       title="AEO 情報"
@@ -11,9 +13,21 @@ export function AeoPageView({ data }: { data: AeoPayload }) {
       kpis={data.kpis}
       headerExtra={
         <DemoBanner
-          title="站內真實指標 + 部分示範"
-          description="FAQ 覆蓋率與 SEO Meta 覆蓋來自已發布文章（Prisma 即時計算）。Featured Snippets / Rich Results 仍為示範，待接 Search Console 或第三方 API。"
-          className="border-emerald-500/40 bg-emerald-500/10 text-emerald-100"
+          title={
+            data.isLiveGsc && !hasDemoMetrics
+              ? "站內 + Search Console 真實數據"
+              : "站內真實指標 + GSC 待連線"
+          }
+          description={
+            data.isLiveGsc
+              ? "FAQ / SEO Meta 來自已發布文章；Featured Snippets / Rich Results 來自 GSC searchAppearance（28 日）。"
+              : `FAQ / SEO Meta 為站內真實數據。GSC：${data.gscMessage ?? "尚未連線"}`
+          }
+          className={
+            data.isLiveGsc && !hasDemoMetrics
+              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-100"
+              : undefined
+          }
         />
       }
       sections={[
@@ -24,7 +38,7 @@ export function AeoPageView({ data }: { data: AeoPayload }) {
               {data.metrics.map((m) => (
                 <li key={m.name} className="flex flex-wrap items-center gap-2">
                   <span>
-                    {m.name}: {m.value} {m.unit}
+                    {m.name}: {m.value.toLocaleString()} {m.unit}
                   </span>
                   <span
                     className={
@@ -33,13 +47,44 @@ export function AeoPageView({ data }: { data: AeoPayload }) {
                         : "rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] text-amber-300"
                     }
                   >
-                    {m.source === "live" ? "站內真實" : "示範"}
+                    {m.source === "live" ? "真實" : "待 GSC"}
                   </span>
                 </li>
               ))}
             </ul>
           ),
         },
+        ...(data.appearances.length > 0
+          ? [
+              {
+                title: "GSC 搜尋外觀 (28D)",
+                content: (
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-slate-500">
+                        <th className="pb-2 text-left">外觀類型</th>
+                        <th className="pb-2 text-right">曝光</th>
+                        <th className="pb-2 text-right">點擊</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.appearances.map((a) => (
+                        <tr key={a.appearance} className="border-t border-slate-800/60">
+                          <td className="py-2 text-slate-200">{a.appearance}</td>
+                          <td className="py-2 text-right font-mono">
+                            {a.impressions.toLocaleString()}
+                          </td>
+                          <td className="py-2 text-right font-mono">
+                            {a.clicks.toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ),
+              },
+            ]
+          : []),
       ]}
     />
   );

@@ -194,3 +194,32 @@ export async function supabaseCount(
   const n = parseInt(total ?? "0", 10);
   return Number.isFinite(n) ? n : 0;
 }
+
+/** PostgREST INSERT（service_role；不經過 ISR 快取） */
+export async function supabaseInsert(
+  table: string,
+  row: Record<string, unknown>
+): Promise<void> {
+  assertAllowedSupabaseTable(table);
+  const cfg = getSupabaseRestConfig();
+  if (!cfg) {
+    throw new SupabaseRestError(table, 0, "Supabase REST is not configured");
+  }
+
+  const url = `${cfg.base}/rest/v1/${table}`;
+  const res = await fetch(url, {
+    method: "POST",
+    cache: "no-store",
+    headers: restHeaders(cfg, {
+      "Content-Type": "application/json",
+      Prefer: "return=minimal",
+    }),
+    body: JSON.stringify(row),
+  });
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    logSupabaseFailure(table, res.status, detail, false);
+    throw new SupabaseRestError(table, res.status, detail);
+  }
+}

@@ -50,6 +50,7 @@ const env = {
   ...process.env,
   CF_PUBLIC_ONLY: "1",
   SKIP_ENV_VALIDATION: process.env.SKIP_ENV_VALIDATION ?? "true",
+  NEXT_PUBLIC_IMAGE_DELIVERY: process.env.NEXT_PUBLIC_IMAGE_DELIVERY ?? "supabase-render",
 };
 
 stash();

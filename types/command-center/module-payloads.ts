@@ -46,6 +46,8 @@ export type SeoPayload = z.infer<typeof seoPayloadSchema>;
 
 export const geoPayloadSchema = z.object({
   isDemo: z.boolean(),
+  dataSource: z.enum(["third_party", "derived", "unavailable"]).optional(),
+  note: z.string().optional(),
   engines: z.array(
     z.object({
       name: z.string(),

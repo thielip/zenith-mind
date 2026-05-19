@@ -1,10 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import ResponsiveImage from "@/components/ui/ResponsiveImage";
 import { useEffect, useMemo, useRef } from "react";
 import type { ReactNode } from "react";
 import type { HomeCarouselItemData, HomepageCopy } from "@/lib/site/types";
+import { EXTERNAL_LINK_REL, isExternalHttpUrl } from "@/lib/site/external-link";
 
 interface Props {
   locale: string;
@@ -12,10 +13,6 @@ interface Props {
   /** 自動橫向捲動間隔（秒）；0 = 關閉 */
   autoplaySeconds?: number;
   copy: HomepageCopy["visualCarousel"];
-}
-
-function isExternalHttpUrl(href: string): boolean {
-  return /^https?:\/\//i.test(href.trim());
 }
 
 export default function ImageCarousel({ locale, items, autoplaySeconds = 0, copy }: Props) {
@@ -28,8 +25,7 @@ export default function ImageCarousel({ locale, items, autoplaySeconds = 0, copy
     const el = scrollRef.current;
     if (!el) return;
     const step = () => {
-      const card = el.querySelector<HTMLElement>("[data-carousel-card]");
-      const delta = (card?.offsetWidth ?? 320) + 20;
+      const delta = 340;
       const maxScroll = el.scrollWidth - el.clientWidth - 2;
       if (el.scrollLeft >= maxScroll) {
         el.scrollTo({ left: 0, behavior: "smooth" });
@@ -54,7 +50,7 @@ export default function ImageCarousel({ locale, items, autoplaySeconds = 0, copy
           key={item.id}
           href={href}
           target="_blank"
-          rel="noopener noreferrer"
+          rel={EXTERNAL_LINK_REL}
           className="shrink-0 snap-start focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
         >
           {card}
@@ -97,23 +93,20 @@ export default function ImageCarousel({ locale, items, autoplaySeconds = 0, copy
           ref={scrollRef}
           className="mt-8 flex snap-x gap-5 overflow-x-auto pb-4 [scrollbar-width:thin]"
         >
-          {activeItems.map((item, itemIndex) => {
-            const isLcpCandidate = itemIndex === 0;
+          {activeItems.map((item) => {
             const card = (
               <article
                 data-carousel-card
                 className="group relative h-80 w-72 shrink-0 snap-start overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-xl shadow-black/20 transition hover:-translate-y-1 sm:w-80"
               >
-                <Image
+                <ResponsiveImage
                   src={item.imageUrl}
                   alt={item.imageAlt || item.title}
                   fill
-                  unoptimized={item.imageUrl.endsWith(".svg")}
-                  sizes="(max-width: 640px) 18rem, (max-width: 1024px) 20rem, 320px"
+                  responsiveWidths={[288, 320, 640]}
+                  sizes="(max-width: 640px) 18rem, 320px"
+                  quality={75}
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  priority={isLcpCandidate}
-                  fetchPriority={isLcpCandidate ? "high" : "auto"}
-                  loading={isLcpCandidate ? undefined : "lazy"}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-blue-950/30 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-5">

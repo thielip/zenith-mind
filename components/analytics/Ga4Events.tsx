@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { sendGAEvent } from "@next/third-parties/google";
+import { sendGa4Event } from "@/lib/analytics/ga4-events";
 
 export default function Ga4Events() {
   useEffect(() => {
@@ -16,7 +16,7 @@ export default function Ga4Events() {
       const percent = (window.scrollY / totalScrollable) * 100;
       if (percent >= 75) {
         hasSentScroll75 = true;
-        sendGAEvent("event", "scroll_75", { percent: 75 });
+        sendGa4Event("scroll_75", { percent: 75 });
       }
     }
 
@@ -30,7 +30,7 @@ export default function Ga4Events() {
 
       const isAffiliate = href.startsWith("/go/");
       if (isAffiliate) {
-        sendGAEvent("event", "click_affiliate", {
+        sendGa4Event("click_affiliate", {
           affiliate_path: href,
           link_text: anchor.textContent?.trim() ?? "",
         });
@@ -40,7 +40,7 @@ export default function Ga4Events() {
         try {
           const url = new URL(href);
           if (url.hostname !== window.location.hostname) {
-            sendGAEvent("event", "outbound_click", {
+            sendGa4Event("outbound_click", {
               destination: url.href,
               link_text: anchor.textContent?.trim() ?? "",
             });

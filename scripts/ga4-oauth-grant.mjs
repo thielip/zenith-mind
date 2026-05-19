@@ -11,8 +11,13 @@
 import http from "node:http";
 import { execSync } from "node:child_process";
 
-const CLIENT_ID = process.env.GA4_OAUTH_CLIENT_ID?.trim();
-const CLIENT_SECRET = process.env.GA4_OAUTH_CLIENT_SECRET?.trim();
+// 可與 GSC 共用同一 OAuth 用戶端（getzenithmind 專案）
+const CLIENT_ID =
+  process.env.GA4_OAUTH_CLIENT_ID?.trim() ||
+  process.env.GSC_OAUTH_CLIENT_ID?.trim();
+const CLIENT_SECRET =
+  process.env.GA4_OAUTH_CLIENT_SECRET?.trim() ||
+  process.env.GSC_OAUTH_CLIENT_SECRET?.trim();
 const REDIRECT_URI = "http://localhost:8765/callback";
 const SCOPE = "https://www.googleapis.com/auth/analytics.manage.users";
 const SA_EMAIL = process.env.GA4_CLIENT_EMAIL?.trim();
@@ -23,7 +28,7 @@ const codeArg = process.argv.find((a) => a.startsWith("--code="))?.slice(7);
 
 if (!CLIENT_ID || !CLIENT_SECRET || !SA_EMAIL) {
   console.error(
-    "缺少 GA4_OAUTH_CLIENT_ID / GA4_OAUTH_CLIENT_SECRET / GA4_CLIENT_EMAIL"
+    "缺少 OAuth 憑證（GA4_OAUTH_* 或 GSC_OAUTH_CLIENT_ID / GSC_OAUTH_CLIENT_SECRET）與 GA4_CLIENT_EMAIL"
   );
   process.exit(1);
 }

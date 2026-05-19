@@ -52,9 +52,6 @@ function buildCsp(nonce: string, isProd: boolean): string {
       "*.supabase.co",                // Supabase
     ].join(" "),
 
-    "require-trusted-types-for": "'script'",
-    "trusted-types": "default",
-
     "frame-src": [
       "'self'",
       "https://www.facebook.com",

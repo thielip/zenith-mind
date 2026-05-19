@@ -1,9 +1,12 @@
 import { getPublishedPostFaqStats } from "@/lib/aeo/post-faq-stats";
+import { fetchGscAeoAppearanceTotals } from "@/services/google/search-console";
 import { kpiMetricSchema, type KpiMetric } from "@/types/command-center/metrics";
 import { z } from "zod";
 
 export const aeoPayloadSchema = z.object({
   isLiveFaq: z.boolean(),
+  isLiveGsc: z.boolean(),
+  gscMessage: z.string().optional(),
   kpis: z.array(kpiMetricSchema),
   metrics: z.array(
     z.object({
@@ -13,12 +16,22 @@ export const aeoPayloadSchema = z.object({
       source: z.enum(["live", "demo"]),
     })
   ),
+  appearances: z.array(
+    z.object({
+      appearance: z.string(),
+      impressions: z.number(),
+      clicks: z.number(),
+    })
+  ),
 });
 
 export type AeoPayload = z.infer<typeof aeoPayloadSchema>;
 
 export async function loadAeoPayload(): Promise<AeoPayload> {
-  const stats = await getPublishedPostFaqStats();
+  const [stats, gsc] = await Promise.all([
+    getPublishedPostFaqStats(),
+    fetchGscAeoAppearanceTotals(),
+  ]);
 
   const kpis: KpiMetric[] = [
     {
@@ -43,8 +56,22 @@ export async function loadAeoPayload(): Promise<AeoPayload> {
     },
   ];
 
+  if (gsc.ok) {
+    kpis.push({
+      id: "gsc-rich",
+      label: "GSC Rich Results 曝光 (28D)",
+      value: gsc.richResultImpressions,
+      trend: gsc.richResultImpressions > 0 ? "up" : "flat",
+      sparkline: [gsc.richResultImpressions],
+      status: gsc.richResultImpressions > 0 ? "ok" : "warn",
+      aiNote: `Search Console searchAppearance，點擊 ${gsc.richResultClicks}`,
+    });
+  }
+
   return {
     isLiveFaq: true,
+    isLiveGsc: gsc.ok,
+    gscMessage: gsc.message,
     kpis,
     metrics: [
       {
@@ -60,17 +87,22 @@ export async function loadAeoPayload(): Promise<AeoPayload> {
         source: "live",
       },
       {
-        name: "Featured Snippets（示範）",
-        value: 0,
-        unit: "頁",
-        source: "demo",
+        name: "Featured Snippets 曝光 (GSC)",
+        value: gsc.ok ? gsc.featuredSnippetPages : 0,
+        unit: "次",
+        source: gsc.ok ? "live" : "demo",
       },
       {
-        name: "Rich Results（示範）",
-        value: 0,
-        unit: "項",
-        source: "demo",
+        name: "Rich Results 曝光 (GSC)",
+        value: gsc.ok ? gsc.richResultImpressions : 0,
+        unit: "次",
+        source: gsc.ok ? "live" : "demo",
       },
     ],
+    appearances: gsc.appearances.map((a) => ({
+      appearance: a.appearance,
+      impressions: a.impressions,
+      clicks: a.clicks,
+    })),
   };
 }
