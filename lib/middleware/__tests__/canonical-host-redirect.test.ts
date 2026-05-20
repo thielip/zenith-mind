@@ -26,7 +26,8 @@ describe("canonicalHostRedirect", () => {
     );
   });
 
-  it("does not redirect admin on vercel.app (avoid CF loop)", () => {
+  it("does not redirect admin on vercel.app even without ADMIN_DEPLOYMENT_URL", () => {
+    delete process.env["ADMIN_DEPLOYMENT_URL"];
     const req = new NextRequest(
       "https://zenith-mind.vercel.app/admin/dashboard"
     );

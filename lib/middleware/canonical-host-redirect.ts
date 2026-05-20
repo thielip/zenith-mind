@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { shouldProxyAdminToExternal } from "@/lib/deploy/admin-origin";
+import { isAdminDeploymentPath } from "@/lib/deploy/admin-origin";
 import { getPublicSiteUrl } from "@/lib/site/url";
 
 const ALT_HOST_SUFFIXES = [".vercel.app", ".workers.dev"] as const;
@@ -22,7 +22,7 @@ export function canonicalHostRedirect(
   if (!ALT_HOST_SUFFIXES.some((s) => host.endsWith(s))) return null;
 
   const pathname = request.nextUrl.pathname;
-  if (shouldProxyAdminToExternal(pathname)) return null;
+  if (isAdminDeploymentPath(pathname)) return null;
 
   const canonicalOrigin = getPublicSiteUrl().replace(/\/$/, "");
   const target = new URL(

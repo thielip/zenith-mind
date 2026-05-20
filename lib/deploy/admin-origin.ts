@@ -8,6 +8,13 @@ const ADMIN_PATH_PREFIXES = [
   "/api/cron",
 ] as const;
 
+/** 後台／後台 API 路徑（不依賴 env；供 canonical 轉址排除用） */
+export function isAdminDeploymentPath(pathname: string): boolean {
+  return ADMIN_PATH_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+}
+
 export function getAdminDeploymentUrl(): string | null {
   const raw = process.env["ADMIN_DEPLOYMENT_URL"]?.trim();
   if (!raw) return null;
@@ -20,9 +27,7 @@ export function isAdminDeploymentSplitEnabled(): boolean {
 
 export function shouldProxyAdminToExternal(pathname: string): boolean {
   if (!isAdminDeploymentSplitEnabled()) return false;
-  return ADMIN_PATH_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
-  );
+  return isAdminDeploymentPath(pathname);
 }
 
 export function buildAdminExternalUrl(
