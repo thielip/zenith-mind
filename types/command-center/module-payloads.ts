@@ -20,6 +20,8 @@ export const warRoomPayloadSchema = z.object({
 export type WarRoomPayload = z.infer<typeof warRoomPayloadSchema>;
 
 export const seoPayloadSchema = z.object({
+  gscOk: z.boolean(),
+  gscMessage: z.string().optional(),
   kpis: z.array(kpiMetricSchema),
   keywords: z.array(
     z.object({
@@ -48,6 +50,16 @@ export const geoPayloadSchema = z.object({
   isDemo: z.boolean(),
   dataSource: z.enum(["third_party", "derived", "unavailable"]).optional(),
   note: z.string().optional(),
+  citedPages: z.number(),
+  brandMentions: z.number(),
+  aiEngineSov: z.array(z.object({ name: z.string(), sov: z.number() })),
+  citationQueries: z.array(
+    z.object({
+      query: z.string(),
+      engines: z.array(z.string()),
+      status: z.enum(["core", "extended", "none"]),
+    })
+  ),
   engines: z.array(
     z.object({
       name: z.string(),

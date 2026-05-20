@@ -49,6 +49,8 @@ export async function loadSeoPayload(): Promise<SeoPayload> {
   ];
 
   return {
+    gscOk: gsc.ok,
+    gscMessage: gsc.message,
     kpis,
     keywords: gsc.queries,
     landingPages: gsc.landingPages,

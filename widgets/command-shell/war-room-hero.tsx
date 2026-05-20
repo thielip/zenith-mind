@@ -42,7 +42,12 @@ export function WarRoomHero({ title, subtitle, pills }: WarRoomHeroProps) {
                       ? "error"
                       : "warn"
               }
+              className="gap-2"
             >
+              <span
+                className="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-80 animate-pulse"
+                aria-hidden
+              />
               {pill.label}: {pill.value}
             </Badge>
           ))}

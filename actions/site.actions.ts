@@ -8,6 +8,10 @@ import { prisma } from "@/infrastructure/db/prisma";
 import { writeAuditLog } from "@/infrastructure/db/adapters/audit.prisma-adapter";
 import { uploadSiteAsset } from "@/infrastructure/storage/supabase-storage";
 import { gateAdminWrite } from "@/lib/auth/resolve-admin-action";
+import {
+  optionalExternalImageUrlSchema,
+  requiredExternalImageUrlSchema,
+} from "@/lib/validation/external-image-url";
 import { sanitizeText } from "@/lib/sanitize/html";
 import { getHeroSlides, getHomeCarouselItems } from "@/lib/site/hero-carousel-queries";
 import { asHomepageCopy, getSiteSettings } from "@/lib/site/queries";
@@ -51,24 +55,6 @@ const optionalUrlSchema = z
   .max(500)
   .transform((v) => (!v ? "" : v.startsWith("/") || v.startsWith("#") ? v : normalizeHttpUrl(v)))
   .refine((value) => !value || z.string().url().safeParse(value).success, "Invalid URL");
-
-const assetUrlSchema = z
-  .string()
-  .trim()
-  .max(500)
-  .transform((v) => {
-    if (!v) return v;
-    if (v.startsWith("/")) return v;
-    return normalizeHttpUrl(v);
-  })
-  .refine(
-    (value) => {
-      if (!value) return false;
-      if (value.startsWith("/")) return true;
-      return z.string().url().safeParse(value).success;
-    },
-    { message: "Invalid image URL" }
-  );
 
 const quickLinkSchema = z.object({
   label: z.string().trim().min(1).max(40),
@@ -197,11 +183,7 @@ const aboutSectionSchema = z.object({
 });
 
 const siteSettingsSchema = z.object({
-  logoUrl: z.string().trim().max(500).refine((value) => {
-    if (!value) return true;
-    if (value.startsWith("/")) return true;
-    return z.string().url().safeParse(value).success;
-  }, "Invalid logo URL"),
+  logoUrl: optionalExternalImageUrlSchema,
   logoAlt: z.string().trim().max(80).default("Zenith Mind"),
   quickLinks: z.array(quickLinkSchema).max(14).default([]),
   homepageCopy: homepageCopySchema,
@@ -226,7 +208,7 @@ const heroSlideSchema = z.object({
   buttonLabel: z.string().trim().max(40).default(""),
   buttonHref: hrefSchema.default(""),
   imageHref: hrefSchema.default(""),
-  imageUrl: assetUrlSchema,
+  imageUrl: requiredExternalImageUrlSchema,
   imageAlt: z.string().trim().max(120).default(""),
   textX: z.coerce.number().int().min(0).max(100).default(12),
   textY: z.coerce.number().int().min(0).max(100).default(50),
@@ -239,7 +221,7 @@ const carouselItemSchema = z.object({
   title: z.string().trim().min(1).max(100),
   description: z.string().trim().max(180).default(""),
   href: hrefSchema.default(""),
-  imageUrl: assetUrlSchema,
+  imageUrl: requiredExternalImageUrlSchema,
   imageAlt: z.string().trim().max(120).default(""),
   sortOrder: z.coerce.number().int().min(0).max(999).default(0),
   isActive: z.boolean().default(true),

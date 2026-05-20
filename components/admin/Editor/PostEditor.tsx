@@ -13,6 +13,8 @@ import RichTextEditor, { type RichTextEditorHandle } from "./RichTextEditor";
 import SeoPanel       from "./SeoPanel";
 import FaqEditor, { type FaqItemInput } from "./FaqEditor";
 import { updatePostAction } from "@/actions/post.actions";
+import ExternalImageUrlField from "@/components/admin/ExternalImageUrlField";
+import { optionalExternalImageUrlSchema } from "@/lib/validation/external-image-url";
 
 // ?? ? ??????????????????????????????????????????????????
 
@@ -82,7 +84,7 @@ const formSchema = z.object({
   excerpt:     z.string().max(300).optional(),
   excerptEn:   z.string().max(300).optional(),
   categoryId:  z.string().optional(),
-  coverImage:  z.string().url("Invalid image URL").optional().or(z.literal("")),
+  coverImage: optionalExternalImageUrlSchema,
   coverImageAlt: z.string().max(300).optional(),
   coverImageWidth: optionalPositiveInt,
   coverImageHeight: optionalPositiveInt,
@@ -117,7 +119,13 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
   const [saveStatus,  setSaveStatus]  = useState<"idle" | "saving" | "saved" | "published" | "error">("idle");
   const [isPending,   startTransition] = useTransition();
 
-  const { register, handleSubmit, formState: { errors } } = useForm<
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<
     PostFormInput,
     unknown,
     PostFormParsed
@@ -358,28 +366,21 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
               />
             </div>
 
-            <div>
-              <label
-                htmlFor="coverImage"
-                className="mb-1.5 block text-sm font-medium text-gray-700"
-              >
-                撠??URL
-              </label>
-              <input
-                id="coverImage"
-                {...register("coverImage")}
-                onChange={(e) => {
-                  register("coverImage").onChange(e);
-                  markDirty();
-                }}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-              {errors.coverImage && (
-                <p role="alert" className="mt-1 text-xs text-red-600">
-                  {errors.coverImage.message}
-                </p>
-              )}
-            </div>
+            <ExternalImageUrlField
+              id="coverImage"
+              label="封面圖 URL（外部連結）"
+              value={watch("coverImage") ?? ""}
+              onChange={(url) => {
+                setValue("coverImage", url, { shouldValidate: true });
+                markDirty();
+              }}
+              previewAlt={watch("coverImageAlt") || "封面預覽"}
+            />
+            {errors.coverImage && (
+              <p role="alert" className="mt-1 text-xs text-red-600">
+                {errors.coverImage.message}
+              </p>
+            )}
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>

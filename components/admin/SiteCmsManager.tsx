@@ -1,15 +1,14 @@
 "use client";
 
-import Image from "next/image";
 import { useMemo, useState, useTransition } from "react";
 import type { ReactNode } from "react";
-import { Eye, ImagePlus, Plus, Save, Trash2 } from "lucide-react";
+import { Eye, Plus, Save, Trash2 } from "lucide-react";
 import {
   saveHeroSlidesAction,
   saveHomeCarouselItemsAction,
   updateSiteSettingsAction,
-  uploadSiteAssetAction,
 } from "@/actions/site.actions";
+import ExternalImageUrlField from "@/components/admin/ExternalImageUrlField";
 import HeroSlider from "@/components/home/HeroSlider";
 import { DEFAULT_QUICK_LINKS } from "@/lib/site/default-quick-links";
 import type {
@@ -67,17 +66,6 @@ function Field({
   );
 }
 
-function formatUploadError(err: ActionError): string {
-  if (err.code === "VALIDATION_ERROR" && err.details && typeof err.details === "object") {
-    const d = err.details as { formErrors?: string[] };
-    if (d.formErrors?.length) return d.formErrors.join(" ");
-  }
-  if (err.code === "AUTH_FAILED") {
-    return "登入已過期，請重新整理頁面並再次登入後台。";
-  }
-  return `圖片上傳失敗（${err.code}）。請確認 Supabase Storage（site-assets）與網路連線。`;
-}
-
 function formatCmsSaveError(prefix: string, err: ActionError): string {
   if (err.code === "AUTH_FAILED") {
     return "登入已過期或閒置超過 1 小時，請重新整理頁面並再次登入後台。";
@@ -94,7 +82,7 @@ function formatCmsSaveError(prefix: string, err: ActionError): string {
       return `${prefix}（${err.code}）：${parts.join("；")}`;
     }
   }
-  return `${prefix}（${err.code}）。請確認：圖片為有效 https URL（或以 / 開頭路徑）、標題非空；按鈕連結請用 /、# 錨點或完整 https URL。`;
+  return `${prefix}（${err.code}）。請確認：圖片為 http(s) 開頭且結尾為 .jpg/.jpeg/.png/.webp、標題非空；按鈕連結請用 /、# 錨點或完整 https URL。`;
 }
 
 /**
@@ -163,21 +151,6 @@ export default function SiteCmsManager({
     () => activeHeroSlides.filter((slide) => slide.imageUrl),
     [activeHeroSlides]
   );
-
-  async function uploadImage(file: File, folder: string) {
-    setMessage("圖片上傳中...");
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("clientFileName", file.name);
-    formData.append("folder", folder);
-    const result = await uploadSiteAssetAction(formData);
-    if (!result.success) {
-      setMessage(formatUploadError(result.error));
-      return "";
-    }
-    setMessage("圖片已上傳，請記得按儲存讓設定同步到前台。");
-    return result.data.url;
-  }
 
   function saveSettings() {
     setMessage("");
@@ -351,36 +324,13 @@ export default function SiteCmsManager({
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
           <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-            <p className="text-sm font-semibold text-gray-800">自訂 LOGO</p>
-            <div className="mt-3 flex min-h-24 items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white p-4">
-              {settings.logoUrl ? (
-                <Image
-                  src={settings.logoUrl}
-                  alt={settings.logoAlt || "LOGO"}
-                  width={220}
-                  height={80}
-                  unoptimized={settings.logoUrl.endsWith(".svg")}
-                  className="max-h-20 w-auto object-contain"
-                />
-              ) : (
-                <span className="text-sm text-gray-400">尚未上傳 LOGO</span>
-              )}
-            </div>
-            <label className="mt-3 inline-flex cursor-pointer items-center justify-center rounded-xl border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50">
-              上傳 LOGO 圖片
-              <input
-                className="sr-only"
-                type="file"
-                accept="image/*"
-                onChange={async (event) => {
-                  const file = event.target.files?.[0];
-                  event.target.value = "";
-                  if (!file) return;
-                  const url = await uploadImage(file, "logo");
-                  if (url) setSettings((prev) => ({ ...prev, logoUrl: url }));
-                }}
-              />
-            </label>
+            <ExternalImageUrlField
+              id="site-logo-url"
+              label="LOGO 圖片網址（外部連結）"
+              value={settings.logoUrl}
+              onChange={(logoUrl) => setSettings((prev) => ({ ...prev, logoUrl }))}
+              previewAlt={settings.logoAlt || "LOGO"}
+            />
             <input
               value={settings.logoAlt}
               onChange={(event) =>
@@ -1169,50 +1119,21 @@ export default function SiteCmsManager({
         )}
         {previewOpen && previewSlides.length === 0 && (
           <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-            目前無法預覽：請至少為一張 Hero「上傳圖片」並填寫標題（未上傳圖的項目不會出現在預覽中）。
+            目前無法預覽：請至少為一張 Hero 填寫有效圖片網址與標題（未填圖片網址的項目不會出現在預覽中）。
           </p>
         )}
 
         <div className="mt-6 space-y-5">
           {activeHeroSlides.map((slide, index) => (
             <article key={slide.id} className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-              <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
-                <div>
-                  <div className="relative h-36 w-full max-w-[220px] overflow-hidden rounded-xl border border-dashed border-gray-300 bg-white">
-                    {slide.imageUrl ? (
-                      <Image
-                        src={slide.imageUrl}
-                        alt={slide.imageAlt || slide.title}
-                        width={880}
-                        height={480}
-                        sizes="220px"
-                        className="h-full w-full object-cover"
-                        unoptimized={slide.imageUrl.endsWith(".svg")}
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center">
-                        <ImagePlus className="text-gray-300" size={40} aria-hidden="true" />
-                      </div>
-                    )}
-                  </div>
-                  <label className="relative mt-3 flex min-h-[42px] cursor-pointer items-center justify-center overflow-hidden rounded-xl border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50">
-                    <span className="pointer-events-none select-none">上傳 Hero 圖片</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="absolute inset-0 cursor-pointer opacity-0"
-                      onChange={async (event) => {
-                        const input = event.currentTarget;
-                        const file = input.files?.[0];
-                        input.value = "";
-                        if (!file) return;
-                        const url = await uploadImage(file, "hero");
-                        if (url) updateHeroSlide(index, { imageUrl: url });
-                        requestAnimationFrame(() => input.blur());
-                      }}
-                    />
-                  </label>
-                </div>
+              <div className="grid gap-4 lg:grid-cols-[minmax(200px,260px)_1fr]">
+                <ExternalImageUrlField
+                  id={`hero-image-${slide.id}`}
+                  label="Hero 大圖網址（外部連結）"
+                  value={slide.imageUrl}
+                  onChange={(imageUrl) => updateHeroSlide(index, { imageUrl })}
+                  previewAlt={slide.imageAlt || slide.title}
+                />
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Field label="Hero 標題"><input value={slide.title} onChange={(e) => updateHeroSlide(index, { title: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></Field>
                   <Field label="Hero 副標"><input value={slide.subtitle} onChange={(e) => updateHeroSlide(index, { subtitle: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></Field>
@@ -1298,43 +1219,14 @@ export default function SiteCmsManager({
           <div className="mt-5 grid gap-4 lg:grid-cols-2">
             {activeCarouselItems.map((item, index) => (
               <article key={item.id} className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                <div className="grid gap-4 sm:grid-cols-[160px_1fr]">
-                  <div>
-                    <div className="relative h-28 w-full max-w-[160px] overflow-hidden rounded-xl border border-dashed border-gray-300 bg-white">
-                      {item.imageUrl ? (
-                        <Image
-                          src={item.imageUrl}
-                          alt={item.imageAlt || item.title}
-                          width={640}
-                          height={360}
-                          sizes="160px"
-                          className="h-full w-full object-cover"
-                          unoptimized={item.imageUrl.endsWith(".svg")}
-                        />
-                      ) : (
-                        <div className="flex h-full items-center justify-center">
-                          <ImagePlus className="text-gray-300" size={36} aria-hidden="true" />
-                        </div>
-                      )}
-                    </div>
-                    <label className="relative mt-2 flex min-h-[40px] cursor-pointer items-center justify-center overflow-hidden rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50">
-                      <span className="pointer-events-none select-none">上傳小圖</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="absolute inset-0 cursor-pointer opacity-0"
-                        onChange={async (event) => {
-                          const input = event.currentTarget;
-                          const file = input.files?.[0];
-                          input.value = "";
-                          if (!file) return;
-                          const url = await uploadImage(file, "carousel");
-                          if (url) updateCarouselItem(index, { imageUrl: url });
-                          requestAnimationFrame(() => input.blur());
-                        }}
-                      />
-                    </label>
-                  </div>
+                <div className="grid gap-4 lg:grid-cols-[minmax(180px,240px)_1fr]">
+                  <ExternalImageUrlField
+                    id={`carousel-image-${item.id}`}
+                    label="小圖網址（外部連結）"
+                    value={item.imageUrl}
+                    onChange={(imageUrl) => updateCarouselItem(index, { imageUrl })}
+                    previewAlt={item.imageAlt || item.title}
+                  />
                   <div className="space-y-2">
                     <Field label="小圖標題"><input value={item.title} onChange={(e) => updateCarouselItem(index, { title: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></Field>
                     <Field label="小圖描述"><input value={item.description} onChange={(e) => updateCarouselItem(index, { description: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></Field>

@@ -2,8 +2,10 @@
 
 import { memo, useEffect, useState } from "react";
 import { useReducedMotion } from "framer-motion";
+import { Bot } from "lucide-react";
 import { GlassCard } from "@/shared/ui/glass-card";
 import { Badge } from "@/shared/ui/badge";
+import { CcInsightSkeletonGrid } from "@/widgets/command-center/cc-skeleton";
 import type { AiInsight } from "@/types/command-center/insights";
 
 const riskVariant = {
@@ -84,13 +86,40 @@ function InsightHeader({ insight }: { insight: AiInsight }) {
   );
 }
 
+function InsightEmptyState() {
+  return (
+    <GlassCard
+      glow="cyan"
+      className="relative overflow-hidden border-cyan-500/25 p-6"
+    >
+      <div className="pointer-events-none absolute inset-0 animate-pulse bg-gradient-to-br from-cyan-500/5 via-transparent to-transparent" />
+      <div className="pointer-events-none absolute -right-12 top-1/2 h-40 w-40 -translate-y-1/2 rounded-full border border-cyan-500/20 shadow-[0_0_60px_rgba(0,210,255,0.15)]" />
+      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-cyan-500/40 bg-cyan-500/10 shadow-[0_0_32px_-4px_rgba(0,210,255,0.45)]">
+          <Bot className="h-7 w-7 animate-pulse text-cyan-300" aria-hidden />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-mono text-xs uppercase tracking-wider text-cyan-400/90">
+            AI 洞察中心
+          </p>
+          <p className="mt-2 text-sm text-slate-300">
+            🤖 Gemini 代理正在後台分析近 30 天流量趨勢與 21 項串接指標…
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            完成後將在此顯示風險分級、根因與建議方案
+          </p>
+          <div className="mt-5">
+            <CcInsightSkeletonGrid />
+          </div>
+        </div>
+      </div>
+    </GlassCard>
+  );
+}
+
 function InsightPanelInner({ insights }: { insights: AiInsight[] }) {
   if (insights.length === 0) {
-    return (
-      <GlassCard className="p-8 text-center text-sm text-slate-500">
-        目前無 AI 洞察，系統持續監控中。
-      </GlassCard>
-    );
+    return <InsightEmptyState />;
   }
 
   return (

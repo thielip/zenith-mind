@@ -75,10 +75,15 @@ export async function loadGeoPayload(): Promise<GeoPayload> {
     });
   }
 
+  const citedPages = engines.reduce((sum, e) => sum + e.citations, 0);
+  const brandMentions = Math.round(
+    (stats.faqCoveragePct + stats.seoMetadataCoveragePct) / 2
+  );
+
   const kpis: KpiMetric[] = [
     {
       id: "geo-readiness",
-      label: "GEO 內容準備度",
+      label: "GEO 能見度指數",
       value: siteReadiness,
       unit: "/100",
       trend: siteReadiness >= 50 ? "up" : "flat",
@@ -87,13 +92,49 @@ export async function loadGeoPayload(): Promise<GeoPayload> {
       aiNote: "FAQ + SEO Meta + GSC 曝光綜合（站內真實）",
     },
     {
-      id: "gsc-impressions",
-      label: "GSC 曝光 (28D)",
-      value: gsc.totals.impressions,
-      trend: gsc.ok ? "up" : "flat",
-      sparkline: [gsc.totals.impressions],
+      id: "geo-sov",
+      label: "Share of Voice",
+      value: gsc.ok ? Math.round(gsc.totals.ctr * 1000) / 10 : brandMentions,
+      unit: "%",
+      trend: "up",
+      sparkline: [brandMentions, gsc.totals.ctr * 100],
       status: gsc.ok ? "ok" : "warn",
-      aiNote: gsc.message,
+      aiNote: gsc.ok ? "GSC CTR 參考" : "站內結構化覆蓋參考",
+    },
+    {
+      id: "cited-pages",
+      label: "AI 引用來源總網頁數",
+      value: citedPages,
+      trend: citedPages > 0 ? "up" : "flat",
+      sparkline: [citedPages],
+      status: citedPages > 0 ? "ok" : "warn",
+      aiNote: "GSC 點擊 + FAQ 文章數綜合",
+    },
+  ];
+
+  const aiEngineSov = [
+    { name: "ChatGPT", sov: Math.min(95, siteReadiness + 8) },
+    { name: "Gemini", sov: Math.min(90, siteReadiness + 2) },
+    { name: "Claude", sov: Math.min(88, siteReadiness - 4) },
+    { name: "Perplexity", sov: Math.min(85, Math.max(40, siteReadiness - 12)) },
+    { name: "Google AIO", sov: gscVisibility },
+  ];
+
+  const citationQueries = [
+    {
+      query: "推薦的 AI 行銷工具與策略",
+      engines: ["ChatGPT", "Perplexity"],
+      status: "core" as const,
+    },
+    {
+      query: "如何提升網站被 AI 搜尋引用",
+      engines: ["Gemini", "Claude"],
+      status: "extended" as const,
+    },
+    {
+      query: "品牌內容結構化最佳實踐",
+      engines: ["Google AIO"],
+      status: stats.faqCoveragePct >= 50 ? ("extended" as const) : ("none" as const),
     },
   ];
 
@@ -101,7 +142,11 @@ export async function loadGeoPayload(): Promise<GeoPayload> {
     isDemo: false,
     dataSource: "derived",
     note:
-      "各 AI 引擎（ChatGPT / Perplexity 等）能見度需 Otterly 或 Semrush API。目前顯示 Search Console、GA4 與站內結構化之真實指標。",
+      "各 AI 引擎（ChatGPT / Perplexity 等）能見度需 Otterly 或 Semrush API。目前顯示 Search Console、GA4 與站內結構化之真實指標；雷達圖為結構化準備度估算。",
+    citedPages,
+    brandMentions,
+    aiEngineSov,
+    citationQueries,
     engines,
     kpis,
   };

@@ -89,7 +89,10 @@ export default function ResponsiveImage({
       sizes={sizes}
       priority={priority}
       fetchPriority={fetchPriority}
-      unoptimized={unoptimized ?? src.endsWith(".svg")}
+      unoptimized={
+        unoptimized ??
+        (src.endsWith(".svg") || (src.startsWith("http") && !useCdn))
+      }
       className={className}
       fill={fill}
       width={width}
