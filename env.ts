@@ -37,22 +37,10 @@ export const env = createEnv({
     // ── Supabase Storage（媒體上傳）────────────────────
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 
-    // ── Alert 通知（Gmail SMTP，Job 失敗告警；空字串視為未設定）──
-    ALERT_EMAIL_USER: z
-      .string()
-      .optional()
-      .refine(
-        (v) => !v?.trim() || z.string().email().safeParse(v.trim()).success,
-        { message: "Invalid email" }
-      ),
+    // ── Alert 通知（格式於寄信時驗證，避免 Vercel 占位值阻擋 build）
+    ALERT_EMAIL_USER: z.string().optional(),
     ALERT_EMAIL_PASS: z.string().min(1).optional(),
-    ALERT_EMAIL_TO: z
-      .string()
-      .optional()
-      .refine(
-        (v) => !v?.trim() || z.string().email().safeParse(v.trim()).success,
-        { message: "Invalid email" }
-      ),
+    ALERT_EMAIL_TO: z.string().optional(),
 
     // ── 運行環境 ─────────────────────────────────────────
     NODE_ENV: z
