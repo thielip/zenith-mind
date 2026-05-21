@@ -5,7 +5,14 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin("./lib/i18n/request.ts");
 
-const isCfPublicOnly = process.env["CF_PUBLIC_ONLY"] === "1";
+// CF_PUBLIC_ONLY：cf-public-build / build:next:public 明確設定
+// SKIP_ENV_VALIDATION + 非 Vercel：Dashboard「SKIP_ENV_VALIDATION=true npm run build:cf」備援
+// CF_PAGES：Cloudflare Pages 自動注入
+const isCfPublicOnly =
+  process.env["CF_PUBLIC_ONLY"] === "1" ||
+  process.env["CF_PAGES"] === "1" ||
+  (process.env["SKIP_ENV_VALIDATION"] === "true" &&
+    process.env["VERCEL"] !== "1");
 const sentryAuthToken = process.env["SENTRY_AUTH_TOKEN"]?.trim();
 const sentryUploadEnabled = Boolean(
   sentryAuthToken &&

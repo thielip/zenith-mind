@@ -105,7 +105,7 @@ function buildCfEnv() {
   const heap =
     process.env.NODE_OPTIONS?.includes("max-old-space-size")
       ? process.env.NODE_OPTIONS
-      : "--max-old-space-size=6144";
+      : "--max-old-space-size=8192";
   const env = {
     CF_PUBLIC_ONLY: "1",
     SKIP_ENV_VALIDATION: "true",
@@ -162,9 +162,11 @@ stashDirs();
 hideEnvFiles();
 let exitCode = 1;
 try {
-  const cfEnv = buildCfEnv();
+  const cfOverrides = buildCfEnv();
+  Object.assign(process.env, cfOverrides);
+  const cfEnv = { ...process.env, ...cfOverrides };
   console.log(
-    "[cf-public-build] CF_PUBLIC_ONLY=1 NODE_OPTIONS=%s",
+    "[cf-public-build] CF_PUBLIC_ONLY=1 NODE_OPTIONS=%s buildCommand=npm run build:next:public",
     cfEnv.NODE_OPTIONS ?? "(default)"
   );
   const r = spawnSync("npx", ["opennextjs-cloudflare", "build"], {

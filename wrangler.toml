@@ -10,7 +10,7 @@ compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 # Cloudflare Workers「連線 Git」建置（Dashboard Latest build）
 # 本機：先 npm run build:cf，再 npx wrangler deploy（deploy 時勿重跑 build 可加 --no-bundle）
 [build]
-command = "npm run build:cf"
+command = "CF_PUBLIC_ONLY=1 SKIP_ENV_VALIDATION=true NODE_OPTIONS=--max-old-space-size=8192 npm run build:cf"
 cwd = "."
 watch_dir = ["app", "lib", "components", "middleware.ts", "next.config.ts", "open-next.config.ts", "scripts/cf-public-build.mjs"]
 

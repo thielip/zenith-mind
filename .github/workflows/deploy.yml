@@ -44,6 +44,7 @@ jobs:
         env:
           SKIP_ENV_VALIDATION: "true"
           CF_PUBLIC_ONLY: "1"
+          NODE_OPTIONS: "--max-old-space-size=8192"
 
       - name: Validate Cloudflare secrets present
         run: |

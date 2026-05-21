@@ -9,6 +9,7 @@
     "verify:cf-build": "node scripts/verify-cf-build-env.mjs",
     "dev": "next dev",
     "build": "next build",
+    "build:next:public": "node scripts/cf-next-build.mjs",
     "build:cf": "node scripts/cf-public-build.mjs",
     "build:cf:full": "opennextjs-cloudflare build",
     "preview:cf": "opennextjs-cloudflare build && opennextjs-cloudflare preview",

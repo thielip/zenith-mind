@@ -3,10 +3,12 @@
 ## 建置命令
 
 ```bash
-SKIP_ENV_VALIDATION=true npm run build:cf
+CF_PUBLIC_ONLY=1 SKIP_ENV_VALIDATION=true NODE_OPTIONS=--max-old-space-size=8192 npm run build:cf
 ```
 
-等同 `wrangler.toml` 的 `[build] command`。
+Dashboard 若自訂建置命令，請**務必**含 `CF_PUBLIC_ONLY=1`（或與 `wrangler.toml` `[build] command` 一致）。
+
+OpenNext 會執行 `npm run build:next:public`（見 `open-next.config.ts`），在子程序內再次設定 `CF_PUBLIC_ONLY=1`。
 
 ## Node 版本
 
@@ -48,6 +50,9 @@ Vercel 後台若要 source map：設 `SENTRY_AUTH_TOKEN` + org/project。
 
 若 log 在 `Linting and checking validity of types` 後 OOM：
 
-1. 確認已推送含 `CF_PUBLIC_ONLY` 的 `next.config.ts`（公開站 build 不跑 tsc/ESLint）。
-2. 品質把關改在 GitHub Actions：`npm run type-check`、`npm run lint`。
-3. 可於 Pages 再加環境變數 `NODE_OPTIONS=--max-old-space-size=6144`（腳本已內建預設）。
+1. 成功建置 log 應出現 `[cf-public-build] CF_PUBLIC_ONLY=1` 與 `[cf-next-build] CF_PUBLIC_ONLY=1`，且 Next 顯示 `Skipping linting`。
+2. 確認已推送含 `build:next:public` / `open-next.config.ts` buildCommand 的 commit。
+3. Cloudflare Dashboard 建置命令需含 `CF_PUBLIC_ONLY=1`；僅 `SKIP_ENV_VALIDATION` 時 `next.config` 仍會略過 lint/tsc（備援）。
+4. 清除 Build cache 後重試部署。
+5. 品質把關改在 GitHub Actions：`npm run type-check`、`npm run lint`。
+6. 可再加環境變數 `NODE_OPTIONS=--max-old-space-size=8192`（腳本已內建預設）。
