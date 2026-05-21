@@ -66,6 +66,7 @@ export default function ResponsiveImage({
     }
 
     return (
+      // eslint-disable-next-line @next/next/no-img-element -- Supabase render CDN；公開站 CF 不使用 /_next/image
       <img
         src={cdnSrc}
         srcSet={srcSet || undefined}

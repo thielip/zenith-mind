@@ -9,7 +9,7 @@ interface Props {
 
 function isHiddenFrontendLink(href: string) {
   const normalized = href.toLowerCase();
-  return normalized.includes("/admin") || normalized.includes("#newsletter");
+  return normalized.includes("/admin");
 }
 
 function normalizeHomeHref(prefix: string, href: string) {

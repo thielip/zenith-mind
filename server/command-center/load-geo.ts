@@ -1,19 +1,27 @@
+import { env } from "@/env";
 import { fetchGa4DashboardBundle } from "@/infrastructure/ga4/dashboard-bundle";
 import { getPublishedPostFaqStats } from "@/lib/aeo/post-faq-stats";
 import { getSchemaCoverageStats } from "@/lib/seo/schema-coverage";
 import { getCachedGa4Bundle } from "@/server/command-center/cached-data";
 import { applyConnectedIntegrations } from "@/services/integrations/runtime-env";
 import { fetchSearchConsoleSummary } from "@/services/google/search-console";
+import {
+  fetchThirdPartyGeo,
+  hasThirdPartyGeoConfig,
+} from "@/services/geo";
+import type { GeoApiResponse } from "@/services/geo/types";
 import type { GeoPayload } from "@/types/command-center/module-payloads";
 
 export type { GeoPayload };
 import type { KpiMetric } from "@/types/command-center/metrics";
 
-function hasThirdPartyGeoApi(): boolean {
-  return Boolean(
-    process.env["OTTERLY_API_KEY"]?.trim() || process.env["SEMRUSH_API_KEY"]?.trim()
-  );
-}
+export type GeoLoadResult = {
+  data: GeoPayload;
+  /** 整頁無法載入時顯示 */
+  error?: string;
+  /** 第三方 API 失敗但仍有衍生資料 */
+  apiWarning?: string;
+};
 
 async function loadGa4BundleForGeo() {
   try {
@@ -24,12 +32,31 @@ async function loadGa4BundleForGeo() {
   }
 }
 
-/** GEO：第三方 API 未設定時，以 GSC + GA4 + 站內結構化指標呈現真實數據（非靜態 Demo） */
-export async function loadGeoPayload(): Promise<GeoPayload> {
-  if (hasThirdPartyGeoApi()) {
-    // 預留：接上 Otterly / Semrush 後改為 isDemo: false, dataSource: third_party
-  }
+function mergeThirdParty(
+  derived: GeoPayload,
+  api: GeoApiResponse,
+  sourceLabel: string
+): GeoPayload {
+  return {
+    ...derived,
+    isDemo: false,
+    dataSource: "third_party",
+    citedPages: api.citedPages ?? derived.citedPages,
+    brandMentions: api.brandMentions ?? derived.brandMentions,
+    aiEngineSov: api.aiEngineSov?.length ? api.aiEngineSov : derived.aiEngineSov,
+    citationQueries: api.citationQueries?.length
+      ? api.citationQueries
+      : derived.citationQueries,
+    engines: api.engines?.length
+      ? [...api.engines, ...derived.engines.filter((e) => !api.engines?.some((a) => a.name === e.name))]
+      : derived.engines,
+    note:
+      api.note ??
+      `${sourceLabel} 已合併 Search Console、GA4 與站內結構化指標。`,
+  };
+}
 
+async function loadDerivedGeoPayload(): Promise<GeoPayload> {
   const [gsc, ga4, stats, schemaCoverage] = await Promise.all([
     fetchSearchConsoleSummary(),
     loadGa4BundleForGeo(),
@@ -161,4 +188,51 @@ export async function loadGeoPayload(): Promise<GeoPayload> {
     kpis,
     schemaCoverage,
   };
+}
+
+/** GEO：第三方 API（可選）+ GSC / GA4 / 站內結構化真實指標 */
+export async function loadGeoPayload(): Promise<GeoLoadResult> {
+  try {
+    const derived = await loadDerivedGeoPayload();
+    const siteUrl = env.NEXT_PUBLIC_SITE_URL;
+
+    if (!hasThirdPartyGeoConfig()) {
+      return { data: derived };
+    }
+
+    const third = await fetchThirdPartyGeo(siteUrl);
+    if (!third) {
+      return { data: derived };
+    }
+
+    if (third.ok) {
+      const sourceLabel =
+        third.source === "semrush" ? "Semrush API" : "GEO REST API";
+      return {
+        data: mergeThirdParty(derived, third.data, sourceLabel),
+      };
+    }
+
+    return {
+      data: derived,
+      apiWarning: third.message,
+    };
+  } catch (e) {
+    const message =
+      e instanceof Error ? e.message : "GEO 儀表板資料載入失敗";
+    return {
+      data: {
+        isDemo: false,
+        dataSource: "unavailable",
+        note: message,
+        citedPages: 0,
+        brandMentions: 0,
+        aiEngineSov: [],
+        citationQueries: [],
+        engines: [],
+        kpis: [],
+      },
+      error: message,
+    };
+  }
 }

@@ -50,7 +50,7 @@ export default async function PublicLocaleLayout({ children, params }: Props) {
     ...siteSettings,
     quickLinks: siteSettings.quickLinks.filter((link) => {
       const href = link.href.toLowerCase();
-      return !href.includes("/admin") && !href.includes("#newsletter");
+      return !href.includes("/admin");
     }),
   };
 

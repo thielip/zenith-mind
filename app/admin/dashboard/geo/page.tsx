@@ -4,6 +4,8 @@ import { GeoPageView } from "@/features/geo-intelligence/components/geo-page-vie
 export const revalidate = 60;
 
 export default async function Page() {
-  const data = await loadGeoPayload();
-  return <GeoPageView data={data} />;
+  const { data, error, apiWarning } = await loadGeoPayload();
+  return (
+    <GeoPageView data={data} error={error} apiWarning={apiWarning} />
+  );
 }

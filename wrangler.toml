@@ -40,7 +40,7 @@ GA4_CLIENT_EMAIL = "ga4-api-reader@getzenithmind.iam.gserviceaccount.com"
 GA4_PROPERTY_ID = "536903218"
 GOOGLE_ADS_CUSTOMER_ID = "8702788584"
 GOOGLE_ADS_LOGIN_CUSTOMER_ID = "4708073999"
-ALERT_EMAIL_TO = "tvb2001thielip@yahoo.com.tw"
+# ALERT_EMAIL_TO 請用 `npx wrangler secret put ALERT_EMAIL_TO`（勿提交 Git）
 GOOGLE_SEARCH_CONSOLE_SITE_URL = "https://www.getzenithmind.com/"
 GOOGLE_MERCHANT_CENTER_ACCOUNT_ID = "5788433025"
 BIGQUERY_DATASET_ID = "my_getzenithmind"

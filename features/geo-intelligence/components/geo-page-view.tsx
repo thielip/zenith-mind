@@ -88,7 +88,15 @@ function buildGeoInsights(data: GeoPayload) {
   return items;
 }
 
-export function GeoPageView({ data }: { data: GeoPayload }) {
+export function GeoPageView({
+  data,
+  error,
+  apiWarning,
+}: {
+  data: GeoPayload;
+  error?: string;
+  apiWarning?: string;
+}) {
   const radarData = data.aiEngineSov.map((e) => ({
     subject: e.name.replace("Google AIO", "Google"),
     value: e.sov,
@@ -96,12 +104,37 @@ export function GeoPageView({ data }: { data: GeoPayload }) {
 
   const geoInsights = buildGeoInsights(data);
 
+  if (error && data.dataSource === "unavailable") {
+    return (
+      <div className="space-y-6 min-w-0">
+        <ModuleHeader
+          title="GEO 情報"
+          description="生成式引擎能見度、Share of Voice 與 AI 引用"
+        />
+        <div
+          role="alert"
+          className="rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-100"
+        >
+          {error}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 min-w-0">
       <ModuleHeader
         title="GEO 情報"
         description="生成式引擎能見度、Share of Voice 與 AI 引用"
       />
+      {apiWarning ? (
+        <div
+          role="status"
+          className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-100"
+        >
+          第三方 GEO API：{apiWarning}
+        </div>
+      ) : null}
       {data.isDemo ? (
         <DemoBanner
           title="Demo 示範資料 / 待接 API"

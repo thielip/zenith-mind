@@ -32,13 +32,17 @@ export default function AuditLogDetailModal({ log, onClose }: AuditLogDetailModa
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       role="presentation"
-      onClick={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose();
+      }}
     >
       <div
         role="dialog"
         aria-labelledby="audit-detail-title"
         className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl"
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="border-b border-gray-100 px-6 py-4">
           <h2 id="audit-detail-title" className="text-lg font-bold text-gray-900">

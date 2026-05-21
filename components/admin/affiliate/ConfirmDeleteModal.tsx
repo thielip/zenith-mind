@@ -21,14 +21,18 @@ export default function ConfirmDeleteModal({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       role="presentation"
-      onClick={onCancel}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onCancel();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onCancel();
+      }}
     >
       <div
         role="alertdialog"
         aria-labelledby="aff-delete-title"
         aria-describedby="aff-delete-desc"
         className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
       >
         <h2 id="aff-delete-title" className="text-lg font-bold text-gray-900">
           確定要刪除聯盟連結？

@@ -3,24 +3,13 @@
 // ⚠ GEMINI_API_KEY 絕不可 NEXT_PUBLIC_
 
 import OpenAI from "openai";
-import { env } from "@/env";
+import {
+  GEMINI_FLASH_LITE_MODEL,
+  getGeminiOpenAIClient,
+} from "@/lib/ai/gemini-openai-client";
 import type { AiPort, AiPromptOptions, AiResponse } from "@/domain/ai/ai.port";
 import type { ActionResult } from "@/domain/shared/core.types";
 import { Errors } from "@/domain/shared/core.types";
-
-const GEMINI_COMPAT_BASE_URL =
-  "https://generativelanguage.googleapis.com/v1beta/openai/";
-const GEMINI_MODEL = "gemini-3.1-flash-lite-preview" as const;
-
-let _client: OpenAI | null = null;
-
-function getClient(): OpenAI {
-  _client ??= new OpenAI({
-    apiKey:  env.GEMINI_API_KEY,
-    baseURL: GEMINI_COMPAT_BASE_URL,
-  });
-  return _client;
-}
 
 export class OpenAiAdapter implements AiPort {
 
@@ -29,10 +18,10 @@ export class OpenAiAdapter implements AiPort {
     options?: AiPromptOptions
   ): Promise<ActionResult<AiResponse>> {
     try {
-      const client = getClient();
+      const client = getGeminiOpenAIClient();
 
       const response = await client.chat.completions.create({
-        model:       GEMINI_MODEL,
+        model:       GEMINI_FLASH_LITE_MODEL,
         temperature: options?.temperature ?? 0.7,
         max_tokens:  options?.maxTokens ?? 2000,
         messages:    [{ role: "user", content: prompt }],
@@ -67,9 +56,9 @@ export class OpenAiAdapter implements AiPort {
   }
 
   async *stream(prompt: string, options?: AiPromptOptions): AsyncIterable<string> {
-    const client = getClient();
+    const client = getGeminiOpenAIClient();
     const stream = await client.chat.completions.create({
-      model:    GEMINI_MODEL,
+      model:    GEMINI_FLASH_LITE_MODEL,
       messages: [{ role: "user", content: prompt }],
       stream:   true,
     });

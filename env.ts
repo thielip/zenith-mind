@@ -40,6 +40,11 @@ export const env = createEnv({
     WEBHOOK_SECRET: z.string().min(32),
     REVALIDATE_SECRET: z.string().min(32).optional(),
 
+    // ── Cron / 公開 API 簽章（部署缺漏時執行期 401/503）──
+    CRON_SECRET: z.string().min(32),
+    PAGEVIEW_HASH_SALT: z.string().min(32),
+    REDIRECT_LOOKUP_SECRET: z.string().min(32),
+
     // ── Supabase Storage（媒體上傳）────────────────────
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 
@@ -89,6 +94,9 @@ export const env = createEnv({
     GA4_PROPERTY_ID:            process.env["GA4_PROPERTY_ID"],
     WEBHOOK_SECRET:             process.env["WEBHOOK_SECRET"],
     REVALIDATE_SECRET:          process.env["REVALIDATE_SECRET"],
+    CRON_SECRET:                process.env["CRON_SECRET"],
+    PAGEVIEW_HASH_SALT:         process.env["PAGEVIEW_HASH_SALT"],
+    REDIRECT_LOOKUP_SECRET:     process.env["REDIRECT_LOOKUP_SECRET"],
     SUPABASE_SERVICE_ROLE_KEY:  process.env["SUPABASE_SERVICE_ROLE_KEY"],
     ALERT_EMAIL_USER:           process.env["ALERT_EMAIL_USER"],
     ALERT_EMAIL_PASS:           process.env["ALERT_EMAIL_PASS"],

@@ -1,7 +1,7 @@
 // infrastructure/health/probes.ts — 管理後台用連線探測（勿回傳 secret）
 
 import { createClient } from "@supabase/supabase-js";
-import OpenAI from "openai";
+import { getGeminiOpenAIClientFromEnv } from "@/lib/ai/gemini-openai-client";
 import { prisma } from "@/infrastructure/db/prisma";
 import { formatApiError } from "@/lib/admin/format-api-error";
 import { fetchRealtimeActiveUsers } from "@/infrastructure/ga4/reporting.client";
@@ -74,10 +74,10 @@ export async function probeSupabaseStorage(): Promise<ProbeResult> {
 
 export async function probeGemini(): Promise<ProbeResult> {
   try {
-    const client = new OpenAI({
-      apiKey: env.GEMINI_API_KEY,
-      baseURL: GEMINI_COMPAT_BASE_URL,
-    });
+    const client = getGeminiOpenAIClientFromEnv();
+    if (!client) {
+      return { ok: false, message: "GEMINI_API_KEY 未設定" };
+    }
     const models = await withProbeTimeout(client.models.list(), 25_000);
     const count = models.data?.length ?? 0;
     return { ok: true, message: `Gemini 相容 API 可連線（模型列表 ${count} 筆）` };

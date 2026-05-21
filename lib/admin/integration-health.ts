@@ -8,6 +8,7 @@ import {
   withProbeTimeout,
 } from "@/infrastructure/health/probes";
 import { fetchSearchConsoleSummary } from "@/services/google/search-console";
+import { fetchBigQueryHealth } from "@/services/google/bigquery";
 import {
   deriveGcpProjectId,
   getGoogleIntegrationStatuses,
@@ -122,7 +123,7 @@ function validateTotp(item: IntegrationHealthItem): IntegrationHealthItem {
   return { ...item, detail: "64 字元 hex 已設定" };
 }
 
-function bigQueryItem(): IntegrationHealthItem {
+function bigQueryBase(): IntegrationHealthItem {
   const missing = missingKeys(["BIGQUERY_DATASET_ID"]);
   const projectId = deriveGcpProjectId();
   if (!projectId) {
@@ -132,7 +133,7 @@ function bigQueryItem(): IntegrationHealthItem {
     id: "google-bigquery",
     name: "BigQuery",
     description:
-      "需資料集 ID；GCP 專案可由 GOOGLE_CLOUD_PROJECT_ID 或 GA4 服務帳號 email 推斷。",
+      "使用 GA4 服務帳號存取；需 IAM 角色 BigQuery Data Viewer。",
     status: missing.length === 0 ? "ok" : "missing",
     missing,
     detail: projectId ? `專案：${projectId}` : undefined,
@@ -235,7 +236,9 @@ export async function runIntegrationHealthChecks(
     return { ok: false, message: r.message ?? "Search Console 失敗" };
   });
 
-  const [postgres, redis, supabaseAdmin, gemini, ga4Live, adsLive, gscLive] =
+  const bigQueryEnv = bigQueryBase();
+
+  const [postgres, redis, supabaseAdmin, gemini, ga4Live, adsLive, gscLive, bigQuery] =
     await Promise.all([
       postgresPromise,
       probeItem(redisBase, probeRedis),
@@ -244,6 +247,7 @@ export async function runIntegrationHealthChecks(
       ga4ProbePromise,
       probeItem(adsLiveBase, probeGoogleAdsOAuth),
       gscLivePromise,
+      probeItem(bigQueryEnv, fetchBigQueryHealth),
     ]);
 
   const staticItems: IntegrationHealthItem[] = [
@@ -284,7 +288,7 @@ export async function runIntegrationHealthChecks(
     gscEnv,
     gscLive,
     ...otherGoogle,
-    bigQueryItem(),
+    bigQuery,
   ];
 
   return {

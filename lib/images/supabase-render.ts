@@ -68,9 +68,12 @@ export function buildSupabaseSrcSet(
 
   const srcSet = sorted.map((w) => `${renderAt(w)} ${w}w`).join(", ");
 
+  const midIndex = Math.min(
+    Math.max(1, Math.floor(sorted.length / 2)),
+    sorted.length - 1
+  );
   const fallback =
-    opts.fallbackWidth ??
-    sorted[Math.min(Math.max(1, Math.floor(sorted.length / 2)), sorted.length - 1)]!;
+    opts.fallbackWidth ?? sorted[midIndex] ?? sorted[0]!;
   const src = renderAt(fallback);
 
   return { src, srcSet };

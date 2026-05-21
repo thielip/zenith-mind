@@ -20,7 +20,7 @@ function readOptional(name: "ALERT_EMAIL_USER" | "ALERT_EMAIL_PASS" | "ALERT_EMA
 export function resolveAlertEmail(): ResolvedAlertEmail {
   const warnings: string[] = [];
   let user = readOptional("ALERT_EMAIL_USER");
-  let pass = readOptional("ALERT_EMAIL_PASS");
+  const pass = readOptional("ALERT_EMAIL_PASS");
   let to = readOptional("ALERT_EMAIL_TO");
 
   if (user && !emailSchema.safeParse(user).success) {

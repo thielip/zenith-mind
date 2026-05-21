@@ -37,7 +37,8 @@ export async function GET() {
     WATCH_KEYS.map((key) => [key, envPresent(key)])
   );
 
-  return NextResponse.json({
+  return NextResponse.json(
+    {
     checkedAt: new Date().toISOString(),
     nodeEnv: process.env["NODE_ENV"],
     vercel: Boolean(process.env["VERCEL"]),
@@ -53,5 +54,12 @@ export async function GET() {
       "REVALIDATE_SECRET 建議 ≥32 字元；可用 openssl rand -hex 32 產生。",
       "作戰中心健康報告快取約 120 秒，請按「重新偵測」或稍候再刷新。",
     ],
-  });
+    },
+    {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        Pragma: "no-cache",
+      },
+    }
+  );
 }

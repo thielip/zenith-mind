@@ -6,6 +6,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { guardDatabaseEnv } from "./guard-database-env.mjs";
 
 const root = process.cwd();
 const envPath = join(root, ".env.local");
@@ -38,6 +39,8 @@ if (prismaArgs.length === 0) {
   console.error("用法: node scripts/prisma-with-local-env.mjs migrate deploy");
   process.exit(1);
 }
+
+guardDatabaseEnv(prismaArgs.join(" "));
 
 const r = spawnSync("npx", ["prisma", ...prismaArgs], {
   stdio: "inherit",

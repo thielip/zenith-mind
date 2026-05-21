@@ -65,11 +65,6 @@ enum OutboxStatus {
   FAILED
 }
 
-enum NewsletterSubscriberStatus {
-  ACTIVE
-  UNSUBSCRIBED
-}
-
 enum IntegrationConnectionStatus {
   DISCONNECTED
   CONNECTED
@@ -496,25 +491,6 @@ model EventOutbox {
 
   @@index([status, createdAt]) // Cron 掃描 PENDING 用
   @@map("event_outbox")
-}
-
-// ═══════════════════════════════════════════════
-// NEWSLETTER_SUBSCRIBER（Email Capture）
-// ═══════════════════════════════════════════════
-
-model NewsletterSubscriber {
-  id     String @id @default(cuid())
-  email  String @unique
-  locale String @default("zh-TW")
-  source String @default("homepage")
-  status NewsletterSubscriberStatus @default(ACTIVE)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([status, createdAt])
-  @@index([locale])
-  @@map("newsletter_subscribers")
 }
 
 // ═══════════════════════════════════════════════

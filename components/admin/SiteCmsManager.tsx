@@ -12,7 +12,6 @@ import CmsAccordionSection from "@/components/admin/CmsAccordionSection";
 import ExternalImageUrlField from "@/components/admin/ExternalImageUrlField";
 import SortableList from "@/components/admin/SortableList";
 import HeroSlider from "@/components/home/HeroSlider";
-import { DEFAULT_QUICK_LINKS } from "@/lib/site/default-quick-links";
 import type {
   HeroSlideData,
   HomeCarouselItemData,

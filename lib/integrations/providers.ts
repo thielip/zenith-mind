@@ -88,7 +88,8 @@ export const INTEGRATION_PROVIDERS: IntegrationProviderDef[] = [
   {
     id: "bigquery",
     name: "BigQuery",
-    description: "資料倉儲查詢",
+    description:
+      "使用 GA4 服務帳號；需在 GCP 為該帳號授予 BigQuery Data Viewer（見 docs/BIGQUERY-IAM-SETUP.md）",
     fields: [
       { key: "BIGQUERY_DATASET_ID", label: "Dataset ID" },
       { key: "GOOGLE_CLOUD_PROJECT_ID", label: "GCP 專案 ID（選填）" },

@@ -12,8 +12,7 @@ export type AdminEntity =
   | "integration"
   | "analytics"
   | "audit"
-  | "settings"
-  | "newsletter";
+  | "settings";
 
 export type AdminPermission = "read" | "write";
 
@@ -31,7 +30,6 @@ const ROLE_ENTITY_PERMISSIONS: Record<
     analytics: ["read", "write"],
     audit: ["read", "write"],
     settings: ["read", "write"],
-    newsletter: ["read", "write"],
   },
   GUEST: {
     post: ["read"],
@@ -43,7 +41,6 @@ const ROLE_ENTITY_PERMISSIONS: Record<
     analytics: ["read"],
     audit: ["read"],
     settings: ["read"],
-    newsletter: ["read"],
   },
 };
 

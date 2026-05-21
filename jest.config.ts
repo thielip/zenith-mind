@@ -26,7 +26,6 @@ const config: Config = {
     "app/(public)/go/**/*.{ts,tsx}",
     "actions/affiliate.actions.ts",
     "actions/media.actions.ts",
-    "actions/newsletter.actions.ts",
     "actions/totp-activate.actions.ts",
     "lib/auth/jwt.ts",
     "lib/middleware/auth-guard.ts",

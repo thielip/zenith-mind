@@ -1,5 +1,4 @@
 import Link from "next/link";
-import NewsletterSignup from "@/components/marketing/NewsletterSignup";
 
 interface Props {
   locale: string;
@@ -31,7 +30,7 @@ export default function HeroSection({ locale }: Props) {
           <p className="mt-6 max-w-2xl text-lg leading-8 text-gray-600">
             {isEn
               ? "Zenith Mind is a bilingual knowledge platform covering AI tools, quantitative thinking, real estate, content monetization and SEO-led growth."
-              : "巔峰思維聚焦 AI 工具、量化交易、房地產、知識變現與個人品牌，用 SEO 內容累積自然流量，未來延伸電子報、聯盟行銷、課程與顧問服務。"}
+              : "巔峰思維聚焦 AI 工具、量化交易、房地產、知識變現與個人品牌，用 SEO 內容累積自然流量，延伸聯盟行銷、課程與顧問服務。"}
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -41,12 +40,12 @@ export default function HeroSection({ locale }: Props) {
             >
               {isEn ? "Explore articles" : "探索文章"}
             </Link>
-            <a
-              href="#newsletter"
+            <Link
+              href={`${prefix}/about`}
               className="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white/90 px-6 py-3 text-sm font-semibold text-gray-800 shadow-sm backdrop-blur hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
-              {isEn ? "Join the newsletter" : "訂閱電子報"}
-            </a>
+              {isEn ? "About Zenith Mind" : "關於巔峰思維"}
+            </Link>
           </div>
 
           <div className="mt-8 flex flex-wrap gap-2">
@@ -66,17 +65,26 @@ export default function HeroSection({ locale }: Props) {
             aria-hidden="true"
             className="pointer-events-none absolute right-6 top-6 h-16 w-16 rounded-full border border-blue-200 bg-blue-50"
           />
-          <div className="relative mb-5">
-            <p className="text-sm font-semibold text-gray-900">
-              {isEn ? "Weekly edge for builders and investors" : "每週給知識創作者與投資者的精選洞察"}
-            </p>
-            <p className="mt-2 text-sm leading-6 text-gray-500">
+          <p className="text-sm font-semibold text-gray-900">
+            {isEn ? "What you will find here" : "本站內容方向"}
+          </p>
+          <ul className="mt-4 space-y-3 text-sm leading-6 text-gray-600">
+            <li>
               {isEn
-                ? "Get practical frameworks for AI tools, SEO content, investing and monetizing personal expertise."
-                : "掌握 AI 工具、SEO 內容、投資理財與個人專業變現的實戰框架。"}
-            </p>
-          </div>
-          <NewsletterSignup locale={locale} source="homepage-hero" compact />
+                ? "Practical guides on AI tools, automation and content workflows."
+                : "AI 工具、自動化與內容工作流的實戰指南。"}
+            </li>
+            <li>
+              {isEn
+                ? "SEO and GEO frameworks for durable organic traffic."
+                : "SEO／GEO 框架，累積可複利的自然流量。"}
+            </li>
+            <li>
+              {isEn
+                ? "Investing, real estate and monetization playbooks."
+                : "投資理財、房地產與知識變現策略。"}
+            </li>
+          </ul>
         </div>
       </div>
     </section>

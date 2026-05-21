@@ -1,10 +1,10 @@
-import OpenAI from "openai";
 import { z } from "zod";
+import {
+  GEMINI_FLASH_LITE_MODEL,
+  getGeminiOpenAIClientFromEnv,
+} from "@/lib/ai/gemini-openai-client";
 import type { AiInsight } from "@/types/command-center/insights";
 import type { CollectedSignals } from "./collectors";
-
-const GEMINI_COMPAT_BASE_URL =
-  "https://generativelanguage.googleapis.com/v1beta/openai/";
 
 const geminiInsightSchema = z.object({
   title: z.string(),
@@ -20,13 +20,8 @@ export async function generateGeminiInsight(
   signals: CollectedSignals,
   ruleInsights: AiInsight[]
 ): Promise<AiInsight | null> {
-  const apiKey = process.env["GEMINI_API_KEY"]?.trim();
-  if (!apiKey) return null;
-
-  const client = new OpenAI({
-    apiKey,
-    baseURL: GEMINI_COMPAT_BASE_URL,
-  });
+  const client = getGeminiOpenAIClientFromEnv();
+  if (!client) return null;
 
   const prompt = `你是 AI 行銷作戰中心的分析官。根據以下即時信號產出 1 則繁體中文洞察（JSON）。
 信號: ${JSON.stringify(signals)}
@@ -35,7 +30,7 @@ export async function generateGeminiInsight(
 
   try {
     const completion = await client.chat.completions.create({
-      model: "gemini-3.1-flash-lite-preview",
+      model: GEMINI_FLASH_LITE_MODEL,
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
     });

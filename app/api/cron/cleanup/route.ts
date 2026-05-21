@@ -11,6 +11,7 @@ import {
 } from "@/infrastructure/db/adapters/audit.prisma-adapter";
 import { prisma } from "@/infrastructure/db/prisma";
 import { logger } from "@/lib/logger";
+import { sendAlertEmail } from "@/lib/alert/send-alert-email";
 
 export const dynamic = "force-dynamic";
 
@@ -59,13 +60,22 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
             revalidatePath("/blog", "layout");
             break;
 
-          case "AI_JOB_DEAD_LETTER":
-            // 發送告警 Email（nodemailer）
-            // 此處僅記錄 log，email 邏輯在 lib/alert 中
+          case "AI_JOB_DEAD_LETTER": {
+            const payloadText = JSON.stringify(event.payload ?? {}, null, 2);
             logger.error("AI Job dead-letter alert", {
               meta: { payload: event.payload },
             });
+            const mail = await sendAlertEmail({
+              subject: "[Zenith Mind] AI Job dead letter",
+              text: `AI 任務進入 dead letter，請至後台 Agent 中控檢查。\n\n${payloadText}`,
+            });
+            if (!mail.sent) {
+              logger.warn("AI dead-letter email skipped", {
+                meta: { reason: mail.reason },
+              });
+            }
             break;
+          }
         }
 
         await prisma.eventOutbox.update({

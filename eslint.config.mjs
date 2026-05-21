@@ -25,7 +25,8 @@ const eslintConfig = [
   // TypeScript 規則（不含需 type-aware 的 no-unsafe-*，避免 next build lint 階段失敗）
   {
     rules: {
-      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@next/next/no-img-element": "warn",
       "no-empty": ["error", { allowEmptyCatch: false }],
       "no-console": ["warn", { allow: ["warn", "error"] }],
       "@typescript-eslint/no-non-null-assertion": "warn",

@@ -15,6 +15,7 @@ const PROTECTED = [
   "/admin/analytics",
   "/admin/audit-log",
   "/admin/settings",
+  "/admin/users",
 ];
 
 const PUBLIC_ADMIN = ["/admin/login", "/admin/totp"];

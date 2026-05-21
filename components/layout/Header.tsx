@@ -38,7 +38,7 @@ export default function Header({ locale, settings }: Props) {
 
   function isHiddenFrontendLink(href: string) {
     const normalized = href.toLowerCase();
-    return normalized.includes("/admin") || normalized.includes("#newsletter");
+    return normalized.includes("/admin");
   }
 
   return (

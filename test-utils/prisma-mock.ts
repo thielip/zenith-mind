@@ -20,7 +20,6 @@ export const prismaMock: Record<string, any> = {
   siteSettings: model(["findUnique", "upsert", "updateMany"]),
   heroSlide: model(["findMany", "createMany", "deleteMany"]),
   homeCarouselItem: model(["findMany", "createMany", "deleteMany"]),
-  newsletterSubscriber: model(["count", "upsert", "findUnique"]),
   $transaction: jest.fn(async (callback: unknown): Promise<unknown> => {
     if (typeof callback === "function") {
       return callback(prismaMock);

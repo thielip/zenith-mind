@@ -156,7 +156,7 @@ export default function ExternalImageUrlField({
         )}
       >
         {showPreview ? (
-          // eslint-disable-next-line @next/next/no-img-element -- 任意網域即時預覽
+          // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/no-noninteractive-element-interactions -- 任意網域即時預覽
           <img
             src={trimmed}
             alt={previewAlt}

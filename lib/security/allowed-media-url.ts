@@ -1,6 +1,5 @@
 // lib/security/allowed-media-url.ts — 封面／媒體 URL：外部圖片連結（Hotlink）
 
-import { z } from "zod";
 import {
   isValidExternalImageUrl,
   EXTERNAL_IMAGE_URL_HINT,

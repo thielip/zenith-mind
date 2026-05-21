@@ -1,9 +1,18 @@
 import { getRealtimeBuffer } from "@/server/realtime/event-hub";
+import { gateAdminRead } from "@/lib/auth/resolve-admin-action";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
+  const gate = await gateAdminRead();
+  if (!gate.ok) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({

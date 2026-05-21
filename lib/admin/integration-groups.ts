@@ -39,7 +39,8 @@ const ID_CATEGORY: Record<string, IntegrationCategory> = {
 };
 
 export function integrationCategory(id: string): IntegrationCategory {
-  if (ID_CATEGORY[id]) return ID_CATEGORY[id]!;
+  const mapped = ID_CATEGORY[id];
+  if (mapped) return mapped;
   if (id.startsWith("google") || id.includes("ga4") || id.includes("gemini")) {
     return "google";
   }
