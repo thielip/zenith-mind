@@ -2,7 +2,11 @@
   "name": "zenith-mind",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
+    "verify:cf-build": "node scripts/verify-cf-build-env.mjs",
     "dev": "next dev",
     "build": "next build",
     "build:cf": "node scripts/cf-public-build.mjs",
@@ -21,6 +25,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:deploy:local": "node scripts/prisma-with-local-env.mjs migrate deploy",
     "db:connection-info": "node --env-file=.env.local scripts/db-connection-info.mjs",
+    "db:migrate:status": "node scripts/prisma-with-local-env.mjs migrate status",
+    "verify:sentry": "node scripts/verify-sentry-env.mjs",
     "admin:ensure": "node scripts/ensure-admin.mjs",
     "redirects:warm": "node scripts/warm-redirect-cache.mjs",
     "db:generate:local": "node scripts/prisma-with-local-env.mjs generate",
@@ -72,7 +78,7 @@
     "react-dom": "19.1.0",
     "react-hook-form": "7.56.3",
     "recharts": "2.15.3",
-    "sanitize-html": "2.16.0",
+    "sanitize-html": "2.17.4",
     "sharp": "0.34.2",
     "speakeasy": "2.0.0",
     "tailwind-merge": "3.3.0",
@@ -112,7 +118,7 @@
     "ts-jest": "^29.4.9",
     "ts-node": "^10.9.2",
     "typescript": "5.8.3",
-    "wrangler": "^4.93.0"
+    "wrangler": "^4.93.1"
   },
   "size-limit": [
     {

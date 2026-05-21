@@ -1,4 +1,5 @@
-chrome >= 111
-edge >= 111
-firefox >= 111
-safari >= 16.4
+# 現代瀏覽器目標，減少 Next/SWC 對 Array.at 等 polyfill
+chrome >= 90
+firefox >= 90
+safari >= 14
+edge >= 90

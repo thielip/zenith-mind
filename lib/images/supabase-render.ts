@@ -36,7 +36,7 @@ export function supabaseRenderImageUrl(
   u.pathname = u.pathname.replace(objectPrefix, renderPrefix);
   u.search = "";
   u.searchParams.set("width", String(Math.round(options.width)));
-  u.searchParams.set("quality", String(options.quality ?? 75));
+  u.searchParams.set("quality", String(options.quality ?? 68));
   if (options.height) {
     u.searchParams.set("height", String(Math.round(options.height)));
   }
@@ -49,7 +49,7 @@ export function supabaseRenderImageUrl(
 export function buildSupabaseSrcSet(
   objectPublicUrl: string,
   widths: number[],
-  qualityOrOptions: number | BuildSupabaseSrcSetOptions = 75
+  qualityOrOptions: number | BuildSupabaseSrcSetOptions = 68
 ): { src: string; srcSet: string } {
   const opts: BuildSupabaseSrcSetOptions =
     typeof qualityOrOptions === "number" ? { quality: qualityOrOptions } : qualityOrOptions;
@@ -73,7 +73,10 @@ export function buildSupabaseSrcSet(
     sorted.length - 1
   );
   const fallback =
-    opts.fallbackWidth ?? sorted[midIndex] ?? sorted[0]!;
+    opts.fallbackWidth ?? sorted[midIndex] ?? sorted[0];
+  if (fallback === undefined) {
+    return { src: objectPublicUrl, srcSet };
+  }
   const src = renderAt(fallback);
 
   return { src, srcSet };

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isBlockedImageHost } from "@/lib/validation/blocked-image-hosts";
 
 /** 路徑結尾須為常見點陣圖副檔名（不含 query） */
 const IMAGE_PATH_EXT = /\.(jpe?g|png|webp)$/i;
@@ -16,6 +17,9 @@ export function isValidExternalImageUrl(value: string): boolean {
   try {
     const parsed = new URL(v);
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return false;
+    }
+    if (isBlockedImageHost(parsed.hostname)) {
       return false;
     }
     return IMAGE_PATH_EXT.test(parsed.pathname);

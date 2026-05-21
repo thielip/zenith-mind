@@ -6,7 +6,7 @@ function model(methods: string[]): MockModel {
 
 export const prismaMock: Record<string, any> = {
   user: model(["findFirst", "findUnique", "update", "upsert", "count"]),
-  post: model(["findMany", "findUnique", "findUniqueOrThrow", "count", "create", "update", "updateMany", "deleteMany"]),
+  post: model(["findMany", "findFirst", "findUnique", "findUniqueOrThrow", "count", "create", "update", "updateMany", "deleteMany"]),
   category: model(["findMany", "count"]),
   tag: model(["findMany"]),
   postTag: model(["findMany", "deleteMany", "createMany"]),

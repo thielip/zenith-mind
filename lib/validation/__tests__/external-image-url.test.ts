@@ -12,6 +12,10 @@ describe("isValidExternalImageUrl", () => {
     expect(isValidExternalImageUrl("https://x.com/pic.webp?v=1")).toBe(true);
   });
 
+  it("rejects blocked hotlink hosts", () => {
+    expect(isValidExternalImageUrl("https://duk.tw/0MFnJo.png")).toBe(false);
+  });
+
   it("rejects missing protocol, wrong extension, or non-http(s)", () => {
     expect(isValidExternalImageUrl("/local/x.png")).toBe(false);
     expect(isValidExternalImageUrl("https://x.com/pic.gif")).toBe(false);

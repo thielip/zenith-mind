@@ -25,13 +25,17 @@ export default function ImageCarousel({ locale, items, autoplaySeconds = 0, copy
     const el = scrollRef.current;
     if (!el) return;
     const step = () => {
-      const delta = 340;
-      const maxScroll = el.scrollWidth - el.clientWidth - 2;
-      if (el.scrollLeft >= maxScroll) {
-        el.scrollTo({ left: 0, behavior: "smooth" });
-      } else {
-        el.scrollBy({ left: delta, behavior: "smooth" });
-      }
+      requestAnimationFrame(() => {
+        const node = scrollRef.current;
+        if (!node) return;
+        const delta = 340;
+        const maxScroll = node.scrollWidth - node.clientWidth - 2;
+        if (node.scrollLeft >= maxScroll) {
+          node.scrollTo({ left: 0, behavior: "smooth" });
+        } else {
+          node.scrollBy({ left: delta, behavior: "smooth" });
+        }
+      });
     };
     const id = window.setInterval(step, autoplaySeconds * 1000);
     return () => window.clearInterval(id);
@@ -105,7 +109,7 @@ export default function ImageCarousel({ locale, items, autoplaySeconds = 0, copy
                   fill
                   responsiveWidths={[288, 320, 640]}
                   sizes="(max-width: 640px) 18rem, 320px"
-                  quality={75}
+                  quality={62}
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-blue-950/30 to-transparent" />

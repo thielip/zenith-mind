@@ -36,6 +36,8 @@ NEXT_PUBLIC_IMAGE_DELIVERY = "supabase-render"
 NEXT_PUBLIC_SUPABASE_URL = "https://qhutexisyfbclxntgkvx.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_FogU-AYv-rXBblU77k4dUw_AZTH9qPh"
 NEXT_PUBLIC_GA4_MEASUREMENT_ID = "G-4C955FQCZ2"
+# Sentry 公開 DSN（非 secret；source map 上傳需 SENTRY_AUTH_TOKEN 設為 CF Secret）
+NEXT_PUBLIC_SENTRY_DSN = "https://198b9a36ec16d5cddf7c1efe1b0a1797@o4511428292509696.ingest.us.sentry.io/4511428306993152"
 GA4_CLIENT_EMAIL = "ga4-api-reader@getzenithmind.iam.gserviceaccount.com"
 GA4_PROPERTY_ID = "536903218"
 GOOGLE_ADS_CUSTOMER_ID = "8702788584"

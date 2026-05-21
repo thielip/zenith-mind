@@ -48,6 +48,10 @@ export function assertCanWrite(
   if (!canWriteAdminEntity(session.role, entity)) {
     throw new Error("FORBIDDEN");
   }
+  // TOTP / 個人設定僅能寫入自己的 userId
+  if (entity === "settings" && entityId && entityId !== session.userId) {
+    throw new Error("FORBIDDEN");
+  }
   if (entityId) {
     session.entityId = entityId;
   }

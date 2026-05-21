@@ -1,8 +1,11 @@
 import * as Sentry from "@sentry/nextjs";
-import { isSentryEnabled } from "@/lib/sentry/dsn";
+import { isSentryEnabled, warnIfSentryDisabled } from "@/lib/sentry/dsn";
 
 export async function register() {
-  if (!isSentryEnabled()) return;
+  if (!isSentryEnabled()) {
+    warnIfSentryDisabled("instrumentation.register");
+    return;
+  }
 
   if (process.env.NEXT_RUNTIME === "nodejs") {
     await import("./sentry.server.config");

@@ -19,6 +19,8 @@ const STASH_PATHS = [
   "app/api/ai",
   "app/api/auth",
   "app/api/cron",
+  "app/sentry-example-page",
+  "app/api/sentry-example-api",
 ];
 
 const ENV_FILES_TO_HIDE = [".env", ".env.local", ".env.production"];
@@ -100,19 +102,34 @@ function restoreEnvFiles() {
 }
 
 function buildCfEnv() {
+  const heap =
+    process.env.NODE_OPTIONS?.includes("max-old-space-size")
+      ? process.env.NODE_OPTIONS
+      : "--max-old-space-size=6144";
   const env = {
     CF_PUBLIC_ONLY: "1",
     SKIP_ENV_VALIDATION: "true",
     NODE_ENV: "production",
+    NODE_OPTIONS: heap,
     NEXT_PUBLIC_IMAGE_DELIVERY: "supabase-render",
     NEXT_PUBLIC_SITE_URL:
       process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.getzenithmind.com",
     ADMIN_DEPLOYMENT_URL:
       process.env.ADMIN_DEPLOYMENT_URL ?? "https://zenith-mind.vercel.app",
+    NEXT_PUBLIC_SUPABASE_URL:
+      process.env.NEXT_PUBLIC_SUPABASE_URL ??
+      "https://qhutexisyfbclxntgkvx.supabase.co",
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
   };
   for (const key of CF_BUILD_ENV_ALLOWLIST) {
     const v = process.env[key];
     if (v !== undefined && v !== "") env[key] = v;
+  }
+  // 無 Auth Token 時勿帶 org/project，避免 @sentry/webpack-plugin 在 CI 上傳失敗
+  if (!process.env.SENTRY_AUTH_TOKEN?.trim()) {
+    delete env.SENTRY_ORG;
+    delete env.SENTRY_PROJECT;
+    delete env.SENTRY_AUTH_TOKEN;
   }
   return env;
 }
@@ -145,10 +162,15 @@ stashDirs();
 hideEnvFiles();
 let exitCode = 1;
 try {
+  const cfEnv = buildCfEnv();
+  console.log(
+    "[cf-public-build] CF_PUBLIC_ONLY=1 NODE_OPTIONS=%s",
+    cfEnv.NODE_OPTIONS ?? "(default)"
+  );
   const r = spawnSync("npx", ["opennextjs-cloudflare", "build"], {
     cwd: root,
     stdio: "inherit",
-    env: buildCfEnv(),
+    env: cfEnv,
     shell: true,
   });
   exitCode = r.status ?? 1;

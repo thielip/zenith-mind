@@ -6,6 +6,12 @@ import createNextIntlPlugin from "next-intl/plugin";
 const withNextIntl = createNextIntlPlugin("./lib/i18n/request.ts");
 
 const isCfPublicOnly = process.env["CF_PUBLIC_ONLY"] === "1";
+const sentryAuthToken = process.env["SENTRY_AUTH_TOKEN"]?.trim();
+const sentryUploadEnabled = Boolean(
+  sentryAuthToken &&
+    process.env["SENTRY_ORG"]?.trim() &&
+    process.env["SENTRY_PROJECT"]?.trim()
+);
 
 const nextConfig: NextConfig = {
   // GA4 / gRPC 僅能在 Node 跑；避免 webpack 打包後在 dev 出現詭異 gRPC 錯誤
@@ -66,9 +72,10 @@ const nextConfig: NextConfig = {
     qualities: [75],
   },
 
-  typescript: { ignoreBuildErrors: false },
-  // TD-007：build 同步執行 ESLint（與 CI npm run lint 一致）
-  eslint: { ignoreDuringBuilds: false },
+  // Vercel 全站：build 跑 tsc + ESLint（CI 亦執行 type-check / lint）
+  // CF 公開站：略過 build 內 tsc/ESLint，避免 Pages 2GB heap OOM（見 cf-public-build）
+  typescript: { ignoreBuildErrors: isCfPublicOnly },
+  eslint: { ignoreDuringBuilds: isCfPublicOnly },
 
   // 僅 DNS prefetch；X-Content-Type-Options 等由 middleware 單一注入（避免重複值導致掃描失敗）
   async headers() {
@@ -114,39 +121,21 @@ const nextConfig: NextConfig = {
 const configWithIntl = withNextIntl(nextConfig);
 
 export default withSentryConfig(configWithIntl, {
-  // For all available options, see:
-  // https://www.npmjs.com/package/@sentry/webpack-plugin#options
-
   org: process.env["SENTRY_ORG"],
-
   project: process.env["SENTRY_PROJECT"],
-
-  // Only print logs for uploading source maps in CI
-  silent: !process.env.CI,
-
-  // For all available options, see:
-  // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
-
-  // Upload a larger set of source maps for prettier stack traces (increases build time)
-  widenClientFileUpload: true,
-
-  // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
-  // This can increase your server load as well as your hosting bill.
-  // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
-  // side errors will fail.
-  tunnelRoute: "/monitoring",
-
-  webpack: {
-    // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
-    // See the following for more information:
-    // https://docs.sentry.io/product/crons/
-    // https://vercel.com/docs/cron-jobs
-    automaticVercelMonitors: true,
-
-    // Tree-shaking options for reducing bundle size
-    treeshake: {
-      // Automatically tree-shake Sentry logger statements to reduce bundle size
-      removeDebugLogging: true,
-    },
-  },
+  authToken: sentryAuthToken,
+  // 無 Auth Token 時勿上傳 source map（Cloudflare Pages CI 常因此失敗）
+  silent: !sentryUploadEnabled,
+  sourcemaps: { disable: !sentryUploadEnabled },
+  widenClientFileUpload: sentryUploadEnabled,
+  // 公開 Worker 不用 Vercel tunnel / cron monitors
+  ...(isCfPublicOnly
+    ? {}
+    : {
+        tunnelRoute: "/monitoring",
+        webpack: {
+          automaticVercelMonitors: true,
+          treeshake: { removeDebugLogging: true },
+        },
+      }),
 });
