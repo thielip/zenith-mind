@@ -2,8 +2,8 @@
 // 相關文章推薦（同分類，排除當前文章）
 
 import Link from "next/link";
-import Image from "next/image";
 import { loadRecommendedPosts } from "@/lib/blog/load-blog-post-data";
+import ResponsiveImage from "@/components/ui/ResponsiveImage";
 
 interface Props {
   currentPostId: string;
@@ -44,7 +44,7 @@ export default async function RecommendedPosts({
                 className="group block rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {post.coverImage && (
-                  <Image
+                  <ResponsiveImage
                     src={post.coverImage}
                     alt={post.coverImageAlt ?? title}
                     width={400}

@@ -15,6 +15,15 @@ export const warRoomPayloadSchema = z.object({
     missing: z.number(),
     error: z.number(),
   }),
+  connections: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      status: z.enum(["ok", "missing", "error"]),
+      detail: z.string().optional(),
+    })
+  ),
+  dataAlerts: z.array(z.string()),
 });
 
 export type WarRoomPayload = z.infer<typeof warRoomPayloadSchema>;
@@ -70,6 +79,18 @@ export const geoPayloadSchema = z.object({
     })
   ),
   kpis: z.array(kpiMetricSchema),
+  schemaCoverage: z
+    .object({
+      siteOrgWebSite: z.boolean(),
+      schemaTypesDeployed: z.array(z.string()),
+      publishedTotal: z.number(),
+      withFaqCount: z.number(),
+      faqCoveragePct: z.number(),
+      withSeoMetadataCount: z.number(),
+      seoMetadataCoveragePct: z.number(),
+      readinessPct: z.number(),
+    })
+    .optional(),
 });
 
 export type GeoPayload = z.infer<typeof geoPayloadSchema>;
@@ -89,8 +110,15 @@ export const agentPayloadSchema = z.object({
     z.object({
       id: z.string(),
       type: z.string(),
+      typeLabel: z.string(),
+      agentLabel: z.string(),
       status: z.string(),
+      statusLabel: z.string(),
       createdAt: z.string(),
+      startedAt: z.string().nullable(),
+      retryCount: z.number(),
+      postTitle: z.string().nullable(),
+      lockedBy: z.string().nullable(),
     })
   ),
 });

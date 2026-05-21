@@ -21,13 +21,22 @@ export interface LocalizedTextBlock {
   descriptionEn?: string;
 }
 
-/** 首頁「主題群集」卡片（六大 slug 固定，後台可改顯示名與描述） */
+/** 首頁「主題群集」卡片（六大 slug 固定，後台可改顯示名、描述、外部圖與連結） */
 export interface TopicClusterCardCopy {
   slug: string;
   name: string;
   nameEn: string;
   description: string;
   descriptionEn: string;
+  /** 繁中：外部圖片網址（16:9）；空則前台 fallback icon */
+  imageUrl?: string;
+  imageAlt?: string;
+  /** 繁中：點擊導向（https 或站內路徑）；空則導向該主題文章列表 */
+  href?: string;
+  /** 英文：外部圖片網址（16:9）；空則 fallback 繁中圖或 icon */
+  imageUrlEn?: string;
+  imageAltEn?: string;
+  hrefEn?: string;
 }
 
 export interface HomepageCopy {

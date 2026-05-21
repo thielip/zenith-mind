@@ -16,12 +16,14 @@ interface Props {
 }
 
 const schema = z.object({
-  title:      z.string().min(2, "標題至少 2 字").max(200),
-  slug:       z.string().min(2).max(200).regex(/^[a-z0-9-]+$/, "slug 只能包含小寫英文、數字、連字號"),
-  categoryId: z.string().optional(),
-  excerpt:    z.string().max(300).optional(),
-  excerptEn:  z.string().max(300).optional(),
-  focusKeyword: z.string().max(100, "SEO 關鍵字最多 100 字").optional(),
+  title:         z.string().min(2, "標題至少 2 字").max(200),
+  titleEn:       z.string().min(2, "英文標題至少 2 字").max(200),
+  slug:          z.string().min(2).max(200).regex(/^[a-z0-9-]+$/, "slug 只能包含小寫英文、數字、連字號"),
+  categoryId:    z.string().optional(),
+  focusKeyword:  z.string().max(100, "中文 SEO 關鍵字最多 100 字").optional(),
+  focusKeywordEn:z.string().max(100, "英文 SEO 關鍵字最多 100 字").optional(),
+  excerpt:       z.string().max(300).optional(),
+  excerptEn:     z.string().max(300).optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -56,23 +58,30 @@ export default function NewPostForm({ categories }: Props) {
       resolver: zodResolver(schema),
       defaultValues: {
         title: "",
+        titleEn: "",
         slug: "",
         categoryId: "",
+        focusKeyword: "",
+        focusKeywordEn: "",
         excerpt: "",
         excerptEn: "",
-        focusKeyword: "",
       },
     });
 
   const titleValue = watch("title") ?? "";
+  const titleEnValue = watch("titleEn") ?? "";
 
-  // 標題改變時自動填入 slug（除非使用者已手動編輯）
   function onTitleChange(e: React.ChangeEvent<HTMLInputElement>) {
     register("title").onChange(e);
     if (!slugEdited) {
       setValue("slug", toSlug(e.target.value), { shouldValidate: true });
     }
     setValue("focusKeyword", toSeoKeyword(e.target.value), { shouldValidate: true });
+  }
+
+  function onTitleEnChange(e: React.ChangeEvent<HTMLInputElement>) {
+    register("titleEn").onChange(e);
+    setValue("focusKeywordEn", toSeoKeyword(e.target.value), { shouldValidate: true });
   }
 
   const onSubmit = handleSubmit((values) => {
@@ -83,6 +92,7 @@ export default function NewPostForm({ categories }: Props) {
           ...values,
           slug: values.slug || toSlug(values.title),
           focusKeyword: values.focusKeyword || toSeoKeyword(values.title),
+          focusKeywordEn: values.focusKeywordEn || toSeoKeyword(values.titleEn),
         };
         const result = await createPostAction(submitValues);
         if (result.success) {
@@ -103,6 +113,8 @@ export default function NewPostForm({ categories }: Props) {
     });
   });
 
+  const canSubmit = titleValue.length >= 2 && titleEnValue.length >= 2;
+
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="mb-6 text-2xl font-bold text-gray-900">新增文章</h1>
@@ -113,7 +125,6 @@ export default function NewPostForm({ categories }: Props) {
         noValidate
         aria-label="新增文章表單"
       >
-        {/* 標題 */}
         <div>
           <label htmlFor="new-title" className="mb-1.5 block text-sm font-medium text-gray-700">
             標題（繁中）<span aria-hidden="true" className="text-red-500">*</span>
@@ -133,7 +144,25 @@ export default function NewPostForm({ categories }: Props) {
           )}
         </div>
 
-        {/* Slug */}
+        <div>
+          <label htmlFor="new-title-en" className="mb-1.5 block text-sm font-medium text-gray-700">
+            標題（英文）<span aria-hidden="true" className="text-red-500">*</span>
+          </label>
+          <input
+            id="new-title-en"
+            {...register("titleEn")}
+            onChange={onTitleEnChange}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            aria-required="true"
+            aria-describedby={errors.titleEn ? "new-title-en-err" : undefined}
+          />
+          {errors.titleEn && (
+            <p id="new-title-en-err" role="alert" className="mt-1 text-xs text-red-600">
+              {errors.titleEn.message}
+            </p>
+          )}
+        </div>
+
         <div>
           <label htmlFor="new-slug" className="mb-1.5 block text-sm font-medium text-gray-700">
             Slug（URL）<span aria-hidden="true" className="text-red-500">*</span>
@@ -153,7 +182,7 @@ export default function NewPostForm({ categories }: Props) {
             />
           </div>
           <p id="slug-hint" className="mt-1 text-xs text-gray-400">
-            依標題自動產生；發布後 slug 不可更改（變更會影響 SEO）
+            依繁中標題自動產生；發布後 slug 不可更改（變更會影響 SEO）
           </p>
           {errors.slug && (
             <p role="alert" className="mt-1 text-xs text-red-600">
@@ -162,7 +191,6 @@ export default function NewPostForm({ categories }: Props) {
           )}
         </div>
 
-        {/* 分類 */}
         <div>
           <label htmlFor="new-category" className="mb-1.5 block text-sm font-medium text-gray-700">
             分類
@@ -181,7 +209,7 @@ export default function NewPostForm({ categories }: Props) {
 
         <div>
           <label htmlFor="new-focus-keyword" className="mb-1.5 block text-sm font-medium text-gray-700">
-            SEO 關鍵字（自動由標題產生，可手動修改）
+            中文 SEO 關鍵字
           </label>
           <input
             id="new-focus-keyword"
@@ -200,10 +228,30 @@ export default function NewPostForm({ categories }: Props) {
           )}
         </div>
 
-        {/* 摘要 */}
+        <div>
+          <label htmlFor="new-focus-keyword-en" className="mb-1.5 block text-sm font-medium text-gray-700">
+            英文 SEO 關鍵字
+          </label>
+          <input
+            id="new-focus-keyword-en"
+            {...register("focusKeywordEn")}
+            onFocus={() => {
+              if (!getValues("focusKeywordEn")) {
+                setValue("focusKeywordEn", toSeoKeyword(getValues("titleEn") ?? ""), { shouldValidate: true });
+              }
+            }}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          {errors.focusKeywordEn && (
+            <p role="alert" className="mt-1 text-xs text-red-600">
+              {errors.focusKeywordEn.message}
+            </p>
+          )}
+        </div>
+
         <div>
           <label htmlFor="new-excerpt" className="mb-1.5 block text-sm font-medium text-gray-700">
-            摘要（選填，列表頁顯示）
+            中文摘要
           </label>
           <textarea
             id="new-excerpt"
@@ -215,7 +263,7 @@ export default function NewPostForm({ categories }: Props) {
 
         <div>
           <label htmlFor="new-excerpt-en" className="mb-1.5 block text-sm font-medium text-gray-700">
-            英文摘要（選填，英文列表頁顯示）
+            英文摘要
           </label>
           <textarea
             id="new-excerpt-en"
@@ -230,7 +278,6 @@ export default function NewPostForm({ categories }: Props) {
           )}
         </div>
 
-        {/* 全域錯誤 */}
         {errorMsg && (
           <p role="alert" className="text-sm text-red-600">{errorMsg}</p>
         )}
@@ -245,7 +292,7 @@ export default function NewPostForm({ categories }: Props) {
           </button>
           <button
             type="submit"
-            disabled={isPending || titleValue.length < 2}
+            disabled={isPending || !canSubmit}
             className="flex-1 rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
           >
             {isPending ? "建立中…" : "建立草稿並開始編輯"}

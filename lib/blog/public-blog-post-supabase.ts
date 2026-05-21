@@ -224,18 +224,16 @@ export async function fetchBlogPostBySlugViaSupabase(
   const row = rows[0];
   if (!row) return null;
 
-  const [tags, seoMetadata] = await Promise.all([
+  const [tags, seoMetadata, pageViews] = await Promise.all([
     fetchPostTagsForPost(row.id),
     fetchSeoForPost(row.id),
+    fetchPostViewTotal(row.id).catch((error) => {
+      console.error("[blog.post] view total failed", error);
+      return 0;
+    }),
   ]);
 
   const post = mapPostDetailRow(row, tags, seoMetadata);
-  let pageViews = 0;
-  try {
-    pageViews = await fetchPostViewTotal(post.id);
-  } catch (error) {
-    console.error("[blog.post] view total failed", error);
-  }
   return { ...post, _count: { pageViews } };
 }
 

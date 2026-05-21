@@ -2,32 +2,19 @@
 // Cache 模式 B：force-dynamic
 
 import type { Metadata } from "next";
-import { prisma } from "@/infrastructure/db/prisma";
 import AffiliateManager from "@/components/admin/AffiliateManager";
+import { loadAffiliateLinksForAdmin } from "@/lib/affiliate/load-affiliate-admin";
 
 export const metadata: Metadata = { title: "聯盟連結 | Admin" };
 export const dynamic = "force-dynamic";
 
 export default async function AffiliatePage() {
-  const links = await prisma.affiliateLink.findMany({
-    orderBy: { createdAt: "desc" },
-  });
+  const initialLinks = await loadAffiliateLinksForAdmin();
 
   return (
     <div>
       <h1 className="mb-6 text-2xl font-bold text-gray-900">聯盟連結管理</h1>
-      <AffiliateManager
-        initialLinks={links.map((l) => ({
-          id:         l.id,
-          name:       l.name,
-          slug:       l.slug,
-          targetUrl:  l.targetUrl,
-          platform:   l.platform ?? "",
-          commission: l.commission ?? "",
-          isActive:   l.isActive,
-          clickCount: l.clickCount,
-        }))}
-      />
+      <AffiliateManager initialLinks={initialLinks} />
     </div>
   );
 }

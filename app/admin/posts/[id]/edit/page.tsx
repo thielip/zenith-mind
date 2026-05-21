@@ -90,6 +90,7 @@ export default async function EditPostPage({ params }: Props) {
               metaTitleEn:       post.seoMetadata.metaTitleEn       ?? "",
               metaDescriptionEn: post.seoMetadata.metaDescriptionEn ?? "",
               focusKeyword:      post.seoMetadata.focusKeyword      ?? "",
+              focusKeywordEn:    post.seoMetadata.focusKeywordEn    ?? "",
               ogTitle:           post.seoMetadata.ogTitle           ?? "",
               ogDescription:     post.seoMetadata.ogDescription     ?? "",
               noIndex:           post.seoMetadata.noIndex,

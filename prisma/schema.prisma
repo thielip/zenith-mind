@@ -288,8 +288,9 @@ model SeoMetadata {
   ogDescription String?
   ogImage       String?
 
-  focusKeyword String?
-  keywords     String[] // PostgreSQL array
+  focusKeyword   String?
+  focusKeywordEn String?
+  keywords       String[] // PostgreSQL array
 
   noIndex  Boolean @default(false)
   noFollow Boolean @default(false)
@@ -383,7 +384,7 @@ model AffiliateLink {
   name       String
   slug       String  @unique // 短網址 /go/[slug]
   targetUrl  String
-  platform   String? // Klook、KKday、Amazon 等
+  platform   String? // 平台標籤：AI 工具、線上課程等
   commission String?
   isActive   Boolean @default(true)
   clickCount Int     @default(0)
@@ -391,8 +392,22 @@ model AffiliateLink {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  dailyClicks AffiliateLinkClickDaily[]
+
   @@index([slug, isActive])
   @@map("affiliate_links")
+}
+
+model AffiliateLinkClickDaily {
+  affiliateLinkId String
+  date            DateTime @db.Date
+  clickCount      Int      @default(0)
+
+  affiliateLink AffiliateLink @relation(fields: [affiliateLinkId], references: [id], onDelete: Cascade)
+
+  @@id([affiliateLinkId, date])
+  @@index([date])
+  @@map("affiliate_link_click_daily")
 }
 
 // ═══════════════════════════════════════════════

@@ -4,8 +4,9 @@
 
 import { prisma } from "@/infrastructure/db/prisma";
 import type { AuditAction, Prisma } from "@prisma/client";
+import { resolveClientIpFromHeaders } from "@/lib/request/client-ip";
 
-/** IP 後段遮罩（GDPR 相容）*/
+/** @deprecated 舊版遮罩格式；新紀錄改存完整 IP */
 export function maskIp(ip: string): string {
   if (!ip || ip === "unknown") return "unknown";
   const v4 = ip.match(/^(\d{1,3}\.\d{1,3}\.\d{1,3})\.\d{1,3}$/);
@@ -14,6 +15,14 @@ export function maskIp(ip: string): string {
   if (parts.length > 4) return parts.slice(0, 4).join(":") + ":****:****:****:****";
   return "masked";
 }
+
+/** 寫入稽核日誌用的 IP（完整位址，供後台追蹤） */
+export function normalizeAuditIp(ip: string | undefined): string | null {
+  if (!ip?.trim() || ip === "unknown") return null;
+  return ip.trim();
+}
+
+export { resolveClientIpFromHeaders };
 
 export interface WriteAuditInput {
   action:     AuditAction;
@@ -39,7 +48,7 @@ export function writeAuditLog(input: WriteAuditInput): void {
         entityType: input.entityType,
         entityId:   input.entityId,
         metadata:   input.metadata,
-        ipMasked:   input.ip ? maskIp(input.ip) : null,
+        ipMasked:   normalizeAuditIp(input.ip),
         userAgent:  input.userAgent?.slice(0, 500) ?? null,
         requestId:  input.requestId,
       },

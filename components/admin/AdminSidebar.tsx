@@ -2,58 +2,153 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  ClipboardList,
-  FileText,
-  Image,
-  Link2,
-  LogOut,
-  PanelsTopLeft,
-  Settings,
-  Users,
-} from "lucide-react";
+import { useEffect, useState, useTransition } from "react";
+import { ChevronDown, LogOut } from "lucide-react";
 import { logoutAction } from "@/actions/auth.actions";
-import { useTransition } from "react";
 import { clearAdminSessionHint } from "@/lib/auth/client-session";
-import { COMMAND_CENTER_NAV } from "@/shared/config/command-center-nav";
+import {
+  ADMIN_SIDEBAR_NAV,
+  type AdminNavItem,
+  type AdminNavLink,
+  type AdminNavSubmenu,
+} from "@/shared/config/admin-sidebar-nav";
 import { cn } from "@/shared/lib/cn";
 
-const CONTENT_NAV = [
-  { href: "/admin/posts", label: "文章管理", icon: FileText },
-  { href: "/admin/media", label: "媒體庫", icon: Image },
-  { href: "/admin/site", label: "首頁版型", icon: PanelsTopLeft },
-  { href: "/admin/affiliate", label: "聯盟連結", icon: Link2 },
-  { href: "/admin/audit-log", label: "操作紀錄", icon: ClipboardList },
-  { href: "/admin/users", label: "使用者管理", icon: Users },
-  { href: "/admin/settings", label: "設定", icon: Settings },
-] as const;
+function isNavLinkActive(pathname: string, href: string, exact?: boolean): boolean {
+  if (exact) {
+    return pathname === href || pathname === `${href}/`;
+  }
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function submenuHasActive(pathname: string, item: AdminNavSubmenu): boolean {
+  return item.children.some((child) => isNavLinkActive(pathname, child.href));
+}
 
 function NavLink({
   href,
   label,
   icon: Icon,
   isActive,
+  nested,
 }: {
   href: string;
   label: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
   isActive: boolean;
+  nested?: boolean;
 }) {
   return (
     <Link
       href={href}
       aria-current={isActive ? "page" : undefined}
       className={cn(
-        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+        "flex items-center gap-3 rounded-lg text-sm transition-colors",
         "focus:outline-none focus:ring-2 focus:ring-cyan-500/50",
+        nested ? "px-3 py-1.5" : "px-3 py-2",
         isActive
-          ? "bg-cyan-500/15 font-medium text-cyan-100"
-          : "text-slate-400 hover:bg-slate-800/80 hover:text-white"
+          ? "bg-cyan-500/20 font-semibold text-cyan-50 ring-1 ring-cyan-500/30"
+          : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
       )}
     >
-      <Icon size={16} aria-hidden />
+      <Icon size={nested ? 14 : 16} aria-hidden className="shrink-0" />
       <span className="truncate">{label}</span>
     </Link>
+  );
+}
+
+function NavSubmenu({
+  item,
+  pathname,
+}: {
+  item: AdminNavSubmenu;
+  pathname: string;
+}) {
+  const childActive = submenuHasActive(pathname, item);
+  const [open, setOpen] = useState(childActive);
+
+  useEffect(() => {
+    if (childActive) setOpen(true);
+  }, [childActive]);
+
+  const Icon = item.icon;
+
+  return (
+    <div className="space-y-0.5">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className={cn(
+          "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors",
+          "focus:outline-none focus:ring-2 focus:ring-cyan-500/50",
+          childActive
+            ? "bg-slate-800/90 font-medium text-cyan-100"
+            : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
+        )}
+      >
+        <Icon size={16} aria-hidden className="shrink-0" />
+        <span className="min-w-0 flex-1 truncate">{item.label}</span>
+        <ChevronDown
+          size={14}
+          aria-hidden
+          className={cn(
+            "shrink-0 text-slate-500 transition-transform duration-200",
+            open && "rotate-180"
+          )}
+        />
+      </button>
+
+      <div
+        className={cn(
+          "grid transition-[grid-template-rows] duration-200 ease-out",
+          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        )}
+      >
+        <div className="overflow-hidden">
+          <ul
+            className="ml-4 space-y-0.5 border-l border-slate-700/80 py-1 pl-2"
+            role="group"
+            aria-label={`${item.label} 子選單`}
+          >
+            {item.children.map((child) => {
+              const active = isNavLinkActive(pathname, child.href);
+              return (
+                <li key={child.href}>
+                  <Link
+                    href={child.href}
+                    aria-current={active ? "page" : undefined}
+                    className={cn(
+                      "block rounded-md px-3 py-1.5 text-sm transition-colors",
+                      active
+                        ? "bg-cyan-500/20 font-semibold text-cyan-50"
+                        : "text-slate-300 hover:bg-slate-800/60 hover:text-white"
+                    )}
+                  >
+                    {child.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NavItem({ item, pathname }: { item: AdminNavItem; pathname: string }) {
+  if (item.type === "submenu") {
+    return <NavSubmenu item={item} pathname={pathname} />;
+  }
+  const link = item as AdminNavLink;
+  return (
+    <NavLink
+      href={link.href}
+      label={link.label}
+      icon={link.icon}
+      isActive={isNavLinkActive(pathname, link.href, link.exact)}
+    />
   );
 }
 
@@ -78,39 +173,24 @@ export default function AdminSidebar() {
         <span className="text-sm font-bold text-white">⚡ AI 行銷作戰中心</span>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-3" aria-label="作戰中心">
-        <p className="mb-2 px-2 text-[10px] font-mono uppercase tracking-widest text-cyan-500/70">
-          AI 作戰中心
-        </p>
-        <ul className="space-y-0.5">
-          {COMMAND_CENTER_NAV.map(({ href, label, icon: Icon }) => {
-            const isActive =
-              href === "/admin/dashboard"
-                ? pathname === "/admin/dashboard"
-                : pathname.startsWith(href);
-            return (
-              <li key={href}>
-                <NavLink href={href} label={label} icon={Icon} isActive={isActive} />
-              </li>
-            );
-          })}
-        </ul>
-
-        <p className="mb-2 mt-6 px-2 text-[10px] font-mono uppercase tracking-widest text-slate-500">
-          內容管理
-        </p>
-        <ul className="space-y-0.5">
-          {CONTENT_NAV.map(({ href, label, icon: Icon }) => (
-            <li key={href}>
-              <NavLink
-                href={href}
-                label={label}
-                icon={Icon}
-                isActive={pathname.startsWith(href)}
-              />
-            </li>
-          ))}
-        </ul>
+      <nav className="flex-1 overflow-y-auto px-3 py-3" aria-label="後台導覽">
+        {ADMIN_SIDEBAR_NAV.map((group, groupIndex) => (
+          <div
+            key={group.id}
+            className={cn(groupIndex > 0 && "mt-5 border-t border-slate-800/70 pt-5")}
+          >
+            <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+              {group.title}
+            </p>
+            <ul className="space-y-0.5">
+              {group.items.map((item) => (
+                <li key={item.type === "submenu" ? item.id : item.href}>
+                  <NavItem item={item} pathname={pathname} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </nav>
 
       <div className="border-t border-slate-800/60 px-3 py-3">
@@ -119,7 +199,7 @@ export default function AdminSidebar() {
           onClick={handleLogout}
           disabled={pending}
           aria-label="登出 Admin"
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-400 hover:bg-slate-800/80 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 disabled:opacity-50"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-slate-800/80 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 disabled:opacity-50"
         >
           <LogOut size={16} aria-hidden />
           {pending ? "登出中…" : "登出"}

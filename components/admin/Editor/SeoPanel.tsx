@@ -1,5 +1,5 @@
 // components/admin/Editor/SeoPanel.tsx — Client Component
-// SEO 欄位面板（Meta Title/Desc、OG、Keyword、noIndex）
+// SEO 欄位面板（Meta / OG；可從內容分頁帶入）
 
 "use client";
 
@@ -9,20 +9,32 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { updateSeoAction } from "@/actions/post.actions";
 
-interface SeoData {
+export interface SeoData {
   metaTitle:         string;
   metaDescription:   string;
   metaTitleEn:       string;
   metaDescriptionEn: string;
   focusKeyword:      string;
+  focusKeywordEn:    string;
   ogTitle:           string;
   ogDescription:     string;
   noIndex:           boolean;
 }
 
+/** 內容分頁欄位，供「從內容帶入」同步 SEO */
+export interface SeoContentSync {
+  title: string;
+  titleEn: string;
+  excerpt: string;
+  excerptEn: string;
+  focusKeyword: string;
+  focusKeywordEn: string;
+}
+
 interface Props {
   postId:     string;
   initialSeo: SeoData | null;
+  syncFrom?:  SeoContentSync;
   readOnly?:  boolean;
 }
 
@@ -37,7 +49,8 @@ const seoSchema = z.object({
   metaDescription:   optionalSeoText(160, "Meta Description"),
   metaTitleEn:       optionalSeoText(70, "English Meta Title"),
   metaDescriptionEn: optionalSeoText(160, "English Meta Description"),
-  focusKeyword:      optionalSeoText(100, "核心關鍵字"),
+  focusKeyword:      optionalSeoText(100, "中文 SEO 關鍵字"),
+  focusKeywordEn:    optionalSeoText(100, "英文 SEO 關鍵字"),
   ogTitle:           optionalSeoText(70, "OG Title"),
   ogDescription:     optionalSeoText(200, "OG Description"),
   noIndex:           z.boolean().default(false),
@@ -46,23 +59,53 @@ const seoSchema = z.object({
 type FormInput = z.input<typeof seoSchema>;
 type FormValues = z.output<typeof seoSchema>;
 
-export default function SeoPanel({ postId, initialSeo, readOnly = false }: Props) {
+function sliceField(value: string, max: number): string {
+  return value.trim().slice(0, max);
+}
+
+export default function SeoPanel({
+  postId,
+  initialSeo,
+  syncFrom,
+  readOnly = false,
+}: Props) {
   const [saveMsg, setSaveMsg]   = useState("");
   const [isPending, startTransition] = useTransition();
 
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<FormInput, unknown, FormValues>({
-    resolver: zodResolver(seoSchema),
-    defaultValues: initialSeo ?? {
-      metaTitle: "", metaDescription: "", metaTitleEn: "",
-      metaDescriptionEn: "", focusKeyword: "", ogTitle: "",
-      ogDescription: "", noIndex: false,
-    },
-  });
+  const { register, handleSubmit, watch, setValue, formState: { errors } } =
+    useForm<FormInput, unknown, FormValues>({
+      resolver: zodResolver(seoSchema),
+      defaultValues: initialSeo ?? {
+        metaTitle: "", metaDescription: "", metaTitleEn: "",
+        metaDescriptionEn: "", focusKeyword: "", focusKeywordEn: "",
+        ogTitle: "", ogDescription: "", noIndex: false,
+      },
+    });
 
   const metaTitleLen = watch("metaTitle")?.length ?? 0;
   const metaDescLen  = watch("metaDescription")?.length ?? 0;
   const metaTitleEnLen = watch("metaTitleEn")?.length ?? 0;
   const metaDescEnLen = watch("metaDescriptionEn")?.length ?? 0;
+
+  const metaTitle = watch("metaTitle") ?? "";
+  const metaDescription = watch("metaDescription") ?? "";
+  const ogTitle = watch("ogTitle") ?? "";
+  const ogDescription = watch("ogDescription") ?? "";
+
+  const effectiveOgTitle =
+    ogTitle.trim() || metaTitle.trim() || "（尚未設定）";
+  const effectiveOgDescription =
+    ogDescription.trim() || metaDescription.trim() || "（尚未設定）";
+
+  function applySyncFromContent() {
+    if (!syncFrom || readOnly) return;
+    setValue("metaTitle", sliceField(syncFrom.title, 70));
+    setValue("metaDescription", sliceField(syncFrom.excerpt, 160));
+    setValue("focusKeyword", sliceField(syncFrom.focusKeyword, 100));
+    setValue("metaTitleEn", sliceField(syncFrom.titleEn, 70));
+    setValue("metaDescriptionEn", sliceField(syncFrom.excerptEn, 160));
+    setValue("focusKeywordEn", sliceField(syncFrom.focusKeywordEn, 100));
+  }
 
   const onSubmit = handleSubmit((values) => {
     startTransition(async () => {
@@ -92,13 +135,28 @@ export default function SeoPanel({ postId, initialSeo, readOnly = false }: Props
         </p>
       )}
 
-      {/* 繁中 Meta */}
+      {syncFrom && !readOnly && (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-blue-100 bg-blue-50/80 px-4 py-3">
+          <p className="text-sm text-blue-900">
+            可將「內容編輯」分頁的標題、摘要與 SEO 關鍵字帶入下方欄位（不覆寫已填的 OG 欄位）。
+          </p>
+          <button
+            type="button"
+            onClick={applySyncFromContent}
+            className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            從內容欄位帶入
+          </button>
+        </div>
+      )}
+
       <fieldset className="rounded-xl border border-gray-200 p-5">
         <legend className="px-1 text-sm font-semibold text-gray-700">繁中 SEO</legend>
         <div className="mt-3 space-y-4">
           <div>
             <label htmlFor="metaTitle" className="mb-1 block text-sm font-medium text-gray-700">
               Meta Title
+              <span className="ml-1 text-xs font-normal text-gray-400">← 標題（繁中）</span>
               <span className="ml-1 text-xs text-gray-400">（{metaTitleLen}/70）</span>
             </label>
             <input
@@ -116,6 +174,7 @@ export default function SeoPanel({ postId, initialSeo, readOnly = false }: Props
           <div>
             <label htmlFor="metaDescription" className="mb-1 block text-sm font-medium text-gray-700">
               Meta Description
+              <span className="ml-1 text-xs font-normal text-gray-400">← 中文摘要</span>
               <span className="ml-1 text-xs text-gray-400">（{metaDescLen}/160）</span>
             </label>
             <textarea
@@ -132,7 +191,8 @@ export default function SeoPanel({ postId, initialSeo, readOnly = false }: Props
           </div>
           <div>
             <label htmlFor="focusKeyword" className="mb-1 block text-sm font-medium text-gray-700">
-              核心關鍵字
+              中文 SEO 關鍵字
+              <span className="ml-1 text-xs font-normal text-gray-400">← 內容分頁同名欄位</span>
             </label>
             <input
               id="focusKeyword"
@@ -143,13 +203,13 @@ export default function SeoPanel({ postId, initialSeo, readOnly = false }: Props
         </div>
       </fieldset>
 
-      {/* 英文 Meta */}
       <fieldset className="rounded-xl border border-gray-200 p-5">
         <legend className="px-1 text-sm font-semibold text-gray-700">English SEO</legend>
         <div className="mt-3 space-y-4">
           <div>
             <label htmlFor="metaTitleEn" className="mb-1 block text-sm font-medium text-gray-700">
               Meta Title (EN)
+              <span className="ml-1 text-xs font-normal text-gray-400">← 標題（英文）</span>
               <span className="ml-1 text-xs text-gray-400">（{metaTitleEnLen}/70）</span>
             </label>
             <input
@@ -167,6 +227,7 @@ export default function SeoPanel({ postId, initialSeo, readOnly = false }: Props
           <div>
             <label htmlFor="metaDescriptionEn" className="mb-1 block text-sm font-medium text-gray-700">
               Meta Description (EN)
+              <span className="ml-1 text-xs font-normal text-gray-400">← 英文摘要</span>
               <span className="ml-1 text-xs text-gray-400">（{metaDescEnLen}/160）</span>
             </label>
             <textarea
@@ -182,10 +243,20 @@ export default function SeoPanel({ postId, initialSeo, readOnly = false }: Props
               </p>
             )}
           </div>
+          <div>
+            <label htmlFor="focusKeywordEn" className="mb-1 block text-sm font-medium text-gray-700">
+              英文 SEO 關鍵字
+              <span className="ml-1 text-xs font-normal text-gray-400">← 內容分頁同名欄位</span>
+            </label>
+            <input
+              id="focusKeywordEn"
+              {...register("focusKeywordEn")}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
         </div>
       </fieldset>
 
-      {/* OGP */}
       <fieldset className="rounded-xl border border-gray-200 p-5">
         <legend className="px-1 text-sm font-semibold text-gray-700">Open Graph</legend>
         <div className="mt-3 space-y-4">
@@ -201,7 +272,7 @@ export default function SeoPanel({ postId, initialSeo, readOnly = false }: Props
           </div>
           <div>
             <label htmlFor="ogDescription" className="mb-1 block text-sm font-medium text-gray-700">
-              OG Description
+              OG Description（留空則使用 Meta Description）
             </label>
             <textarea
               id="ogDescription"
@@ -210,10 +281,23 @@ export default function SeoPanel({ postId, initialSeo, readOnly = false }: Props
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
+          <div
+            className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600"
+            aria-live="polite"
+          >
+            <p className="font-medium text-gray-700">前台實際使用（與公開站邏輯一致）</p>
+            <p className="mt-1">
+              <span className="text-gray-500">OG Title：</span>
+              {effectiveOgTitle}
+            </p>
+            <p className="mt-0.5">
+              <span className="text-gray-500">OG Description：</span>
+              {effectiveOgDescription}
+            </p>
+          </div>
         </div>
       </fieldset>
 
-      {/* Robots */}
       <div className="flex items-center gap-3 rounded-xl border border-gray-200 p-5">
         <input
           type="checkbox"

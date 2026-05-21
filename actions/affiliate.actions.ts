@@ -4,10 +4,10 @@
 "use server";
 
 import { z } from "zod";
-import { cookies, headers } from "next/headers";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { prisma } from "@/infrastructure/db/prisma";
 import { gateAdminWrite } from "@/lib/auth/resolve-admin-action";
+import { getRequestMeta } from "@/lib/request/request-meta";
 import { sanitizeText } from "@/lib/sanitize/html";
 import { writeAuditLog } from "@/infrastructure/db/adapters/audit.prisma-adapter";
 import type { ActionResult } from "@/domain/shared/core.types";
@@ -41,21 +41,12 @@ const updateSchema = z.object({
   isActive:   z.boolean(),
 });
 
-async function getMeta() {
-  const h = await headers();
-  return {
-    ip:        h.get("CF-Connecting-IP") ?? "unknown",
-    userAgent: h.get("user-agent") ?? "",
-    requestId: crypto.randomUUID(),
-  };
-}
-
 // ── 新增 ──────────────────────────────────────────────────
 
 export async function createAffiliateLinkAction(
   input: unknown
 ): Promise<ActionResult<AffiliateLinkData>> {
-  const meta = await getMeta();
+  const meta = await getRequestMeta();
 
   try {
     const gate = await gateAdminWrite("affiliate");
@@ -125,7 +116,7 @@ export async function createAffiliateLinkAction(
 export async function updateAffiliateLinkAction(
   input: unknown
 ): Promise<ActionResult<AffiliateLinkData>> {
-  const meta = await getMeta();
+  const meta = await getRequestMeta();
 
   try {
     const gate = await gateAdminWrite("affiliate");
@@ -183,12 +174,60 @@ export async function updateAffiliateLinkAction(
   }
 }
 
+// ── 列表快速切換啟用狀態 ────────────────────────────────────
+
+export async function toggleAffiliateLinkActiveAction(
+  id: unknown,
+  isActive: unknown
+): Promise<ActionResult<AffiliateLinkData>> {
+  const meta = await getRequestMeta();
+
+  try {
+    const gate = await gateAdminWrite("affiliate");
+    if (!gate.ok) return gate.result;
+
+    const parsedId = z.string().cuid().safeParse(id);
+    const parsedActive = z.boolean().safeParse(isActive);
+    if (!parsedId.success || !parsedActive.success) {
+      return { success: false, data: null, error: Errors.validation() };
+    }
+
+    const link = await prisma.affiliateLink.update({
+      where: { id: parsedId.data },
+      data: { isActive: parsedActive.data },
+    });
+
+    revalidateTag("affiliate-links");
+    revalidatePath("/zh-TW");
+    revalidatePath("/en");
+    revalidatePath("/", "layout");
+
+    return {
+      success: true,
+      error: null,
+      data: {
+        id: link.id,
+        name: link.name,
+        slug: link.slug,
+        targetUrl: link.targetUrl,
+        platform: link.platform ?? "",
+        commission: link.commission ?? "",
+        isActive: link.isActive,
+        clickCount: link.clickCount,
+      },
+    };
+  } catch (e: unknown) {
+    console.error(`[Affiliate] toggle active error [${meta.requestId}]:`, e);
+    return { success: false, data: null, error: Errors.internal(meta.requestId) };
+  }
+}
+
 // ── 刪除 ──────────────────────────────────────────────────
 
 export async function deleteAffiliateLinkAction(
   id: unknown
 ): Promise<ActionResult<void>> {
-  const meta = await getMeta();
+  const meta = await getRequestMeta();
 
   try {
     const gate = await gateAdminWrite("affiliate");

@@ -222,6 +222,12 @@ function asTopicClusterCards(value: unknown): TopicClusterCardCopy[] {
       nameEn: asText(row["nameEn"], def.nameEn),
       description: asText(row["description"], def.description),
       descriptionEn: asText(row["descriptionEn"], def.descriptionEn),
+      imageUrl: asText(row["imageUrl"]),
+      imageAlt: asText(row["imageAlt"]),
+      href: asText(row["href"]),
+      imageUrlEn: asText(row["imageUrlEn"]),
+      imageAltEn: asText(row["imageAltEn"]),
+      hrefEn: asText(row["hrefEn"]),
     };
   });
 }

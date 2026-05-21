@@ -78,7 +78,7 @@ export async function probeGemini(): Promise<ProbeResult> {
       apiKey: env.GEMINI_API_KEY,
       baseURL: GEMINI_COMPAT_BASE_URL,
     });
-    const models = await withProbeTimeout(client.models.list());
+    const models = await withProbeTimeout(client.models.list(), 25_000);
     const count = models.data?.length ?? 0;
     return { ok: true, message: `Gemini 相容 API 可連線（模型列表 ${count} 筆）` };
   } catch (e) {

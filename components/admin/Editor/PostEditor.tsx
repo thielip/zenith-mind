@@ -1,5 +1,5 @@
-﻿// components/admin/Editor/PostEditor.tsx ??Client Component
-// ??蝺刻摩?其蜓擃?Tiptap + SEO ?Ｘ
+﻿// components/admin/Editor/PostEditor.tsx — Client Component
+// 文章編輯器主體：Tiptap + SEO 分頁
 
 "use client";
 
@@ -13,10 +13,10 @@ import RichTextEditor, { type RichTextEditorHandle } from "./RichTextEditor";
 import SeoPanel       from "./SeoPanel";
 import FaqEditor, { type FaqItemInput } from "./FaqEditor";
 import { updatePostAction } from "@/actions/post.actions";
+import BlurHashField from "@/components/admin/BlurHashField";
 import ExternalImageUrlField from "@/components/admin/ExternalImageUrlField";
+import { isValidBlurHash, BLURHASH_FORMAT_ERROR } from "@/lib/validation/blurhash";
 import { optionalExternalImageUrlSchema } from "@/lib/validation/external-image-url";
-
-// ?? ? ??????????????????????????????????????????????????
 
 export interface PostEditorData {
   id:          string;
@@ -45,6 +45,7 @@ export interface PostEditorData {
     metaTitleEn:       string;
     metaDescriptionEn: string;
     focusKeyword:      string;
+    focusKeywordEn:    string;
     ogTitle:           string;
     ogDescription:     string;
     noIndex:           boolean;
@@ -67,8 +68,6 @@ function toDatetimeLocalValue(iso: string | null): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-// ?? Zod Schema ?????????????????????????????????????????????
-
 const optionalPositiveInt = z
   .union([z.literal(""), z.string(), z.number(), z.null(), z.undefined()])
   .transform((v): number | undefined => {
@@ -80,15 +79,21 @@ const optionalPositiveInt = z
 
 const formSchema = z.object({
   title:       z.string().min(2, "Title at least 2 characters").max(200),
-  titleEn:     z.string().max(200).optional(),
+  titleEn:     z.string().min(2, "英文標題至少 2 字").max(200),
   excerpt:     z.string().max(300).optional(),
   excerptEn:   z.string().max(300).optional(),
+  focusKeyword: z.string().max(100).optional(),
+  focusKeywordEn: z.string().max(100).optional(),
   categoryId:  z.string().optional(),
   coverImage: optionalExternalImageUrlSchema,
   coverImageAlt: z.string().max(300).optional(),
   coverImageWidth: optionalPositiveInt,
   coverImageHeight: optionalPositiveInt,
-  coverImageBlurHash: z.string().max(200).optional(),
+  coverImageBlurHash: z
+    .string()
+    .max(200)
+    .optional()
+    .refine((v) => isValidBlurHash(v ?? ""), { message: BLURHASH_FORMAT_ERROR }),
   scheduledAt: z.string().optional(),
   isPasswordProtected: z.boolean().optional(),
   accessPassword: z.string().max(128).optional(),
@@ -97,8 +102,6 @@ const formSchema = z.object({
 
 type PostFormInput = z.input<typeof formSchema>;
 type PostFormParsed = z.output<typeof formSchema>;
-
-// ?? ?辣 ??????????????????????????????????????????????????
 
 export default function PostEditor({ post, categories, readOnly = false }: Props) {
   const router = useRouter();
@@ -136,6 +139,8 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
       titleEn:    post.titleEn,
       excerpt:    post.excerpt,
       excerptEn:  post.excerptEn,
+      focusKeyword: post.seo?.focusKeyword ?? "",
+      focusKeywordEn: post.seo?.focusKeywordEn ?? "",
       categoryId: post.categoryId,
       coverImage: post.coverImage,
       coverImageAlt: post.coverImageAlt ?? "",
@@ -150,7 +155,22 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
   const [accessPassword, setAccessPassword] = useState("");
   const [clearAccessPassword, setClearAccessPassword] = useState(false);
 
-  // 璅???脣?鞈?嚗ilentRefresh beforeunload ?剁?
+  const watchedTitle = watch("title") ?? "";
+  const watchedTitleEn = watch("titleEn") ?? "";
+  const watchedExcerpt = watch("excerpt") ?? "";
+  const watchedExcerptEn = watch("excerptEn") ?? "";
+  const watchedFocusKeyword = watch("focusKeyword") ?? "";
+  const watchedFocusKeywordEn = watch("focusKeywordEn") ?? "";
+
+  const seoSyncFrom = {
+    title: watchedTitle,
+    titleEn: watchedTitleEn,
+    excerpt: watchedExcerpt,
+    excerptEn: watchedExcerptEn,
+    focusKeyword: watchedFocusKeyword,
+    focusKeywordEn: watchedFocusKeywordEn,
+  };
+
   const markDirty = useCallback(() => {
     (window as Window & { __hasUnsavedData?: boolean }).__hasUnsavedData = true;
   }, []);
@@ -162,6 +182,8 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
         const result = await updatePostAction({
           id:      post.id,
           ...values,
+          focusKeyword: values.focusKeyword,
+          focusKeywordEn: values.focusKeywordEn,
           scheduledAt: values.scheduledAt
             ? new Date(values.scheduledAt).toISOString()
             : undefined,
@@ -194,31 +216,31 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
     })();
 
   const TABS = [
-    { id: "content" as const, label: "?批捆蝺刻摩" },
-    { id: "faq"     as const, label: "FAQ 蝺刻摩" },
-    { id: "seo"     as const, label: "SEO 閮剖?" },
+    { id: "content" as const, label: "內容編輯" },
+    { id: "faq"     as const, label: "FAQ 編輯" },
+    { id: "seo"     as const, label: "SEO 設定" },
   ];
 
   return (
     <div className="flex h-full flex-col">
-      {/* ?撌亙??*/}
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900 truncate max-w-md">
           編輯：{post.title}
         </h1>
         <div className="flex items-center gap-2">
-          {/* ?脣????蝷?*/}
           {saveStatus === "saved" && (
             <span className="text-xs text-green-600" aria-live="polite">
-              ??撌脣摮?            </span>
+              ✓ 已儲存
+            </span>
           )}
           {saveStatus === "published" && (
             <span className="text-xs text-green-600" aria-live="polite">
-              ???澆?摰?嚗迤?刻???蝡恣??            </span>
+              ✓ 已發布完成，正在前往列表…
+            </span>
           )}
           {saveStatus === "error" && (
             <span className="text-xs text-red-600" aria-live="assertive">
-              ?脣?憭望?嚗??岫
+              儲存失敗，請重試
             </span>
           )}
 
@@ -252,10 +274,9 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
         </div>
       </div>
 
-      {/* Tab ?? */}
       <div
         role="tablist"
-        aria-label="蝺刻摩?Ｘ"
+        aria-label="編輯分頁"
         className="mb-4 flex border-b border-gray-200"
       >
         {TABS.map((tab) => (
@@ -278,10 +299,9 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
         ))}
       </div>
 
-      {/* Tab ?Ｘ */}
       <div className="min-h-0 flex-1 overflow-y-auto">
 
-        {/* ?批捆蝺刻摩 */}
+        {/* 內容編輯 */}
         <div
           id="panel-content"
           role="tabpanel"
@@ -289,13 +309,12 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
           hidden={activeTab !== "content"}
         >
           <div className="space-y-4">
-            {/* 璅? */}
             <div>
               <label
                 htmlFor="title"
                 className="mb-1.5 block text-sm font-medium text-gray-700"
               >
-                璅?嚗?銝哨?<span aria-hidden="true" className="text-red-500">*</span>
+                標題（繁中）<span aria-hidden="true" className="text-red-500">*</span>
               </label>
               <input
                 id="title"
@@ -314,10 +333,47 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
 
             <div>
               <label
+                htmlFor="titleEn"
+                className="mb-1.5 block text-sm font-medium text-gray-700"
+              >
+                標題（英文）<span aria-hidden="true" className="text-red-500">*</span>
+              </label>
+              <input
+                id="titleEn"
+                {...register("titleEn")}
+                onChange={(e) => { register("titleEn").onChange(e); markDirty(); }}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                aria-required="true"
+              />
+              {errors.titleEn && (
+                <p role="alert" className="mt-1 text-xs text-red-600">
+                  {errors.titleEn.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label
+                htmlFor="excerpt"
+                className="mb-1.5 block text-sm font-medium text-gray-700"
+              >
+                中文摘要
+              </label>
+              <textarea
+                id="excerpt"
+                rows={2}
+                {...register("excerpt")}
+                onChange={(e) => { register("excerpt").onChange(e); markDirty(); }}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label
                 htmlFor="excerptEn"
                 className="mb-1.5 block text-sm font-medium text-gray-700"
               >
-                ??嚗???望??”?＊蝷綽?
+                英文摘要
               </label>
               <textarea
                 id="excerptEn"
@@ -333,37 +389,41 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
               )}
             </div>
 
-            {/* 璅?嚗??*/}
-            <div>
-              <label
-                htmlFor="titleEn"
-                className="mb-1.5 block text-sm font-medium text-gray-700"
-              >
-                璅?嚗??
-              </label>
-              <input
-                id="titleEn"
-                {...register("titleEn")}
-                onChange={(e) => { register("titleEn").onChange(e); markDirty(); }}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
-
-            {/* ?? */}
-            <div>
-              <label
-                htmlFor="excerpt"
-                className="mb-1.5 block text-sm font-medium text-gray-700"
-              >
-                ??嚗?銝哨??”?＊蝷綽?
-              </label>
-              <textarea
-                id="excerpt"
-                rows={2}
-                {...register("excerpt")}
-                onChange={(e) => { register("excerpt").onChange(e); markDirty(); }}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label
+                  htmlFor="focusKeyword"
+                  className="mb-1.5 block text-sm font-medium text-gray-700"
+                >
+                  中文 SEO 關鍵字
+                </label>
+                <input
+                  id="focusKeyword"
+                  {...register("focusKeyword")}
+                  onChange={(e) => {
+                    register("focusKeyword").onChange(e);
+                    markDirty();
+                  }}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="focusKeywordEn"
+                  className="mb-1.5 block text-sm font-medium text-gray-700"
+                >
+                  英文 SEO 關鍵字
+                </label>
+                <input
+                  id="focusKeywordEn"
+                  {...register("focusKeywordEn")}
+                  onChange={(e) => {
+                    register("focusKeywordEn").onChange(e);
+                    markDirty();
+                  }}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
             </div>
 
             <ExternalImageUrlField
@@ -374,6 +434,7 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
                 setValue("coverImage", url, { shouldValidate: true });
                 markDirty();
               }}
+              uploadFolder="cms/post-covers"
               previewAlt={watch("coverImageAlt") || "封面預覽"}
             />
             {errors.coverImage && (
@@ -388,7 +449,8 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
                   htmlFor="coverImageAlt"
                   className="mb-1.5 block text-sm font-medium text-gray-700"
                 >
-                  撠 Alt嚗EO / a11y嚗?                </label>
+                  封面 Alt（SEO / a11y）
+                </label>
                 <input
                   id="coverImageAlt"
                   {...register("coverImageAlt")}
@@ -399,29 +461,27 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
-              <div>
-                <label
-                  htmlFor="coverImageBlurHash"
-                  className="mb-1.5 block text-sm font-medium text-gray-700"
-                >
-                  撠 BlurHash嚗憛恬?
-                </label>
-                <input
-                  id="coverImageBlurHash"
-                  {...register("coverImageBlurHash")}
-                  onChange={(e) => {
-                    register("coverImageBlurHash").onChange(e);
-                    markDirty();
-                  }}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
+              <BlurHashField
+                id="coverImageBlurHash"
+                label="封面 BlurHash（選填）"
+                value={watch("coverImageBlurHash") ?? ""}
+                onChange={(v) => {
+                  setValue("coverImageBlurHash", v, { shouldValidate: true });
+                  markDirty();
+                }}
+              />
+              {errors.coverImageBlurHash ? (
+                <p className="text-xs text-red-600">
+                  {String(errors.coverImageBlurHash.message)}
+                </p>
+              ) : null}
               <div>
                 <label
                   htmlFor="coverImageWidth"
                   className="mb-1.5 block text-sm font-medium text-gray-700"
                 >
-                  撠撖穿?px嚗?                </label>
+                  封面寬（px）
+                </label>
                 <input
                   id="coverImageWidth"
                   type="number"
@@ -468,10 +528,11 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
             <div className="rounded-lg border border-gray-200 bg-gray-50/80 p-4 space-y-4">
               <p className="text-sm font-medium text-gray-800 flex items-center gap-2">
                 <Calendar size={16} aria-hidden />
-                ?撣?蝔?              </p>
+                排程發布
+              </p>
               <div>
                 <label htmlFor="scheduledAt" className="mb-1.5 block text-sm text-gray-600">
-                  ?澆???嚗??蝔撣?敹‵嚗??箸靘???
+                  發布時間（選填；排程發布時必填，未填則立即發布）
                 </label>
                 <input
                   id="scheduledAt"
@@ -490,7 +551,7 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
             <div className="rounded-lg border border-gray-200 bg-gray-50/80 p-4 space-y-4">
               <p className="text-sm font-medium text-gray-800 flex items-center gap-2">
                 <Lock size={16} aria-hidden />
-                ????
+                存取設定
               </p>
               <label className="flex items-center gap-2 text-sm text-gray-700">
                 <input
@@ -502,7 +563,7 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
                     markDirty();
                   }}
                 />
-                ?撖Ⅳ靽風嚗???頛詨撖Ⅳ????
+                啟用密碼保護（讀者需輸入密碼才能閱讀全文）
               </label>
               {post.hasAccessPassword && (
                 <p className="text-xs text-gray-500">目前已設定密碼；留空則沿用原密碼。</p>
@@ -535,18 +596,17 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
                       markDirty();
                     }}
                   />
-                  蝘駁撖Ⅳ靽風
+                  移除密碼保護
                 </label>
               )}
             </div>
 
-            {/* ?? */}
             <div>
               <label
                 htmlFor="categoryId"
                 className="mb-1.5 block text-sm font-medium text-gray-700"
               >
-                ??
+                分類
               </label>
               <select
                 id="categoryId"
@@ -560,7 +620,6 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
               </select>
             </div>
 
-            {/* 蝜葉?批捆蝺刻摩??*/}
             <div role="group" aria-labelledby="editor-zh-label">
               <p id="editor-zh-label" className="mb-1.5 block text-sm font-medium text-gray-700">
                 HTML 內容編輯器（繁中）
@@ -574,16 +633,16 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
               />
             </div>
 
-            {/* ?望??批捆蝺刻摩??*/}
             <div role="group" aria-labelledby="editor-en-label">
               <p id="editor-en-label" className="mb-1.5 block text-sm font-medium text-gray-700">
-                HTML 蝬脤??批捆蝺刻摩?剁??望?嚗憛恬?
+                HTML 內容編輯器（英文，選填）
               </p>
               <RichTextEditor
                 ref={editorEnRef}
                 content={contentEn}
                 onChange={(v) => { setContentEn(v); markDirty(); }}
                 placeholder="Write English content here…"
+                modeLabels={{ visual: "Visual editor", source: "HTML source" }}
               />
             </div>
           </div>
@@ -603,13 +662,17 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
           />
         </div>
 
-        {/* SEO 閮剖? */}
         <div
           id="panel-seo"
           role="tabpanel"
           hidden={activeTab !== "seo"}
         >
-          <SeoPanel postId={post.id} initialSeo={post.seo} readOnly={readOnly} />
+          <SeoPanel
+            postId={post.id}
+            initialSeo={post.seo}
+            syncFrom={seoSyncFrom}
+            readOnly={readOnly}
+          />
         </div>
 
       </div>

@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/infrastructure/db/prisma";
+import { recordAffiliateClick } from "@/lib/affiliate/record-click";
 
 export const dynamic = "force-dynamic";
 
@@ -25,11 +26,7 @@ export async function GET(
     return NextResponse.redirect(new URL("/", _req.url), { status: 302 });
   }
 
-  // 非同步更新點擊數（不阻塞轉址）
-  void prisma.affiliateLink.update({
-    where: { id: link.id },
-    data:  { clickCount: { increment: 1 } },
-  }).catch((err: unknown) => {
+  void recordAffiliateClick(link.id).catch((err: unknown) => {
     console.error("[AffiliateLink] click count update failed:", err);
   });
 

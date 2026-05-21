@@ -5,7 +5,6 @@
 "use server";
 
 import { z } from "zod";
-import { headers } from "next/headers";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { purgePublicSiteAfterPostChange } from "@/lib/revalidate/purge-public-site";
 import { prisma } from "@/infrastructure/db/prisma";
@@ -13,20 +12,14 @@ import { hashPassword } from "@/lib/auth/password";
 import { gateAdminWrite } from "@/lib/auth/resolve-admin-action";
 import { sanitizeRichText, sanitizeText } from "@/lib/sanitize/html";
 import { optionalTrustedMediaUrl } from "@/lib/security/allowed-media-url";
+import { isValidBlurHash, BLURHASH_FORMAT_ERROR } from "@/lib/validation/blurhash";
 import { convertMarkdownImagesToHtml } from "@/lib/markdown/images";
 import { writeAuditLog } from "@/infrastructure/db/adapters/audit.prisma-adapter";
+import { buildFieldChanges } from "@/lib/audit/field-changes";
 import { upsertPostDeleteRedirects } from "@/lib/redirects/queries";
+import { getRequestMeta } from "@/lib/request/request-meta";
 import type { ActionResult } from "@/domain/shared/core.types";
 import { Errors } from "@/domain/shared/core.types";
-
-async function getRequestMeta() {
-  const h = await headers();
-  return {
-    ip:        h.get("CF-Connecting-IP") ?? "unknown",
-    userAgent: h.get("user-agent") ?? "",
-    requestId: crypto.randomUUID(),
-  };
-}
 
 // ── Zod Schema ────────────────────────────────────────────
 
@@ -40,9 +33,11 @@ const postContentDocSchema = z
 const updatePostSchema = z.object({
   id:          z.string().cuid(),
   title:       z.string().min(2).max(200),
-  titleEn:     z.string().max(200).optional(),
+  titleEn:     z.string().min(2).max(200),
   excerpt:     z.string().max(300).optional(),
   excerptEn:   z.string().max(300).optional(),
+  focusKeyword: z.string().max(100).optional(),
+  focusKeywordEn: z.string().max(100).optional(),
   content:     z.string(),
   contentEn:   z.string().optional(),
   categoryId:  z.string().cuid().optional().or(z.literal("")),
@@ -50,7 +45,12 @@ const updatePostSchema = z.object({
   coverImageAlt: z.string().max(300).optional().or(z.literal("")),
   coverImageWidth: z.number().int().positive().optional(),
   coverImageHeight: z.number().int().positive().optional(),
-  coverImageBlurHash: z.string().max(200).optional().or(z.literal("")),
+  coverImageBlurHash: z
+    .string()
+    .max(200)
+    .optional()
+    .or(z.literal(""))
+    .refine((v) => isValidBlurHash(v ?? ""), { message: BLURHASH_FORMAT_ERROR }),
   contentDoc: postContentDocSchema,
   scheduledAt: z.string().optional(),
   faq: z.array(z.object({
@@ -74,6 +74,7 @@ const updateSeoSchema = z.object({
   metaTitleEn:       seoText(70),
   metaDescriptionEn: seoText(160),
   focusKeyword:      seoText(100),
+  focusKeywordEn:    seoText(100),
   ogTitle:           seoText(70),
   ogDescription:     seoText(200),
   noIndex:           z.boolean().default(false),
@@ -126,7 +127,15 @@ export async function updatePostAction(
 
     const existing = await prisma.post.findUnique({
       where: { id: d.id, deletedAt: null },
-      select: { accessPasswordHash: true },
+      select: {
+        accessPasswordHash: true,
+        title: true,
+        titleEn: true,
+        status: true,
+        slug: true,
+        excerpt: true,
+        categoryId: true,
+      },
     });
     if (!existing) {
       return { success: false, data: null, error: Errors.notFound("Post") };
@@ -186,6 +195,27 @@ export async function updatePostAction(
           ? undefined
           : undefined;
 
+    const afterSnapshot = {
+      title: cleanTitle,
+      titleEn: cleanTitleEn,
+      status: d.status,
+      slug: existing.slug,
+      excerpt: cleanExcerpt,
+      categoryId: d.categoryId || null,
+    };
+    const changes = buildFieldChanges(
+      {
+        title: existing.title,
+        titleEn: existing.titleEn,
+        status: existing.status,
+        slug: existing.slug,
+        excerpt: existing.excerpt,
+        categoryId: existing.categoryId,
+      },
+      afterSnapshot,
+      ["title", "titleEn", "status", "excerpt", "categoryId"]
+    );
+
     // Step 6：Business Logic
     const post = await prisma.post.update({
       where: { id: d.id, deletedAt: null },
@@ -224,7 +254,25 @@ export async function updatePostAction(
       entityType: "Post",
       entityId:   post.id,
       userId:     admin.userId,
-      metadata:   { status: d.status },
+      metadata:   JSON.parse(
+        JSON.stringify({
+          status: d.status,
+          slug: post.slug,
+          ...(changes
+            ? {
+                changes,
+                before: {
+                  title: existing.title,
+                  titleEn: existing.titleEn,
+                  status: existing.status,
+                  excerpt: existing.excerpt,
+                  categoryId: existing.categoryId,
+                },
+                after: afterSnapshot,
+              }
+            : {}),
+        })
+      ),
       ...meta,
     });
 
@@ -235,6 +283,29 @@ export async function updatePostAction(
     revalidatePath("/zh-TW/blog");
     revalidatePath("/en/blog");
     void purgePublicSiteAfterPostChange(post.slug);
+
+    const cleanFocusKw = d.focusKeyword?.trim()
+      ? sanitizeText(d.focusKeyword)
+      : null;
+    const cleanFocusKwEn = d.focusKeywordEn?.trim()
+      ? sanitizeText(d.focusKeywordEn)
+      : null;
+    await prisma.seoMetadata.upsert({
+      where: { postId: post.id },
+      create: {
+        postId: post.id,
+        focusKeyword: cleanFocusKw,
+        focusKeywordEn: cleanFocusKwEn,
+        metaTitle: cleanTitle.slice(0, 70),
+        metaTitleEn: cleanTitleEn?.slice(0, 70) ?? null,
+        metaDescription: cleanExcerpt,
+        metaDescriptionEn: cleanExcerptEn,
+      },
+      update: {
+        focusKeyword: cleanFocusKw,
+        focusKeywordEn: cleanFocusKwEn,
+      },
+    });
 
     return { success: true, data: { id: post.id }, error: null };
 
@@ -272,6 +343,7 @@ export async function updateSeoAction(
       metaTitleEn:       d.metaTitleEn       ? sanitizeText(d.metaTitleEn)       : null,
       metaDescriptionEn: d.metaDescriptionEn ? sanitizeText(d.metaDescriptionEn) : null,
       focusKeyword:      d.focusKeyword       ? sanitizeText(d.focusKeyword)       : null,
+      focusKeywordEn:    d.focusKeywordEn     ? sanitizeText(d.focusKeywordEn)     : null,
       ogTitle:           d.ogTitle           ? sanitizeText(d.ogTitle)           : null,
       ogDescription:     d.ogDescription     ? sanitizeText(d.ogDescription)     : null,
       noIndex:           d.noIndex,

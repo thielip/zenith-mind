@@ -7,6 +7,40 @@ import {
 import type { WarRoomPayload } from "@/types/command-center/module-payloads";
 import type { KpiMetric, StatusPill } from "@/types/command-center/metrics";
 import { publishRealtimeEvent, createRealtimeEvent } from "@/server/realtime/event-hub";
+import { buildWarRoomDataAlerts } from "@/lib/admin/war-room-data-alerts";
+import type { IntegrationHealthItem } from "@/lib/admin/integration-health.types";
+
+const WAR_ROOM_CONNECTION_IDS = [
+  "postgres",
+  "redis",
+  "ga4-reporting",
+  "gemini",
+  "search-console-live",
+  "supabase-admin",
+  "ga4",
+  "jwt",
+] as const;
+
+function pickConnections(items: IntegrationHealthItem[]) {
+  const map = new Map(items.map((i) => [i.id, i]));
+  return WAR_ROOM_CONNECTION_IDS.flatMap((id) => {
+    const item = map.get(id);
+    if (!item) return [];
+    return [
+      {
+        id: item.id,
+        name: item.name,
+        status: item.status,
+        detail:
+          item.status === "ok"
+            ? item.detail
+            : item.missing.length > 0
+              ? `缺少：${item.missing.join(", ")}`
+              : item.detail,
+      },
+    ];
+  });
+}
 
 function spark(values: number[]): number[] {
   return values.length > 0 ? values : [0, 0, 0, 0, 0, 0, 0];
@@ -104,15 +138,25 @@ export async function loadWarRoomPayload(): Promise<WarRoomPayload> {
     })
   );
 
+  const trafficSeries = ga4.traffic.map((d) => ({
+    date: d.date,
+    sessions: d.sessions,
+    pageViews: d.pageViews,
+  }));
+
   return {
     statusPills,
     kpis,
     insights,
-    trafficSeries: ga4.traffic.map((d) => ({
-      date: d.date,
-      sessions: d.sessions,
-      pageViews: d.pageViews,
-    })),
+    trafficSeries,
     integrationSummary: healthReport.summary,
+    connections: pickConnections(healthReport.items),
+    dataAlerts: buildWarRoomDataAlerts({
+      ga4Ok: ga4.reportingProbe.ok,
+      ga4Message: ga4.reportingProbe.message,
+      trafficSeriesLen: trafficSeries.length,
+      insights,
+      connections: healthReport.items,
+    }),
   };
 }

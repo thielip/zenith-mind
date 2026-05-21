@@ -7,6 +7,8 @@
 .dev.vars
 .env.import.tmp
 .env.vercel-import
+.env.vercel-production-check
+.env.vercel.production.check
 
 # Cloudflare Wrangler 本機狀態（可能含快取／本機 secret 參照）
 .wrangler/
@@ -31,3 +33,6 @@ tsconfig.tsbuildinfo
 # 本地文件／需求文件（勿上傳）
 *.docx
 圖稿/
+
+.vercel
+.env*.local

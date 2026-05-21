@@ -31,25 +31,70 @@ const engineBadgeColors: Record<string, string> = {
   "Google AIO": "border-amber-500/40 bg-amber-500/10 text-amber-200",
 };
 
+function buildGeoInsights(data: GeoPayload) {
+  const perplexitySov =
+    data.aiEngineSov.find((e) => e.name === "Perplexity")?.sov ?? 0;
+  const schema = data.schemaCoverage;
+  const items: {
+    icon?: string;
+    title: string;
+    body: string;
+    priority: "high" | "medium" | "low";
+  }[] = [];
+
+  if (perplexitySov < 55) {
+    const hasSiteSchema = schema?.siteOrgWebSite ?? true;
+    const faqPct = schema?.faqCoveragePct ?? 0;
+    const types = schema?.schemaTypesDeployed?.join("、") ?? "Organization、WebSite、Article";
+
+    if (hasSiteSchema && faqPct < 40) {
+      items.push({
+        icon: "💡",
+        title: "Perplexity 能見度偏低",
+        body: `估算能見度 ${perplexitySov}/100。全站已部署 ${types} 等 JSON-LD，但已發布文章 FAQ 覆蓋僅 ${faqPct}% — 建議在更多文章加入問答式（FAQ）區塊與 SEO Meta，以提升 AI 引用率。`,
+        priority: "high",
+      });
+    } else if (!hasSiteSchema) {
+      items.push({
+        icon: "💡",
+        title: "Perplexity 能見度偏低",
+        body: `估算能見度 ${perplexitySov}/100。請確認首頁／版型已輸出 Organization、WebSite 等 Schema.org JSON-LD。`,
+        priority: "high",
+      });
+    } else {
+      items.push({
+        icon: "💡",
+        title: "Perplexity 能見度可再提升",
+        body: `估算能見度 ${perplexitySov}/100（結構化準備度 ${schema?.readinessPct ?? "—"}%）。可持續擴充 FAQ、更新 Article 日期，並考慮 Otterly / Semrush API 取得第三方即時數據。`,
+        priority: "medium",
+      });
+    }
+  }
+
+  items.push({
+    title: "GSC 曝光與站內 FAQ 協同",
+    body: data.note ?? "持續優化 FAQ 與 SEO Meta 覆蓋，可同步提升 Google 搜尋與生成式引用準備度。",
+    priority: "medium",
+  });
+
+  if (schema) {
+    items.push({
+      title: "Schema.org 覆蓋快照",
+      body: `已發布 ${schema.publishedTotal} 篇 · FAQ ${schema.withFaqCount} 篇（${schema.faqCoveragePct}%）· SEO Meta ${schema.seoMetadataCoveragePct}% · 類型：${schema.schemaTypesDeployed.join("、")}`,
+      priority: "low",
+    });
+  }
+
+  return items;
+}
+
 export function GeoPageView({ data }: { data: GeoPayload }) {
   const radarData = data.aiEngineSov.map((e) => ({
     subject: e.name.replace("Google AIO", "Google"),
     value: e.sov,
   }));
 
-  const geoInsights = [
-    {
-      icon: "💡",
-      title: "Perplexity 能見度偏低",
-      body: `偵測到本網站在 Perplexity 的能見度較低 (${data.aiEngineSov.find((e) => e.name === "Perplexity")?.sov ?? 55})，主因是缺乏結構化數據（Schema.org）。建議在內容中多使用「問答式（FAQ）」結構，以利提升被 AI 引擎引用的機率。`,
-      priority: "high" as const,
-    },
-    {
-      title: "GSC 曝光與站內 FAQ 協同",
-      body: data.note ?? "持續優化 FAQ 與 SEO Meta 覆蓋，可同步提升 Google 搜尋與生成式引用準備度。",
-      priority: "medium" as const,
-    },
-  ];
+  const geoInsights = buildGeoInsights(data);
 
   return (
     <div className="space-y-6 min-w-0">

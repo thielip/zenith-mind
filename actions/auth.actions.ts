@@ -5,7 +5,8 @@
 "use server";
 
 import { z } from "zod";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
+import { getRequestMeta } from "@/lib/request/request-meta";
 import type { ActionResult } from "@/domain/shared/core.types";
 import { Errors } from "@/domain/shared/core.types";
 import {
@@ -51,17 +52,6 @@ const loginSchema = z.object({
 const totpSchema = z.object({
   code: z.string().length(6).regex(/^\d{6}$/),
 });
-
-// ── 取得請求資訊（Audit Log 用）──────────────────────────
-
-async function getRequestMeta() {
-  const h = await headers();
-  return {
-    ip:        h.get("CF-Connecting-IP") ?? h.get("x-forwarded-for") ?? "unknown",
-    userAgent: h.get("user-agent") ?? "",
-    requestId: crypto.randomUUID(),
-  };
-}
 
 // ═══════════════════════════════════════════════════════
 // Action 1：登入

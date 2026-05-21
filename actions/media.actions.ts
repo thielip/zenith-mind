@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { z } from "zod";
+import { getRequestMeta } from "@/lib/request/request-meta";
 import { prisma } from "@/infrastructure/db/prisma";
 import { writeAuditLog } from "@/infrastructure/db/adapters/audit.prisma-adapter";
 import { deleteSiteAssetByPublicUrl } from "@/infrastructure/storage/supabase-storage";
@@ -17,14 +17,6 @@ const deleteMediaSchema = z.object({
   entityId: z.string().min(1).max(120).optional(),
 });
 
-async function getMeta() {
-  const h = await headers();
-  return {
-    ip: h.get("CF-Connecting-IP") ?? "unknown",
-    userAgent: h.get("user-agent") ?? "",
-    requestId: crypto.randomUUID(),
-  };
-}
 
 function revalidateMediaPages() {
   revalidatePath("/admin/media");
@@ -35,7 +27,7 @@ function revalidateMediaPages() {
 }
 
 export async function deleteMediaItemAction(input: unknown): Promise<ActionResult<void>> {
-  const meta = await getMeta();
+  const meta = await getRequestMeta();
 
   try {
     const gate = await gateAdminWrite("media");

@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath, revalidateTag } from "next/cache";
-import { headers } from "next/headers";
 import { z } from "zod";
+import { getRequestMeta } from "@/lib/request/request-meta";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/infrastructure/db/prisma";
 import { writeAuditLog } from "@/infrastructure/db/adapters/audit.prisma-adapter";
@@ -84,6 +84,12 @@ const topicClusterCardSchema = z.object({
   nameEn: z.string().trim().max(80),
   description: z.string().trim().max(400),
   descriptionEn: z.string().trim().max(400),
+  imageUrl: optionalExternalImageUrlSchema.default(""),
+  imageAlt: z.string().trim().max(120).default(""),
+  href: hrefSchema.default(""),
+  imageUrlEn: optionalExternalImageUrlSchema.default(""),
+  imageAltEn: z.string().trim().max(120).default(""),
+  hrefEn: hrefSchema.default(""),
 });
 
 const homepageCopySchema = z.object({
@@ -227,14 +233,6 @@ const carouselItemSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
-async function getMeta() {
-  const h = await headers();
-  return {
-    ip: h.get("CF-Connecting-IP") ?? "unknown",
-    userAgent: h.get("user-agent") ?? "",
-    requestId: crypto.randomUUID(),
-  };
-}
 
 function revalidatePublicPages() {
   revalidateTag("site-settings");
@@ -248,7 +246,7 @@ function revalidatePublicPages() {
 export async function uploadSiteAssetAction(
   formData: FormData
 ): Promise<ActionResult<{ url: string }>> {
-  const meta = await getMeta();
+  const meta = await getRequestMeta();
 
   try {
     const gate = await gateAdminWrite("site");
@@ -355,7 +353,7 @@ export async function uploadSiteAssetAction(
 export async function updateSiteSettingsAction(
   input: unknown
 ): Promise<ActionResult<SiteSettingsData>> {
-  const meta = await getMeta();
+  const meta = await getRequestMeta();
 
   try {
     const gate = await gateAdminWrite("site");
@@ -435,7 +433,7 @@ export async function saveHeroSlidesAction(
   locale: unknown,
   input: unknown
 ): Promise<ActionResult<HeroSlideData[]>> {
-  const meta = await getMeta();
+  const meta = await getRequestMeta();
 
   try {
     const gate = await gateAdminWrite("site");
@@ -519,7 +517,7 @@ export async function saveHomeCarouselItemsAction(
   locale: unknown,
   input: unknown
 ): Promise<ActionResult<HomeCarouselItemData[]>> {
-  const meta = await getMeta();
+  const meta = await getRequestMeta();
 
   try {
     const gate = await gateAdminWrite("site");

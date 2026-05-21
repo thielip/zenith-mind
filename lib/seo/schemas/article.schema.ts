@@ -70,6 +70,56 @@ export function buildBreadcrumbSchema(
 
 // ── Organization + WebSite（首頁）────────────────────────
 
+export function buildHomeWebPageSchema(p: {
+  locale: "zh-TW" | "en";
+  title: string;
+  description: string;
+}) {
+  const base = getPublicSiteUrl();
+  const path = p.locale === "en" ? "/en" : "/zh-TW";
+  const url = `${base}${path}`;
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": `${url}#webpage`,
+    url,
+    name: p.title,
+    description: p.description,
+    isPartOf: { "@id": `${base}/#website` },
+    about: { "@id": `${base}/#organization` },
+    inLanguage: p.locale === "en" ? "en" : "zh-TW",
+  };
+}
+
+export function buildBlogCollectionSchema(p: {
+  locale: "zh-TW" | "en";
+  name: string;
+  description: string;
+  postUrls: string[];
+}) {
+  const base = getPublicSiteUrl();
+  const path = p.locale === "en" ? "/en/blog" : "/zh-TW/blog";
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "@id": `${base}${path}#collection`,
+    url: `${base}${path}`,
+    name: p.name,
+    description: p.description,
+    isPartOf: { "@id": `${base}/#website` },
+    mainEntity: {
+      "@type": "ItemList",
+      itemListElement: p.postUrls.slice(0, 12).map((itemUrl, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        url: itemUrl,
+      })),
+    },
+  };
+}
+
 export function buildOrganizationSchema() {
   const base = getPublicSiteUrl();
   const logo = absoluteSiteLogoUrl(base);

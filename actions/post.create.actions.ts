@@ -4,8 +4,8 @@
 "use server";
 
 import { z } from "zod";
-import { headers } from "next/headers";
 import { prisma } from "@/infrastructure/db/prisma";
+import { getRequestMeta } from "@/lib/request/request-meta";
 import { gateAdminWrite } from "@/lib/auth/resolve-admin-action";
 import { sanitizeText } from "@/lib/sanitize/html";
 import { writeAuditLog } from "@/infrastructure/db/adapters/audit.prisma-adapter";
@@ -15,12 +15,14 @@ import type { ActionResult } from "@/domain/shared/core.types";
 import { Errors } from "@/domain/shared/core.types";
 
 const createSchema = z.object({
-  title:      z.string().min(2).max(200),
-  slug:       z.string().min(2).max(200).regex(/^[a-z0-9-]+$/),
-  categoryId: z.string().cuid().optional().or(z.literal("")),
-  excerpt:    z.string().max(300).optional(),
-  excerptEn:  z.string().max(300).optional(),
-  focusKeyword: z.string().max(100).optional(),
+  title:          z.string().min(2).max(200),
+  titleEn:        z.string().min(2).max(200),
+  slug:           z.string().min(2).max(200).regex(/^[a-z0-9-]+$/),
+  categoryId:     z.string().cuid().optional().or(z.literal("")),
+  excerpt:        z.string().max(300).optional(),
+  excerptEn:      z.string().max(300).optional(),
+  focusKeyword:   z.string().max(100).optional(),
+  focusKeywordEn: z.string().max(100).optional(),
 });
 
 function normalizeSlug(slug: string): string {
@@ -35,19 +37,13 @@ function normalizeSlug(slug: string): string {
 export async function createPostAction(
   input: unknown
 ): Promise<ActionResult<{ id: string }>> {
-  const h = await headers();
-  const meta = {
-    ip:        h.get("CF-Connecting-IP") ?? "unknown",
-    userAgent: h.get("user-agent") ?? "",
-    requestId: crypto.randomUUID(),
-  };
+  const meta = await getRequestMeta();
 
   try {
     const gate = await gateAdminWrite("post");
     if (!gate.ok) return gate.result;
     const admin = gate.session;
 
-    // Zod
     const parsed = createSchema.safeParse(input);
     if (!parsed.success) {
       return { success: false, data: null, error: Errors.validation(parsed.error.flatten()) };
@@ -55,17 +51,21 @@ export async function createPostAction(
 
     const d = parsed.data;
 
-    // 清洗
     const cleanTitle   = sanitizeText(d.title);
+    const cleanTitleEn = sanitizeText(d.titleEn);
     const cleanExcerpt = d.excerpt ? sanitizeText(d.excerpt) : null;
     const cleanExcerptEn = d.excerptEn ? sanitizeText(d.excerptEn) : null;
-    const cleanFocusKeyword = d.focusKeyword ? sanitizeText(d.focusKeyword) : cleanTitle.slice(0, 100);
-    const cleanSlug    = normalizeSlug(d.slug);
+    const cleanFocusKeyword = d.focusKeyword
+      ? sanitizeText(d.focusKeyword)
+      : cleanTitle.slice(0, 100);
+    const cleanFocusKeywordEn = d.focusKeywordEn
+      ? sanitizeText(d.focusKeywordEn)
+      : cleanTitleEn.slice(0, 100);
+    const cleanSlug = normalizeSlug(d.slug);
     if (!cleanSlug) {
       return { success: false, data: null, error: Errors.validation("Invalid slug") };
     }
 
-    // 檢查 slug 唯一性
     const existing = await prisma.post.findUnique({
       where: { slug: cleanSlug },
     });
@@ -73,21 +73,24 @@ export async function createPostAction(
       return { success: false, data: null, error: Errors.duplicate("slug") };
     }
 
-    // 建立草稿
     const post = await prisma.post.create({
       data: {
         title:      cleanTitle,
+        titleEn:    cleanTitleEn,
         slug:       cleanSlug,
         excerpt:    cleanExcerpt,
         excerptEn:  cleanExcerptEn,
         status:     "DRAFT",
         content:    "",
+        contentEn:  "",
         categoryId: d.categoryId || null,
         authorId:   admin.userId,
         seoMetadata: {
           create: {
             focusKeyword: cleanFocusKeyword || null,
+            focusKeywordEn: cleanFocusKeywordEn || null,
             metaTitle: cleanTitle.slice(0, 70),
+            metaTitleEn: cleanTitleEn.slice(0, 70),
             metaDescription: cleanExcerpt,
             metaDescriptionEn: cleanExcerptEn,
           },

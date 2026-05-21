@@ -4,7 +4,10 @@
 // ✓ 禁止 'use client'、禁止 Prisma 直接操作
 
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { env } from "@/env";
+import JsonLd from "@/components/seo/JsonLd";
+import { buildHomeWebPageSchema } from "@/lib/seo/schemas/article.schema";
 import HeroSection from "@/components/home/HeroSection";
 import HeroSlider from "@/components/home/HeroSlider";
 import { heroLcpPreload } from "@/components/home/HeroLcpPreload";
@@ -77,16 +80,35 @@ export default async function HomePage({ params }: Props) {
     heroLcpPreload(firstHeroSlide.imageUrl, firstHeroSlide.title);
   }
 
+  const h = await headers();
+  const nonce = h.get("x-nonce") ?? "";
+  const homeWebPageSchema = buildHomeWebPageSchema({
+    locale: siteLocale,
+    title: isEn
+      ? "Zenith Mind — AI, Investing, SEO Content and Personal Brand Growth"
+      : "巔峰思維 — AI 工具、投資理財、SEO內容與個人品牌變現",
+    description: isEn
+      ? "A bilingual content media platform for AI tools, quantitative thinking, real estate investing, knowledge monetization and SEO-led personal brand growth."
+      : "巔峰思維是內容型媒體與個人品牌平台，聚焦 AI 工具、量化交易、房地產、知識變現與 SEO 導向流量變現。",
+  });
+
   const topics = siteSettings.homepageCopy.topicClusters.cards.map((c) => ({
     slug: c.slug,
     name: c.name,
     nameEn: c.nameEn,
     description: c.description,
     descriptionEn: c.descriptionEn,
+    imageUrl: c.imageUrl,
+    imageAlt: c.imageAlt,
+    href: c.href,
+    imageUrlEn: c.imageUrlEn,
+    imageAltEn: c.imageAltEn,
+    hrefEn: c.hrefEn,
   }));
 
   return (
     <>
+      <JsonLd data={homeWebPageSchema} nonce={nonce} />
       <HomePageViewTracker locale={locale} />
 
       {heroSlides.length > 0 ? (

@@ -4,8 +4,8 @@
 "use server";
 
 import { z } from "zod";
-import { headers } from "next/headers";
 import { prisma } from "@/infrastructure/db/prisma";
+import { getRequestMeta } from "@/lib/request/request-meta";
 import { verifyTotpToken } from "@/lib/auth/totp";
 import { gateAdminWrite } from "@/lib/auth/resolve-admin-action";
 import { writeAuditLog } from "@/infrastructure/db/adapters/audit.prisma-adapter";
@@ -21,12 +21,7 @@ const schema = z.object({
 export async function activateTotpAction(
   input: unknown
 ): Promise<ActionResult<void>> {
-  const h = await headers();
-  const meta = {
-    ip:        h.get("CF-Connecting-IP") ?? "unknown",
-    userAgent: h.get("user-agent") ?? "",
-    requestId: crypto.randomUUID(),
-  };
+  const meta = await getRequestMeta();
 
   try {
     const parsed = schema.safeParse(input);

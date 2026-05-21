@@ -1,5 +1,6 @@
 import { fetchGa4DashboardBundle } from "@/infrastructure/ga4/dashboard-bundle";
 import { getPublishedPostFaqStats } from "@/lib/aeo/post-faq-stats";
+import { getSchemaCoverageStats } from "@/lib/seo/schema-coverage";
 import { getCachedGa4Bundle } from "@/server/command-center/cached-data";
 import { applyConnectedIntegrations } from "@/services/integrations/runtime-env";
 import { fetchSearchConsoleSummary } from "@/services/google/search-console";
@@ -29,10 +30,11 @@ export async function loadGeoPayload(): Promise<GeoPayload> {
     // 預留：接上 Otterly / Semrush 後改為 isDemo: false, dataSource: third_party
   }
 
-  const [gsc, ga4, stats] = await Promise.all([
+  const [gsc, ga4, stats, schemaCoverage] = await Promise.all([
     fetchSearchConsoleSummary(),
     loadGa4BundleForGeo(),
     getPublishedPostFaqStats(),
+    getSchemaCoverageStats(),
   ]);
 
   const siteReadiness = Math.min(
@@ -112,11 +114,19 @@ export async function loadGeoPayload(): Promise<GeoPayload> {
     },
   ];
 
+  const perplexityBase =
+    schemaCoverage.readinessPct +
+    Math.round(schemaCoverage.faqCoveragePct * 0.25) -
+    (schemaCoverage.faqCoveragePct < 30 ? 18 : 8);
+
   const aiEngineSov = [
     { name: "ChatGPT", sov: Math.min(95, siteReadiness + 8) },
     { name: "Gemini", sov: Math.min(90, siteReadiness + 2) },
     { name: "Claude", sov: Math.min(88, siteReadiness - 4) },
-    { name: "Perplexity", sov: Math.min(85, Math.max(40, siteReadiness - 12)) },
+    {
+      name: "Perplexity",
+      sov: Math.min(92, Math.max(45, perplexityBase)),
+    },
     { name: "Google AIO", sov: gscVisibility },
   ];
 
@@ -149,5 +159,6 @@ export async function loadGeoPayload(): Promise<GeoPayload> {
     citationQueries,
     engines,
     kpis,
+    schemaCoverage,
   };
 }

@@ -182,12 +182,14 @@ npx tsx --env-file=.env.local scripts/test-dashboard-ga4.mjs
 
 ## 七、首頁「累計瀏覽次數」
 
-### 7.1 資料流
+### 7.1 資料流（簡化版）
 
-1. 瀏覽器 → `POST /api/public/page-view`（Cloudflare 公開站）
-2. 寫入 Supabase `page_views`（`postId` 為 null）
-3. 讀取 view `v_site_view_totals`（歷史彙總 + 當日即時）
-4. 前台 Social Proof 顯示；成功記錄後數字 +1（不整頁 refresh）
+1. 有人開首頁 → 瀏覽器 `POST /api/public/page-view`
+2. 寫入 Supabase 表 `page_views`（`postId` 為 null）
+3. 顯示時 **直接數這張表有幾筆**（同語系 zh-TW / en）
+4. 成功記錄後前台數字 +1（不必整頁重新整理）
+
+（日彙總表 / SQL view 為進階優化，目前顯示不依賴它們。）
 
 ### 7.2 必要 Secrets（Cloudflare Worker）
 
@@ -196,26 +198,7 @@ npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 npx wrangler secret put PAGEVIEW_HASH_SALT
 ```
 
-### 7.3 Supabase SQL（若尚未執行）
-
-在 Supabase SQL Editor 執行：
-
-- `supabase/migrations/20260515120000_page_view_daily_rollup.sql`
-- `supabase/migrations/20260515130000_fix_postgrest_grants_and_reload.sql`
-- `supabase/migrations/20260519150000_fix_view_totals_columns.sql`（若 `v_site_view_totals` 查詢永遠為 `[]` 但 `page_views` 有資料，**必跑**）
-- `supabase/migrations/20260519160000_fix_site_daily_aggregate_rpc_id.sql`（日彙總 Cron RPC 若報 `null value in column id`）
-
-### 7.3b 歷史回填（累計數只顯示「今天」時）
-
-```bash
-# 從 page_views 寫入 site_daily_aggregates（不需 RPC）
-npx tsx --env-file=.env.local scripts/backfill-site-views-rest.mjs
-
-# 或依 RPC 回填（需先執行 20260519160000 migration）
-npx tsx --env-file=.env.local scripts/backfill-page-view-aggregates.mjs 60
-```
-
-### 7.4 驗證（本機對正式站）
+### 7.3 驗證（本機對正式站）
 
 ```bash
 # 記一筆首頁瀏覽

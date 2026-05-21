@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
     "@google-analytics/data",
     "google-gax",
     "@grpc/grpc-js",
+    "jose",
     ...(isCfPublicOnly
       ? ["googleapis", "google-auth-library", "@google/generative-ai"]
       : []),

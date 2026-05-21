@@ -7,8 +7,8 @@ import { notFound } from "next/navigation";
 import { redirectArchivedPostIfNeeded } from "@/lib/redirects/resolve";
 import { getTranslations } from "next-intl/server";
 import { headers } from "next/headers";
-import Image from "next/image";
 import Link from "next/link";
+import ResponsiveImage from "@/components/ui/ResponsiveImage";
 import { Clock } from "lucide-react";
 import { env } from "@/env";
 import {
@@ -24,7 +24,7 @@ import JsonLd    from "@/components/seo/JsonLd";
 import Breadcrumb from "@/components/seo/Breadcrumb";
 import PostArticleBody from "@/components/blog/PostArticleBody";
 import TableOfContents  from "@/components/blog/TableOfContents";
-import RecommendedPosts from "@/components/blog/RecommendedPosts";
+import RecommendedPostsSection from "@/components/blog/RecommendedPostsSection";
 import PageViewTracker from "@/components/analytics/PageViewTracker";
 import PostPasswordGate from "@/components/blog/PostPasswordGate";
 import { hasPostAccess } from "@/lib/blog/post-access-cookie";
@@ -247,7 +247,7 @@ export default async function BlogPostPage({ params }: Props) {
         </header>
 
         {post.coverImage && (
-          <Image
+          <ResponsiveImage
             src={post.coverImage}
             alt={post.coverImageAlt ?? title}
             width={post.coverImageWidth ?? 896}
@@ -310,7 +310,7 @@ export default async function BlogPostPage({ params }: Props) {
           </aside>
         </div>
 
-        <RecommendedPosts
+        <RecommendedPostsSection
           currentPostId={post.id}
           categoryId={post.categoryId ?? undefined}
           locale={locale}

@@ -3,8 +3,14 @@ import { prismaMock, resetPrismaMock } from "@/test-utils/prisma-mock";
 jest.mock("@/infrastructure/db/prisma", () => ({
   prisma: require("@/test-utils/prisma-mock").prismaMock,
 }));
+jest.mock("@/lib/affiliate/record-click", () => ({
+  recordAffiliateClick: jest.fn().mockResolvedValue(undefined),
+}));
 
+import { recordAffiliateClick } from "@/lib/affiliate/record-click";
 import { GET } from "../route";
+
+const recordAffiliateClickMock = jest.mocked(recordAffiliateClick);
 
 describe("GET /go/:slug", () => {
   beforeEach(() => {
@@ -29,17 +35,12 @@ describe("GET /go/:slug", () => {
       slug: "tool",
       targetUrl: "https://example.com/tool",
     });
-    prismaMock.affiliateLink.update.mockResolvedValue({});
-
     const response = await GET(new Request("http://localhost/go/tool") as never, {
       params: Promise.resolve({ slug: "tool" }),
     });
 
     expect(response.status).toBe(301);
     expect(response.headers.get("location")).toBe("https://example.com/tool");
-    expect(prismaMock.affiliateLink.update).toHaveBeenCalledWith({
-      where: { id: "link-1" },
-      data: { clickCount: { increment: 1 } },
-    });
+    expect(recordAffiliateClickMock).toHaveBeenCalledWith("link-1");
   });
 });

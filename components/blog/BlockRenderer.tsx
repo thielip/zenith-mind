@@ -1,8 +1,8 @@
 // components/blog/BlockRenderer.tsx — Server Component
 // 依區塊型別渲染；圖片走 next/image + 契約寬高
 
-import Image from "next/image";
 import type { ContentBlock } from "@/lib/content-blocks/schema";
+import ResponsiveImage from "@/components/ui/ResponsiveImage";
 import { sanitizeRichText } from "@/lib/sanitize/html";
 
 interface Props {
@@ -30,7 +30,7 @@ export default function BlockRenderer({ blocks }: Props) {
             const { url, width, height, alt } = block.data;
             return (
               <figure key={i} className="my-6">
-                <Image
+                <ResponsiveImage
                   src={url}
                   alt={alt}
                   width={width}

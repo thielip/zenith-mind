@@ -1,7 +1,7 @@
 "use server";
 
-import { headers } from "next/headers";
 import { z } from "zod";
+import { getRequestMeta } from "@/lib/request/request-meta";
 import type { ActionResult } from "@/domain/shared/core.types";
 import { Errors } from "@/domain/shared/core.types";
 import {
@@ -12,15 +12,6 @@ import {
 } from "@/domain/auth/user.service";
 import { gateAdminRead, gateAdminWrite } from "@/lib/auth/resolve-admin-action";
 import { writeAuditLog } from "@/infrastructure/db/adapters/audit.prisma-adapter";
-
-async function getRequestMeta() {
-  const h = await headers();
-  return {
-    ip: h.get("CF-Connecting-IP") ?? h.get("x-forwarded-for") ?? "unknown",
-    userAgent: h.get("user-agent") ?? "",
-    requestId: crypto.randomUUID(),
-  };
-}
 
 const emailSchema = z.string().email();
 const passwordSchema = z.string().min(8).max(128);

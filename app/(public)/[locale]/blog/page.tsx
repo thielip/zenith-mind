@@ -5,8 +5,8 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
-import Image from "next/image";
 import Link from "next/link";
+import ResponsiveImage from "@/components/ui/ResponsiveImage";
 import { Clock } from "lucide-react";
 import { env } from "@/env";
 import { loadBlogListData } from "@/lib/blog/load-blog-list-data";
@@ -17,6 +17,8 @@ import {
   probePublicPostsHealth,
 } from "@/lib/db/public-data-health";
 import { isSearchEngineCrawler } from "@/lib/seo/crawler";
+import JsonLd from "@/components/seo/JsonLd";
+import { buildBlogCollectionSchema } from "@/lib/seo/schemas/article.schema";
 import { sortDefaultCategories } from "@/lib/categories/defaults";
 
 export const revalidate = 3600;
@@ -83,6 +85,20 @@ export default async function BlogListPage({ params, searchParams }: Props) {
   const sortedCategories = sortDefaultCategories(categories);
 
   const totalPages = Math.ceil(total / PER_PAGE);
+  const nonce = h.get("x-nonce") ?? "";
+  const siteUrl = env.NEXT_PUBLIC_SITE_URL;
+  const postUrls = posts.map(
+    (post) => `${siteUrl}/${isEn ? "en" : "zh-TW"}/blog/${post.slug}`
+  );
+  const collectionSchema = buildBlogCollectionSchema({
+    locale: isEn ? "en" : "zh-TW",
+    name: isEn ? "Featured articles" : "精選文章",
+    description: isEn
+      ? "Featured articles on AI, investing, and personal branding."
+      : "精選文章：AI 工具、投資理財、個人品牌與內容策略。",
+    postUrls,
+  });
+
   function buildPageHref(nextPage: number) {
     const params = new URLSearchParams();
     params.set("page", String(nextPage));
@@ -94,6 +110,7 @@ export default async function BlogListPage({ params, searchParams }: Props) {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
+      <JsonLd data={collectionSchema} nonce={nonce} />
       <h1 className="mb-8 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
         {isEn ? "Featured articles" : "精選文章"}
       </h1>
@@ -138,7 +155,7 @@ export default async function BlogListPage({ params, searchParams }: Props) {
                           aria-hidden="true"
                           tabIndex={-1}
                         >
-                          <Image
+                          <ResponsiveImage
                             src={post.coverImage}
                             alt={post.coverImageAlt ?? title}
                             width={200}
