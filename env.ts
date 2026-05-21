@@ -5,6 +5,12 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
+/** 非核心 env：空字串視為未設定，避免占位值阻擋 build */
+const optionalNonEmptyString = z.preprocess(
+  (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+  z.string().optional()
+);
+
 export const env = createEnv({
   server: {
     // ── 資料庫 ────────────────────────────────────────────
@@ -37,10 +43,10 @@ export const env = createEnv({
     // ── Supabase Storage（媒體上傳）────────────────────
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 
-    // ── Alert 通知（格式於寄信時驗證，避免 Vercel 占位值阻擋 build）
-    ALERT_EMAIL_USER: z.string().optional(),
-    ALERT_EMAIL_PASS: z.string().min(1).optional(),
-    ALERT_EMAIL_TO: z.string().optional(),
+    // ── Alert 通知（格式於 lib/alert/resolve-alert-email 執行期驗證）
+    ALERT_EMAIL_USER: optionalNonEmptyString,
+    ALERT_EMAIL_PASS: optionalNonEmptyString,
+    ALERT_EMAIL_TO: optionalNonEmptyString,
 
     // ── 運行環境 ─────────────────────────────────────────
     NODE_ENV: z
