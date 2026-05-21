@@ -2,7 +2,8 @@
 
 import { z } from "zod";
 import { cookies } from "next/headers";
-import { prisma } from "@/infrastructure/db/prisma";
+import { isCfPublicRuntime } from "@/lib/db/cf-public-runtime";
+import { fetchProtectedPostHashBySlug } from "@/lib/blog/post-access-supabase";
 import { verifyPassword } from "@/lib/auth/password";
 import {
   hasPostAccess,
@@ -27,15 +28,20 @@ export async function verifyPostPasswordAction(
     }
 
     const { slug, password } = parsed.data;
-    const post = await prisma.post.findFirst({
-      where: {
-        slug,
-        status: "PUBLISHED",
-        deletedAt: null,
-        isPasswordProtected: true,
-      },
-      select: { id: true, accessPasswordHash: true },
-    });
+    const post = isCfPublicRuntime()
+      ? await fetchProtectedPostHashBySlug(slug)
+      : await (async () => {
+          const { prisma } = await import("@/infrastructure/db/prisma");
+          return prisma.post.findFirst({
+            where: {
+              slug,
+              status: "PUBLISHED",
+              deletedAt: null,
+              isPasswordProtected: true,
+            },
+            select: { id: true, accessPasswordHash: true },
+          });
+        })();
 
     if (!post?.accessPasswordHash) {
       return { success: false, data: null, error: Errors.notFound() };

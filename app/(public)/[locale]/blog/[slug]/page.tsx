@@ -24,10 +24,9 @@ import JsonLd    from "@/components/seo/JsonLd";
 import Breadcrumb from "@/components/seo/Breadcrumb";
 import PostArticleBody from "@/components/blog/PostArticleBody";
 import TableOfContents  from "@/components/blog/TableOfContents";
-import RecommendedPostsSection from "@/components/blog/RecommendedPostsSection";
 import PageViewTracker from "@/components/analytics/PageViewTracker";
-import PostPasswordGate from "@/components/blog/PostPasswordGate";
 import { hasPostAccess } from "@/lib/blog/post-access-cookie";
+import { isCfPublicRuntime } from "@/lib/db/cf-public-runtime";
 
 export const revalidate = 3600;
 
@@ -259,8 +258,8 @@ export default async function BlogPostPage({ params }: Props) {
 
         <div className="flex gap-10">
           <div className="min-w-0 flex-1">
-            {!unlocked ? (
-              <PostPasswordGate slug={slug} locale={locale} />
+            {PasswordGate ? (
+              <PasswordGate slug={slug} locale={locale} />
             ) : (
               <PostArticleBody
                 locale={locale}
@@ -300,21 +299,25 @@ export default async function BlogPostPage({ params }: Props) {
             )}
           </div>
 
-          <aside
-            className="hidden w-60 shrink-0 xl:block"
-            aria-label={isEn ? "Table of Contents" : "文章目錄"}
-          >
-            <div className="sticky top-8">
-              <TableOfContents content={safeContent} />
-            </div>
-          </aside>
+          {!cfLight && (
+            <aside
+              className="hidden w-60 shrink-0 xl:block"
+              aria-label={isEn ? "Table of Contents" : "文章目錄"}
+            >
+              <div className="sticky top-8">
+                <TableOfContents content={safeContent} />
+              </div>
+            </aside>
+          )}
         </div>
 
-        <RecommendedPostsSection
-          currentPostId={post.id}
-          categoryId={post.categoryId ?? undefined}
-          locale={locale}
-        />
+        {RecommendedPostsSection ? (
+          <RecommendedPostsSection
+            currentPostId={post.id}
+            categoryId={post.categoryId ?? undefined}
+            locale={locale}
+          />
+        ) : null}
       </article>
     </>
   );

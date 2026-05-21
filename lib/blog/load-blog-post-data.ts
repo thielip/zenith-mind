@@ -1,6 +1,5 @@
 import { cache } from "react";
 import { isCfPublicRuntime } from "@/lib/db/cf-public-runtime";
-import { getPrismaCfEdge } from "@/lib/db/prisma-cf-edge";
 import { safeQuery } from "@/lib/db/safe-query";
 import { isDatabaseAvailable } from "@/lib/build/runtime-env";
 import type {
@@ -17,6 +16,7 @@ async function loadBlogPostBySlugCf(slug: string): Promise<BlogPostDetail | null
   const post = await fetchBlogPostBySlugViaSupabase(slug);
   if (post) return post;
 
+  const { getPrismaCfEdge } = await import("@/lib/db/prisma-cf-edge");
   const prisma = getPrismaCfEdge();
   if (!prisma) return null;
 
@@ -58,6 +58,7 @@ export async function loadRecommendedPosts(
         );
         if (posts.length > 0) return posts;
 
+        const { getPrismaCfEdge } = await import("@/lib/db/prisma-cf-edge");
         const prisma = getPrismaCfEdge();
         if (!prisma) return [];
         const { loadRecommendedPostsPrisma } = await import(

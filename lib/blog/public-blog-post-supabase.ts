@@ -2,6 +2,7 @@
  * 部落格文章詳頁（Cloudflare Worker）：僅 Supabase PostgREST。
  * 禁止 import @/infrastructure/db/prisma。
  */
+import { isCfPublicRuntime } from "@/lib/db/cf-public-runtime";
 import { fetchPostViewTotal } from "@/lib/analytics/post-view-totals";
 import { supabaseRestWithFallback } from "@/lib/db/supabase-rest";
 import type {
@@ -224,13 +225,17 @@ export async function fetchBlogPostBySlugViaSupabase(
   const row = rows[0];
   if (!row) return null;
 
+  const viewPromise = isCfPublicRuntime()
+    ? Promise.resolve(0)
+    : fetchPostViewTotal(row.id).catch((error) => {
+        console.error("[blog.post] view total failed", error);
+        return 0;
+      });
+
   const [tags, seoMetadata, pageViews] = await Promise.all([
     fetchPostTagsForPost(row.id),
     fetchSeoForPost(row.id),
-    fetchPostViewTotal(row.id).catch((error) => {
-      console.error("[blog.post] view total failed", error);
-      return 0;
-    }),
+    viewPromise,
   ]);
 
   const post = mapPostDetailRow(row, tags, seoMetadata);

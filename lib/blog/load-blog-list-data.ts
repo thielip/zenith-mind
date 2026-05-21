@@ -1,5 +1,4 @@
 import { isCfPublicRuntime } from "@/lib/db/cf-public-runtime";
-import { getPrismaCfEdge } from "@/lib/db/prisma-cf-edge";
 import { safeQuery } from "@/lib/db/safe-query";
 import type { BlogListData, BlogListFilters } from "@/lib/blog/blog-list-types";
 
@@ -26,6 +25,7 @@ async function loadBlogListDataCf(
     console.error("[blog.list] Supabase REST failed, trying Prisma Neon", supabaseError);
   }
 
+  const { getPrismaCfEdge } = await import("@/lib/db/prisma-cf-edge");
   const prisma = getPrismaCfEdge();
   if (!prisma) throw new Error("Prisma Edge is not configured (DATABASE_URL)");
 

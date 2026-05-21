@@ -1,7 +1,11 @@
 // next.config.ts
 import type { NextConfig } from "next";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { withSentryConfig } from "@sentry/nextjs";
 import createNextIntlPlugin from "next-intl/plugin";
+
+const configDir = path.dirname(fileURLToPath(import.meta.url));
 
 const withNextIntl = createNextIntlPlugin("./lib/i18n/request.ts");
 
@@ -28,7 +32,14 @@ const nextConfig: NextConfig = {
     "@grpc/grpc-js",
     "jose",
     ...(isCfPublicOnly
-      ? ["googleapis", "google-auth-library", "@google/generative-ai"]
+      ? [
+          "googleapis",
+          "google-auth-library",
+          "@google/generative-ai",
+          "@prisma/client",
+          "@prisma/adapter-neon",
+          "sanitize-html",
+        ]
       : []),
   ],
 
@@ -120,6 +131,14 @@ const nextConfig: NextConfig = {
     config.resolve.alias = {
       ...config.resolve.alias,
       "pg-native": false,
+      ...(isCfPublicOnly
+        ? {
+            "@/infrastructure/db/prisma": path.join(
+              configDir,
+              "infrastructure/db/prisma-public-stub.ts"
+            ),
+          }
+        : {}),
     };
     return config;
   },

@@ -1,6 +1,7 @@
 // components/blog/PostArticleBody.tsx — Server Component
 // 有通過契約的 contentBlocks 時優先渲染；否則回退 HTML（Tiptap / Markdown 轉 HTML）
 
+import { isCfPublicRuntime } from "@/lib/db/cf-public-runtime";
 import { parseContentBlocksForLocale } from "@/lib/content-blocks/schema";
 import ArticleContent from "./ArticleContent";
 import BlockRenderer from "./BlockRenderer";
@@ -18,6 +19,10 @@ export default function PostArticleBody({
   contentType,
   contentBlocks,
 }: Props) {
+  if (isCfPublicRuntime()) {
+    return <ArticleContent content={content} contentType={contentType} />;
+  }
+
   const loc = locale === "en" ? "en" : "zh-TW";
   const blocks = parseContentBlocksForLocale(contentBlocks, loc);
 
