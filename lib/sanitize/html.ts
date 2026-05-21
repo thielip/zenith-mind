@@ -1,7 +1,5 @@
-// lib/sanitize/html.ts — Node Runtime
-// sanitize-html 白名單清洗（取代 DOMPurify+jsdom）
-// 適合 Tiptap 輸出（結構可控，非任意 HTML）
-// 無 DOM 環境開銷，Serverless 冷啟動友好
+// lib/sanitize/html.ts — Node Runtime（後台寫入）
+// 公開站渲染請用 html-display.ts，避免 sanitize-html 進 CF Worker
 
 import sanitizeHtml from "sanitize-html";
 

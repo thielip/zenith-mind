@@ -3,7 +3,7 @@
 
 import type { ContentBlock } from "@/lib/content-blocks/schema";
 import ResponsiveImage from "@/components/ui/ResponsiveImage";
-import { sanitizeRichText } from "@/lib/sanitize/html";
+import { sanitizeRichTextForDisplay } from "@/lib/sanitize/html-display";
 
 interface Props {
   blocks: ContentBlock[];
@@ -22,7 +22,7 @@ export default function BlockRenderer({ blocks }: Props) {
               <div
                 key={`paragraph-${i}`}
                 dangerouslySetInnerHTML={{
-                  __html: sanitizeRichText(block.data.html),
+                  __html: sanitizeRichTextForDisplay(block.data.html),
                 }}
               />
             );
