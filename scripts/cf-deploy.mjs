@@ -34,13 +34,14 @@ if (!existsSync(workerJs)) {
   console.log("[cf-deploy] 使用既有 .open-next 輸出（可加 -Rebuild 強制重建）");
 }
 
-console.log("[cf-deploy] opennextjs-cloudflare deploy（不重跑 build）…");
+console.log("[cf-deploy] wrangler deploy --no-bundle（不重跑 build）…");
 run(
   "npx",
-  ["opennextjs-cloudflare", "deploy", "--", "--no-bundle"],
+  ["wrangler", "deploy", "--no-bundle"],
   {
     OPEN_NEXT_DEPLOY: "true",
     CF_SKIP_BUILD: "1",
+    CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: "false",
   }
 );
 
