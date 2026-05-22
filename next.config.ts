@@ -55,9 +55,7 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "8mb",
     },
-    ...(isCfPublicOnly
-      ? { optimizePackageImports: ["lucide-react"] }
-      : {}),
+    optimizePackageImports: ["lucide-react"],
   },
 
   images: {
@@ -156,22 +154,21 @@ const nextConfig: NextConfig = {
 
 const configWithIntl = withNextIntl(nextConfig);
 
-export default withSentryConfig(configWithIntl, {
+const sentryBuildOptions = {
   org: process.env["SENTRY_ORG"],
   project: process.env["SENTRY_PROJECT"],
   authToken: sentryAuthToken,
-  // 無 Auth Token 時勿上傳 source map（Cloudflare Pages CI 常因此失敗）
   silent: !sentryUploadEnabled,
   sourcemaps: { disable: !sentryUploadEnabled },
   widenClientFileUpload: sentryUploadEnabled,
-  // 公開 Worker 不用 Vercel tunnel / cron monitors
-  ...(isCfPublicOnly
-    ? {}
-    : {
-        tunnelRoute: "/monitoring",
-        webpack: {
-          automaticVercelMonitors: true,
-          treeshake: { removeDebugLogging: true },
-        },
-      }),
-});
+  tunnelRoute: "/monitoring",
+  webpack: {
+    automaticVercelMonitors: true,
+    treeshake: { removeDebugLogging: true },
+  },
+} as const;
+
+/** CF 公開站略過 withSentryConfig，避免注入瀏覽器 SDK（chunk 431 / 長任務） */
+export default isCfPublicOnly
+  ? configWithIntl
+  : withSentryConfig(configWithIntl, sentryBuildOptions);

@@ -10,7 +10,8 @@
 - **失效圖床：** `duk.tw` 等 host 於 `lib/validation/blocked-image-hosts.ts` 阻擋（含 CMS 驗證與 `mapSiteSettingsRow`）。
 - **Sentry CSP：** `connect-src` 含 `*.ingest.sentry.io` / `*.ingest.us.sentry.io`。
 - **分析腳本：** GA/GTM 僅在同意 + 互動/20s 後載入（`ConsentGatedAnalytics`）。
-- **Polyfill：** `.browserslistrc` 鎖定現代瀏覽器。
+- **Polyfill：** `.browserslistrc` 對齊 Next 15（chrome/edge/firefox 111、Safari 16.4）；`tsconfig` target `ES2022`。
+- **首頁 JS：** `home-deferred-sections.tsx` 動態載入非 LCP 區塊；CF 公開站 `disableClientWebpackPlugin` 關閉 Sentry 瀏覽器 SDK。
 
 ## 需在 Cloudflare / GTM 後台處理（非程式碼）
 

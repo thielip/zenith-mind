@@ -1,5 +1,5 @@
-# 現代瀏覽器目標，減少 Next/SWC 對 Array.at 等 polyfill
-chrome >= 90
-firefox >= 90
-safari >= 14
-edge >= 90
+# 與 Next.js 15 預設一致（chrome 111+），避免 Array.at / Object.hasOwn 等 polyfill
+chrome 111
+edge 111
+firefox 111
+safari 16.4

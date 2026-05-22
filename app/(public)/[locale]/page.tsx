@@ -11,16 +11,18 @@ import { buildHomeWebPageSchema } from "@/lib/seo/schemas/article.schema";
 import HeroSection from "@/components/home/HeroSection";
 import HeroSlider from "@/components/home/HeroSlider";
 import { heroLcpPreload } from "@/components/home/HeroLcpPreload";
-import ImageCarousel from "@/components/home/ImageCarousel";
 import SocialProofSection from "@/components/home/SocialProofSection";
-import TopicClusterSection from "@/components/home/TopicClusterSection";
-import FeaturedPostsSection from "@/components/home/FeaturedPostsSection";
-import MonetizationSection from "@/components/home/MonetizationSection";
-import AffiliateLinksSection from "@/components/home/AffiliateLinksSection";
-import ProgrammaticSeoSection from "@/components/home/ProgrammaticSeoSection";
-import HomeConversionBanner from "@/components/home/HomeConversionBanner";
-import AdSlotBanner from "@/components/home/AdSlotBanner";
-import HomePageViewTracker from "@/components/analytics/HomePageViewTracker";
+import {
+  DeferredAdSlotBanner,
+  DeferredAffiliateLinksSection,
+  DeferredFeaturedPostsSection,
+  DeferredHomeConversionBanner,
+  DeferredHomePageViewTracker,
+  DeferredImageCarousel,
+  DeferredMonetizationSection,
+  DeferredProgrammaticSeoSection,
+  DeferredTopicClusterSection,
+} from "@/components/home/home-deferred-sections";
 import { loadHomepageData } from "@/lib/homepage/load-homepage-data";
 import type { SiteLocale } from "@/lib/site/types";
 
@@ -109,7 +111,7 @@ export default async function HomePage({ params }: Props) {
   return (
     <>
       <JsonLd data={homeWebPageSchema} nonce={nonce} />
-      <HomePageViewTracker locale={locale} />
+      <DeferredHomePageViewTracker locale={locale} />
 
       {heroSlides.length > 0 ? (
         <HeroSlider
@@ -120,7 +122,7 @@ export default async function HomePage({ params }: Props) {
       ) : (
         <HeroSection locale={locale} />
       )}
-      <AdSlotBanner slotKey="home_below_hero" locale={siteLocale} />
+      <DeferredAdSlotBanner slotKey="home_below_hero" locale={siteLocale} />
       <SocialProofSection
         locale={locale}
         publishedPosts={publishedPostCount}
@@ -128,22 +130,39 @@ export default async function HomePage({ params }: Props) {
         homePageViews={homePageViews}
         copy={siteSettings.homepageCopy.socialProof}
       />
-      <TopicClusterSection
+      <DeferredTopicClusterSection
         locale={locale}
         topics={topics}
         copy={siteSettings.homepageCopy.topicClusters}
       />
-      <ImageCarousel
+      <DeferredImageCarousel
         locale={locale}
         items={carouselItems}
         autoplaySeconds={siteSettings.carouselAutoplaySeconds}
         copy={siteSettings.homepageCopy.visualCarousel}
       />
-      <FeaturedPostsSection locale={locale} posts={featuredPosts} copy={siteSettings.homepageCopy.featuredPosts} />
-      <HomeConversionBanner locale={locale} copy={siteSettings.homepageCopy.conversionBanner} />
-      <MonetizationSection locale={locale} copy={siteSettings.homepageCopy.monetization} />
-      <AffiliateLinksSection locale={locale} links={affiliateLinks} copy={siteSettings.homepageCopy.affiliate} />
-      <ProgrammaticSeoSection locale={locale} copy={siteSettings.homepageCopy.programmaticSeo} />
+      <DeferredFeaturedPostsSection
+        locale={locale}
+        posts={featuredPosts}
+        copy={siteSettings.homepageCopy.featuredPosts}
+      />
+      <DeferredHomeConversionBanner
+        locale={locale}
+        copy={siteSettings.homepageCopy.conversionBanner}
+      />
+      <DeferredMonetizationSection
+        locale={locale}
+        copy={siteSettings.homepageCopy.monetization}
+      />
+      <DeferredAffiliateLinksSection
+        locale={locale}
+        links={affiliateLinks}
+        copy={siteSettings.homepageCopy.affiliate}
+      />
+      <DeferredProgrammaticSeoSection
+        locale={locale}
+        copy={siteSettings.homepageCopy.programmaticSeo}
+      />
 
     </>
   );
