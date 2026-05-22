@@ -12,6 +12,7 @@
 
 # Cloudflare Wrangler 本機狀態（可能含快取／本機 secret 參照）
 .wrangler/
+wrangler.deploy.toml
 
 # Next.js
 .next/
