@@ -19,14 +19,26 @@ let toml = readFileSync(join(root, "wrangler.toml"), "utf8");
 toml = toml.replace(/\r?\n\[build\][\s\S]*?(?=\r?\n\[)/, "\n");
 writeFileSync(deployToml, toml);
 
-console.log("[cf-gha-deploy] wrangler deploy（略過 [build]，使用既有 .open-next）");
+console.log("[cf-gha-deploy] opennextjs-cloudflare deploy（略過 [build]）");
 
 const result = spawnSync(
   "npx",
-  ["wrangler", "deploy", "--config", "wrangler.deploy.toml", "--no-bundle"],
+  [
+    "opennextjs-cloudflare",
+    "deploy",
+    "--",
+    "--config",
+    "wrangler.deploy.toml",
+    "--no-bundle",
+  ],
   {
     cwd: root,
-    env: process.env,
+    env: {
+      ...process.env,
+      // 避免 wrangler → opennext → wrangler 無限遞迴（見 @opennextjs/cloudflare deploy.js）
+      OPEN_NEXT_DEPLOY: "true",
+      CF_SKIP_BUILD: "1",
+    },
     stdio: "inherit",
     shell: true,
   }

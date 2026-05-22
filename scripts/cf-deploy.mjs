@@ -34,9 +34,14 @@ if (!existsSync(workerJs)) {
   console.log("[cf-deploy] 使用既有 .open-next 輸出（可加 -Rebuild 強制重建）");
 }
 
-console.log("[cf-deploy] wrangler deploy（CF_SKIP_BUILD=1，不重跑 OpenNext build）…");
-run("npx", ["wrangler", "deploy", "--no-bundle"], {
-  CF_SKIP_BUILD: "1",
-});
+console.log("[cf-deploy] opennextjs-cloudflare deploy（不重跑 build）…");
+run(
+  "npx",
+  ["opennextjs-cloudflare", "deploy", "--", "--no-bundle"],
+  {
+    OPEN_NEXT_DEPLOY: "true",
+    CF_SKIP_BUILD: "1",
+  }
+);
 
 console.log("[cf-deploy] 完成。請開啟 https://www.getzenithmind.com/zh-TW 驗證。");
