@@ -21,7 +21,7 @@
 3. 確認 Secrets 已設：`CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`  
 4. 等綠燈後驗證 https://www.getzenithmind.com/zh-TW  
 
-若 **Deploy Cloudflare**（GHA）失敗但 **Workers Builds**（Cloudflare Git）成功，公開站可能已上線；GHA 應使用 `wrangler deploy --no-bundle`（見 `scripts/cf-gha-deploy.mjs`），不要用 `opennextjs-cloudflare deploy`（CI 易在 `getPlatformProxy` 失敗）。
+若 **Deploy Cloudflare**（GHA）失敗但 **Workers Builds**（Cloudflare Git）成功，公開站可能已上線。GHA 請用 `wrangler deploy`（**勿**加 `--no-bundle`，否則 `cloudflare/images.js` 無法解析），見 `scripts/cf-gha-deploy.mjs`。
 
 ### 方法 2：WSL（本機）
 

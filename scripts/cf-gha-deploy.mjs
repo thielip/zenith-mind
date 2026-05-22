@@ -21,7 +21,7 @@ let toml = readFileSync(join(root, "wrangler.toml"), "utf8");
 toml = toml.replace(/\r?\n\[build\][\s\S]*?(?=\r?\n\[)/, "\n");
 writeFileSync(deployToml, toml);
 
-console.log("[cf-gha-deploy] wrangler deploy --no-bundle（略過 [build]）");
+console.log("[cf-gha-deploy] wrangler deploy（略過 [build]，由 wrangler 打包 .open-next）");
 
 const env = {
   ...process.env,
@@ -35,7 +35,7 @@ for (const key of ["HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"]) {
 
 const result = spawnSync(
   "npx",
-  ["wrangler", "deploy", "--config", "wrangler.deploy.toml", "--no-bundle"],
+  ["wrangler", "deploy", "--config", "wrangler.deploy.toml"],
   {
     cwd: root,
     env,

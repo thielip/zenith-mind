@@ -34,10 +34,10 @@ if (!existsSync(workerJs)) {
   console.log("[cf-deploy] 使用既有 .open-next 輸出（可加 -Rebuild 強制重建）");
 }
 
-console.log("[cf-deploy] wrangler deploy --no-bundle（不重跑 build）…");
+console.log("[cf-deploy] wrangler deploy（不重跑 build；由 wrangler 打包 .open-next）…");
 run(
   "npx",
-  ["wrangler", "deploy", "--no-bundle"],
+  ["wrangler", "deploy"],
   {
     OPEN_NEXT_DEPLOY: "true",
     CF_SKIP_BUILD: "1",
