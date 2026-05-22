@@ -5,12 +5,6 @@
   "engines": {
     "node": ">=22"
   },
-  "browserslist": [
-    "chrome >= 90",
-    "firefox >= 90",
-    "safari >= 14",
-    "edge >= 90"
-  ],
   "scripts": {
     "verify:cf-build": "node scripts/verify-cf-build-env.mjs",
     "dev": "next dev",
