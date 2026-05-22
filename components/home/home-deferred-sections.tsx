@@ -10,11 +10,6 @@ const sk = (minHeight: string) =>
     return <HomeSectionSkeleton minHeight={minHeight} />;
   };
 
-export const DeferredHomePageViewTracker = dynamic(
-  () => import("@/components/analytics/HomePageViewTracker"),
-  { ssr: false }
-);
-
 export const DeferredAdSlotBanner = dynamic(
   () => import("@/components/home/AdSlotBanner"),
   { loading: sk("min-h-[120px]") }

@@ -12,12 +12,12 @@ import HeroSection from "@/components/home/HeroSection";
 import HeroSlider from "@/components/home/HeroSlider";
 import { heroLcpPreload } from "@/components/home/HeroLcpPreload";
 import SocialProofSection from "@/components/home/SocialProofSection";
+import DeferredHomePageViewTracker from "@/components/analytics/DeferredHomePageViewTracker";
 import {
   DeferredAdSlotBanner,
   DeferredAffiliateLinksSection,
   DeferredFeaturedPostsSection,
   DeferredHomeConversionBanner,
-  DeferredHomePageViewTracker,
   DeferredImageCarousel,
   DeferredMonetizationSection,
   DeferredProgrammaticSeoSection,
