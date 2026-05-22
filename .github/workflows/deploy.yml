@@ -12,6 +12,7 @@ name: Deploy Cloudflare
 on:
   push:
     branches: [main]
+  workflow_dispatch:
   pull_request:
     types: [closed]
     branches: [main]
@@ -55,6 +56,9 @@ jobs:
 
       - name: Deploy with Wrangler
         uses: cloudflare/wrangler-action@v3
+        env:
+          # 上一步已 build:cf；勿讓 wrangler.toml [build] 再跑一輪
+          CF_SKIP_BUILD: "1"
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

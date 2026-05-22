@@ -8,9 +8,10 @@ compatibility_date = "2024-12-30"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 
 # Cloudflare Workers「連線 Git」建置（Dashboard Latest build）
-# 本機：先 npm run build:cf，再 npx wrangler deploy（deploy 時勿重跑 build 可加 --no-bundle）
+# 本機 Windows：npm run deploy:cf（見 scripts/cf-deploy.mjs）
+# Dashboard / Linux：node scripts/cf-wrangler-build.mjs（勿用 VAR=1 npm，Windows 會失敗）
 [build]
-command = "CF_PUBLIC_ONLY=1 SKIP_ENV_VALIDATION=true NODE_OPTIONS=--max-old-space-size=8192 npm run build:cf"
+command = "node scripts/cf-wrangler-build.mjs"
 cwd = "."
 watch_dir = ["app", "lib", "components", "middleware.ts", "next.config.ts", "open-next.config.ts", "scripts/cf-public-build.mjs"]
 

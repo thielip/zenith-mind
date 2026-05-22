@@ -64,3 +64,16 @@ Cloudflare Workers 部署設定（getzenithmind.com / zenith-mind.com）
   部署 Success 後開啟：
   https://www.getzenithmind.com/logo.png
   https://www.getzenithmind.com/zh-TW
+
+【G】本機 Windows 部署（Dashboard 503 時）
+  勿用：CF_PUBLIC_ONLY=1 npm run build:cf 後 wrangler deploy
+  （wrangler 會用 Unix 語法重跑 build，PowerShell 報「不是內部或外部命令」）
+
+  請用：
+    npm run deploy:cf
+
+  或分兩步：
+    npm run build:cf
+    $env:CF_SKIP_BUILD="1"; npx wrangler deploy --no-bundle
+
+  wrangler.toml [build].command 已改為 node scripts/cf-wrangler-build.mjs（跨平台）。

@@ -11,6 +11,7 @@
     "build": "next build",
     "build:next:public": "node scripts/cf-next-build.mjs",
     "build:cf": "node scripts/cf-public-build.mjs",
+    "deploy:cf": "node scripts/cf-deploy.mjs",
     "build:cf:full": "opennextjs-cloudflare build",
     "preview:cf": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "start": "next start",
