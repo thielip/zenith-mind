@@ -1,6 +1,7 @@
 // lib/seo/schemas/article.schema.ts
 // JSON-LD Schema 產生函式（統一管理，page.tsx import 使用）
 
+import { toIsoStringSafe } from "@/lib/blog/safe-blog-dates";
 import { absoluteSiteLogoUrl } from "@/lib/site/brand";
 import { getPublicSiteUrl } from "@/lib/site/url";
 
@@ -31,8 +32,8 @@ export function buildArticleSchema(p: {
       name: BRAND_ZH,
       logo: { "@type": "ImageObject", url: absoluteSiteLogoUrl(getPublicSiteUrl()) },
     },
-    datePublished: p.publishedAt.toISOString(),
-    dateModified: p.updatedAt.toISOString(),
+    datePublished: toIsoStringSafe(p.publishedAt),
+    dateModified: toIsoStringSafe(p.updatedAt),
     mainEntityOfPage: { "@type": "WebPage", "@id": p.url },
   };
 }

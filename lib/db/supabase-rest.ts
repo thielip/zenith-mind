@@ -39,7 +39,9 @@ type SupabaseRestConfig = { base: string; key: string };
 
 export function getSupabaseRestConfig(): SupabaseRestConfig | null {
   const base = process.env["NEXT_PUBLIC_SUPABASE_URL"]?.trim();
-  const key = process.env["SUPABASE_SERVICE_ROLE_KEY"]?.trim();
+  const key =
+    process.env["SUPABASE_SERVICE_ROLE_KEY"]?.trim() ||
+    process.env["NEXT_PUBLIC_SUPABASE_ANON_KEY"]?.trim();
   if (!base || !key) return null;
   return { base: base.replace(/\/$/, ""), key };
 }

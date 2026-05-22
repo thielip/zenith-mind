@@ -63,12 +63,20 @@ type PostDetailRow = {
   categoryId: string | null;
   readingTime: number | null;
   isPasswordProtected: boolean | null;
-  categories: {
-    id: string;
-    name: string;
-    nameEn: string | null;
-    slug: string;
-  } | null;
+  categories:
+    | {
+        id: string;
+        name: string;
+        nameEn: string | null;
+        slug: string;
+      }
+    | {
+        id: string;
+        name: string;
+        nameEn: string | null;
+        slug: string;
+      }[]
+    | null;
 };
 
 type PostTagJoinRow = {
@@ -109,7 +117,21 @@ function parseDate(value: string | null): Date | null {
 
 function mapFaq(raw: unknown): BlogPostFaq[] | null {
   if (!Array.isArray(raw)) return null;
-  return raw as BlogPostFaq[];
+  const out: BlogPostFaq[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const o = item as Record<string, unknown>;
+    const question = typeof o.question === "string" ? o.question : "";
+    const answer = typeof o.answer === "string" ? o.answer : "";
+    if (!question || !answer) continue;
+    out.push({
+      question,
+      answer,
+      ...(typeof o.questionEn === "string" ? { questionEn: o.questionEn } : {}),
+      ...(typeof o.answerEn === "string" ? { answerEn: o.answerEn } : {}),
+    });
+  }
+  return out.length > 0 ? out : null;
 }
 
 function mapSeo(row: SeoMetadataRow): BlogPostSeo | null {
@@ -214,7 +236,7 @@ export async function fetchBlogPostBySlugViaSupabase(
     return await fetchBlogPostBySlugViaSupabaseInner(slug);
   } catch (error) {
     logBlogRenderError("fetchBlogPostBySlugViaSupabase", error, { slug });
-    throw error;
+    return null;
   }
 }
 

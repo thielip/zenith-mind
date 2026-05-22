@@ -34,7 +34,7 @@ export const loadBlogPostBySlug = cache(async (slug: string): Promise<BlogPostDe
       slug,
       cfRuntime: isCfPublicRuntime(),
     });
-    throw error;
+    return null;
   }
 });
 

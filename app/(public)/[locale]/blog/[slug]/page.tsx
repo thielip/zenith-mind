@@ -16,6 +16,8 @@ import {
   loadPublishedPostSlugsForStaticParams,
 } from "@/lib/blog/load-blog-post-data";
 import { logBlogRenderError } from "@/lib/blog/log-blog-render-error";
+import { isNextNavigationError } from "@/lib/blog/next-navigation-error";
+import { toIsoStringSafe } from "@/lib/blog/safe-blog-dates";
 import {
   buildArticleSchema,
   buildFaqSchema,
@@ -89,8 +91,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         locale: isEn ? "en_US" : "zh_TW",
         alternateLocale: isEn ? ["zh_TW"] : ["en_US"],
         siteName: "Zenith Mind",
-        publishedTime: post.publishedAt?.toISOString(),
-        modifiedTime: post.updatedAt.toISOString(),
+        publishedTime: post.publishedAt ? toIsoStringSafe(post.publishedAt) : undefined,
+        modifiedTime: toIsoStringSafe(post.updatedAt),
         images: post.coverImage
           ? [
               {
@@ -122,6 +124,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         : { index: true, follow: true },
     };
   } catch (error) {
+    if (isNextNavigationError(error)) throw error;
     logBlogRenderError("generateMetadata", error, { locale, slug });
     return {};
   }
@@ -134,6 +137,7 @@ export default async function BlogPostPage({ params }: Props) {
   try {
     return await renderBlogPostPage(locale, slug);
   } catch (error) {
+    if (isNextNavigationError(error)) throw error;
     logBlogRenderError("BlogPostPage", error, {
       locale,
       slug,
@@ -150,7 +154,14 @@ async function renderBlogPostPage(locale: string, slug: string) {
   const nonce = h.get("x-nonce") ?? "";
   const siteUrl = env.NEXT_PUBLIC_SITE_URL;
 
-  const post = await loadBlogPostBySlug(slug);
+  let post;
+  try {
+    post = await loadBlogPostBySlug(slug);
+  } catch (error) {
+    if (isNextNavigationError(error)) throw error;
+    logBlogRenderError("loadBlogPostBySlug", error, { locale, slug });
+    throw error;
+  }
   if (!post) {
     await redirectArchivedPostIfNeeded(locale, slug);
     notFound();
@@ -170,16 +181,23 @@ async function renderBlogPostPage(locale: string, slug: string) {
   const blogBasePath = `/${isEn ? "en" : "zh-TW"}/blog`;
 
   const faqs = post.faq ?? [];
+  const tags = post.tags ?? [];
 
-  const articleSchema = buildArticleSchema({
+  let articleSchema;
+  try {
+    articleSchema = buildArticleSchema({
     title,
     description: (isEn ? post.excerptEn : post.excerpt) ?? "",
     url: canonical,
     imageUrl: post.coverImage ?? undefined,
     authorName: "巔峰思維",
-    publishedAt: post.publishedAt ?? post.createdAt,
-    updatedAt: post.updatedAt,
-  });
+      publishedAt: post.publishedAt ?? post.createdAt,
+      updatedAt: post.updatedAt,
+    });
+  } catch (error) {
+    logBlogRenderError("buildArticleSchema", error, { locale, slug, postId: post.id });
+    throw error;
+  }
 
   const faqSchema =
     faqs.length > 0
@@ -205,10 +223,9 @@ async function renderBlogPostPage(locale: string, slug: string) {
     { name: title, url: canonical },
   ];
 
-  const publishedIso =
-    post.publishedAt && !Number.isNaN(post.publishedAt.getTime())
-      ? post.publishedAt.toISOString()
-      : undefined;
+  const publishedIso = post.publishedAt
+    ? toIsoStringSafe(post.publishedAt)
+    : undefined;
 
   const cfLight = isCfPublicRuntime();
   let PasswordGate: typeof import("@/components/blog/PostPasswordGate").default | null =
@@ -277,9 +294,9 @@ async function renderBlogPostPage(locale: string, slug: string) {
               {post._count.pageViews.toLocaleString()} {isEn ? "views" : "次瀏覽"}
             </span>
           </div>
-          {post.tags.length > 0 && (
+          {tags.length > 0 && (
             <div className="mt-4 flex flex-wrap gap-2" aria-label={t("tags")}>
-              {post.tags.map(({ tag }) => (
+              {tags.map(({ tag }) => (
                 <Link
                   key={tag.slug}
                   href={`${blogBasePath}?tag=${tag.slug}`}
