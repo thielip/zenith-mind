@@ -158,12 +158,27 @@ function mapPostTags(rows: PostTagJoinRow[]): { tag: { name: string; slug: strin
   return tags;
 }
 
+type CategoryEmbed = {
+  id: string;
+  name: string;
+  nameEn: string | null;
+  slug: string;
+};
+
+function pickCategoryEmbed(
+  categories: PostDetailRow["categories"]
+): CategoryEmbed | null {
+  if (!categories) return null;
+  const cat = Array.isArray(categories) ? categories[0] : categories;
+  return cat ?? null;
+}
+
 function mapPostDetailRow(
   row: PostDetailRow,
   tags: { tag: { name: string; slug: string } }[],
   seoMetadata: BlogPostSeo | null
 ): BlogPostDetail {
-  const cat = row.categories;
+  const cat = pickCategoryEmbed(row.categories);
   return {
     id: row.id,
     slug: row.slug,
@@ -186,9 +201,7 @@ function mapPostDetailRow(
     categoryId: row.categoryId,
     readingTime: row.readingTime ?? 0,
     isPasswordProtected: Boolean(row.isPasswordProtected),
-    category: cat
-      ? { id: cat.id, name: cat.name, nameEn: cat.nameEn, slug: cat.slug }
-      : null,
+    category: cat,
     tags,
     seoMetadata,
     _count: { pageViews: 0 },
