@@ -15,6 +15,7 @@ import {
   loadBlogPostBySlug,
   loadPublishedPostSlugsForStaticParams,
 } from "@/lib/blog/load-blog-post-data";
+import { logBlogRenderError } from "@/lib/blog/log-blog-render-error";
 import {
   buildArticleSchema,
   buildFaqSchema,
@@ -49,79 +50,104 @@ export async function generateStaticParams(): Promise<
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
-  const isEn = locale === "en";
-  const siteUrl = env.NEXT_PUBLIC_SITE_URL;
+  try {
+    const isEn = locale === "en";
+    const siteUrl = env.NEXT_PUBLIC_SITE_URL;
 
-  const post = await loadBlogPostBySlug(slug);
-  if (!post) return {};
+    const post = await loadBlogPostBySlug(slug);
+    if (!post) return {};
 
-  const title       = isEn ? (post.titleEn ?? post.title) : post.title;
-  const metaTitle = isEn
-    ? (post.seoMetadata?.metaTitleEn ?? post.titleEn ?? post.title)
-    : (post.seoMetadata?.metaTitle ?? post.title);
-  const metaDesc = isEn
-    ? (post.seoMetadata?.metaDescriptionEn ?? post.excerptEn ?? "")
-    : (post.seoMetadata?.metaDescription ?? post.excerpt ?? "");
-  const ogTitle = post.seoMetadata?.ogTitle ?? metaTitle;
-  const ogDesc = post.seoMetadata?.ogDescription ?? metaDesc;
-  const canonical   = `${siteUrl}/${isEn ? "en" : "zh-TW"}/blog/${slug}`;
+    const title = isEn ? (post.titleEn ?? post.title) : post.title;
+    const metaTitle = isEn
+      ? (post.seoMetadata?.metaTitleEn ?? post.titleEn ?? post.title)
+      : (post.seoMetadata?.metaTitle ?? post.title);
+    const metaDesc = isEn
+      ? (post.seoMetadata?.metaDescriptionEn ?? post.excerptEn ?? "")
+      : (post.seoMetadata?.metaDescription ?? post.excerpt ?? "");
+    const ogTitle = post.seoMetadata?.ogTitle ?? metaTitle;
+    const ogDesc = post.seoMetadata?.ogDescription ?? metaDesc;
+    const canonical = `${siteUrl}/${isEn ? "en" : "zh-TW"}/blog/${slug}`;
 
-  const coverW = post.coverImageWidth ?? 1200;
-  const coverH = post.coverImageHeight ?? 630;
+    const coverW = post.coverImageWidth ?? 1200;
+    const coverH = post.coverImageHeight ?? 630;
 
-  return {
-    title:       metaTitle,
-    description: metaDesc,
-    alternates: {
-      canonical,
-      languages: {
-        "zh-TW": `${siteUrl}/zh-TW/blog/${slug}`,
-        en:      `${siteUrl}/en/blog/${slug}`,
-      },
-    },
-    openGraph: {
-      title:        ogTitle,
-      description:  ogDesc,
-      url:          canonical,
-      type:         "article",
-      locale:       isEn ? "en_US" : "zh_TW",
-      alternateLocale: isEn ? ["zh_TW"] : ["en_US"],
-      siteName:     "Zenith Mind",
-      publishedTime: post.publishedAt?.toISOString(),
-      modifiedTime:  post.updatedAt.toISOString(),
-      images: post.coverImage
-        ? [
-            {
-              url: post.coverImage,
-              alt: post.coverImageAlt ?? title,
-              width: coverW,
-              height: coverH,
-            },
-          ]
-        : [],
-    },
-    twitter: {
-      card:        "summary_large_image",
-      title:       metaTitle,
+    return {
+      title: metaTitle,
       description: metaDesc,
-      images:      post.coverImage
-        ? [{ url: post.coverImage, alt: post.coverImageAlt ?? title, width: coverW, height: coverH }]
-        : [],
-    },
-    robots: post.seoMetadata?.noIndex
-      ? { index: false, follow: false }
-      : { index: true,  follow: true  },
-  };
+      alternates: {
+        canonical,
+        languages: {
+          "zh-TW": `${siteUrl}/zh-TW/blog/${slug}`,
+          en: `${siteUrl}/en/blog/${slug}`,
+        },
+      },
+      openGraph: {
+        title: ogTitle,
+        description: ogDesc,
+        url: canonical,
+        type: "article",
+        locale: isEn ? "en_US" : "zh_TW",
+        alternateLocale: isEn ? ["zh_TW"] : ["en_US"],
+        siteName: "Zenith Mind",
+        publishedTime: post.publishedAt?.toISOString(),
+        modifiedTime: post.updatedAt.toISOString(),
+        images: post.coverImage
+          ? [
+              {
+                url: post.coverImage,
+                alt: post.coverImageAlt ?? title,
+                width: coverW,
+                height: coverH,
+              },
+            ]
+          : [],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: metaTitle,
+        description: metaDesc,
+        images: post.coverImage
+          ? [
+              {
+                url: post.coverImage,
+                alt: post.coverImageAlt ?? title,
+                width: coverW,
+                height: coverH,
+              },
+            ]
+          : [],
+      },
+      robots: post.seoMetadata?.noIndex
+        ? { index: false, follow: false }
+        : { index: true, follow: true },
+    };
+  } catch (error) {
+    logBlogRenderError("generateMetadata", error, { locale, slug });
+    return {};
+  }
 }
 
 // ── Page Component ────────────────────────────────────────
 
 export default async function BlogPostPage({ params }: Props) {
   const { locale, slug } = await params;
-  const isEn   = locale === "en";
-  const t      = await getTranslations("blog");
-  const h      = await headers();
-  const nonce  = h.get("x-nonce") ?? "";
+  try {
+    return await renderBlogPostPage(locale, slug);
+  } catch (error) {
+    logBlogRenderError("BlogPostPage", error, {
+      locale,
+      slug,
+      cfRuntime: isCfPublicRuntime(),
+    });
+    throw error;
+  }
+}
+
+async function renderBlogPostPage(locale: string, slug: string) {
+  const isEn = locale === "en";
+  const t = await getTranslations("blog");
+  const h = await headers();
+  const nonce = h.get("x-nonce") ?? "";
   const siteUrl = env.NEXT_PUBLIC_SITE_URL;
 
   const post = await loadBlogPostBySlug(slug);
@@ -130,7 +156,7 @@ export default async function BlogPostPage({ params }: Props) {
     notFound();
   }
 
-  const title   = isEn ? (post.titleEn   ?? post.title)   : post.title;
+  const title = isEn ? (post.titleEn ?? post.title) : post.title;
   const unlocked =
     !post.isPasswordProtected || (await hasPostAccess(slug, post.id));
   const rawContent = isEn ? (post.contentEn ?? post.content) : post.content;
@@ -148,27 +174,33 @@ export default async function BlogPostPage({ params }: Props) {
   const articleSchema = buildArticleSchema({
     title,
     description: (isEn ? post.excerptEn : post.excerpt) ?? "",
-    url:         canonical,
-    imageUrl:    post.coverImage ?? undefined,
-    authorName:  "巔峰思維",
+    url: canonical,
+    imageUrl: post.coverImage ?? undefined,
+    authorName: "巔峰思維",
     publishedAt: post.publishedAt ?? post.createdAt,
-    updatedAt:   post.updatedAt,
+    updatedAt: post.updatedAt,
   });
 
-  const faqSchema = faqs.length > 0
-    ? buildFaqSchema(
-        faqs.map((f) => ({
-          question: isEn ? (f.questionEn ?? f.question) : f.question,
-          answer:   isEn ? (f.answerEn   ?? f.answer)   : f.answer,
-        }))
-      )
-    : null;
+  const faqSchema =
+    faqs.length > 0
+      ? buildFaqSchema(
+          faqs.map((f) => ({
+            question: isEn ? (f.questionEn ?? f.question) : f.question,
+            answer: isEn ? (f.answerEn ?? f.answer) : f.answer,
+          }))
+        )
+      : null;
 
   const breadcrumbItems = [
-    { name: isEn ? "Home"     : "首頁", url: `${siteUrl}/${isEn ? "en" : "zh-TW"}` },
-    { name: isEn ? "Blog"     : "文章", url: `${siteUrl}/${isEn ? "en" : "zh-TW"}/blog` },
+    { name: isEn ? "Home" : "首頁", url: `${siteUrl}/${isEn ? "en" : "zh-TW"}` },
+    { name: isEn ? "Blog" : "文章", url: `${siteUrl}/${isEn ? "en" : "zh-TW"}/blog` },
     ...(post.category
-      ? [{ name: catName ?? "", url: `${siteUrl}/${isEn ? "en" : "zh-TW"}/blog?category=${post.category.slug}` }]
+      ? [
+          {
+            name: catName ?? "",
+            url: `${siteUrl}/${isEn ? "en" : "zh-TW"}/blog?category=${post.category.slug}`,
+          },
+        ]
       : []),
     { name: title, url: canonical },
   ];
@@ -177,6 +209,21 @@ export default async function BlogPostPage({ params }: Props) {
     post.publishedAt && !Number.isNaN(post.publishedAt.getTime())
       ? post.publishedAt.toISOString()
       : undefined;
+
+  const cfLight = isCfPublicRuntime();
+  let PasswordGate: typeof import("@/components/blog/PostPasswordGate").default | null =
+    null;
+  let RecommendedPostsSection: typeof import("@/components/blog/RecommendedPostsSection").default | null =
+    null;
+
+  if (!unlocked && post.isPasswordProtected) {
+    PasswordGate = (await import("@/components/blog/PostPasswordGate")).default;
+  }
+  if (!cfLight) {
+    RecommendedPostsSection = (
+      await import("@/components/blog/RecommendedPostsSection")
+    ).default;
+  }
 
   return (
     <>

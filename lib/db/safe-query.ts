@@ -7,10 +7,11 @@ export async function safeQuery<T>(
   try {
     return await fn();
   } catch (error) {
+    const prefix = label.startsWith("blog.") ? "【Blog Render Error】:" : "[safeQuery]";
     if (process.env.NODE_ENV === "development") {
-      console.warn(`[safeQuery] ${label} failed`, error);
+      console.warn(`${prefix} ${label} failed`, error);
     } else {
-      console.error(`[safeQuery] ${label} failed`, error);
+      console.error(`${prefix} ${label} failed`, error);
     }
     return fallback;
   }

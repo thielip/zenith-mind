@@ -37,6 +37,7 @@ const nextConfig: NextConfig = {
           "google-auth-library",
           "@google/generative-ai",
           "@prisma/client",
+          "@prisma/client/edge",
           "@prisma/adapter-neon",
           "sanitize-html",
         ]

@@ -4,6 +4,7 @@
  */
 import { isCfPublicRuntime } from "@/lib/db/cf-public-runtime";
 import { fetchPostViewTotal } from "@/lib/analytics/post-view-totals";
+import { logBlogRenderError } from "@/lib/blog/log-blog-render-error";
 import { supabaseRestWithFallback } from "@/lib/db/supabase-rest";
 import type {
   BlogPostDetail,
@@ -207,6 +208,17 @@ async function fetchSeoForPost(postId: string): Promise<BlogPostSeo | null> {
 }
 
 export async function fetchBlogPostBySlugViaSupabase(
+  slug: string
+): Promise<BlogPostDetail | null> {
+  try {
+    return await fetchBlogPostBySlugViaSupabaseInner(slug);
+  } catch (error) {
+    logBlogRenderError("fetchBlogPostBySlugViaSupabase", error, { slug });
+    throw error;
+  }
+}
+
+async function fetchBlogPostBySlugViaSupabaseInner(
   slug: string
 ): Promise<BlogPostDetail | null> {
   const rows = await supabaseRestWithFallback<PostDetailRow[]>(

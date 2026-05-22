@@ -2,6 +2,7 @@ import { cache } from "react";
 import { isCfPublicRuntime } from "@/lib/db/cf-public-runtime";
 import { safeQuery } from "@/lib/db/safe-query";
 import { isDatabaseAvailable } from "@/lib/build/runtime-env";
+import { logBlogRenderError } from "@/lib/blog/log-blog-render-error";
 import type {
   BlogPostDetail,
   RecommendedPostCard,
@@ -9,33 +10,32 @@ import type {
 
 export type { BlogPostDetail, BlogPostFaq, RecommendedPostCard } from "@/lib/blog/blog-post-types";
 
+/** CF 公開站僅 Supabase REST，不載入 Prisma（避免 Worker CPU / bundle 問題） */
 async function loadBlogPostBySlugCf(slug: string): Promise<BlogPostDetail | null> {
   const { fetchBlogPostBySlugViaSupabase } = await import(
     "@/lib/blog/public-blog-post-supabase"
   );
-  const post = await fetchBlogPostBySlugViaSupabase(slug);
-  if (post) return post;
-
-  const { getPrismaCfEdge } = await import("@/lib/db/prisma-cf-edge");
-  const prisma = getPrismaCfEdge();
-  if (!prisma) return null;
-
-  const { loadBlogPostBySlugPrisma } = await import(
-    "@/lib/blog/load-blog-post-data-prisma"
-  );
-  return loadBlogPostBySlugPrisma(prisma, slug);
+  return fetchBlogPostBySlugViaSupabase(slug);
 }
 
 export const loadBlogPostBySlug = cache(async (slug: string): Promise<BlogPostDetail | null> => {
-  if (isCfPublicRuntime()) {
-    return safeQuery(`blog.post.${slug}`, () => loadBlogPostBySlugCf(slug), null);
-  }
+  try {
+    if (isCfPublicRuntime()) {
+      return await safeQuery(`blog.post.${slug}`, () => loadBlogPostBySlugCf(slug), null);
+    }
 
-  const { prisma } = await import("@/infrastructure/db/prisma");
-  const { loadBlogPostBySlugPrisma } = await import(
-    "@/lib/blog/load-blog-post-data-prisma"
-  );
-  return loadBlogPostBySlugPrisma(prisma, slug);
+    const { prisma } = await import("@/infrastructure/db/prisma");
+    const { loadBlogPostBySlugPrisma } = await import(
+      "@/lib/blog/load-blog-post-data-prisma"
+    );
+    return await loadBlogPostBySlugPrisma(prisma, slug);
+  } catch (error) {
+    logBlogRenderError("loadBlogPostBySlug", error, {
+      slug,
+      cfRuntime: isCfPublicRuntime(),
+    });
+    throw error;
+  }
 });
 
 export async function loadRecommendedPosts(

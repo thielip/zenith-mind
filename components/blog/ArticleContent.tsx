@@ -2,6 +2,7 @@
 // 富文本安全渲染（sanitize-html 白名單清洗）
 // ⚠ dangerouslySetInnerHTML 必須搭配清洗，絕不直接渲染原始 HTML
 
+import { isCfPublicRuntime } from "@/lib/db/cf-public-runtime";
 import { sanitizeRichTextForDisplay } from "@/lib/sanitize/html-display";
 import { convertMarkdownImagesToHtml } from "@/lib/markdown/images";
 
@@ -12,7 +13,12 @@ interface Props {
 
 export default function ArticleContent({ content }: Props) {
   const raw = typeof content === "string" ? content : "";
-  const cleanHtml = sanitizeRichTextForDisplay(convertMarkdownImagesToHtml(raw || "<p></p>"));
+  const trimmed = raw.trim();
+  const htmlInput =
+    isCfPublicRuntime() && trimmed.startsWith("<")
+      ? trimmed || "<p></p>"
+      : convertMarkdownImagesToHtml(raw || "<p></p>");
+  const cleanHtml = sanitizeRichTextForDisplay(htmlInput);
 
   return (
     <article

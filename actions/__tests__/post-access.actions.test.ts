@@ -11,7 +11,7 @@ jest.mock("@/lib/auth/password", () => ({
   verifyPassword: jest.fn(),
 }));
 jest.mock("@/lib/blog/post-access-cookie", () => ({
-  signPostUnlockToken: jest.fn(() => "unlock-token"),
+  signPostUnlockToken: jest.fn(async () => "unlock-token"),
   postUnlockCookieOptions: jest.fn(() => ({
     name: "post_unlock_test",
     value: "unlock-token",

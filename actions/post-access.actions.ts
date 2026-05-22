@@ -52,7 +52,7 @@ export async function verifyPostPasswordAction(
       return { success: false, data: null, error: Errors.auth() };
     }
 
-    const token = signPostUnlockToken(slug, post.id);
+    const token = await signPostUnlockToken(slug, post.id);
     const jar = await cookies();
     const opts = postUnlockCookieOptions(slug, token);
     jar.set(opts.name, opts.value, {
