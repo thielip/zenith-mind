@@ -1,6 +1,6 @@
 // components/admin/AdminHeader.tsx — Server Component
 
-import { getPublicLocaleHomeUrl } from "@/lib/site/url";
+import { PUBLIC_ZH_TW_HOME_URL } from "@/lib/site/url";
 
 interface Props {
   userEmail: string;
@@ -21,7 +21,7 @@ export default function AdminHeader({ userEmail }: Props) {
 
       <section className="flex items-center gap-3 text-sm text-gray-500" aria-label="目前登入資訊">
         <a
-          href={getPublicLocaleHomeUrl("zh-TW")}
+          href={PUBLIC_ZH_TW_HOME_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="rounded-lg border border-blue-200 px-3 py-1.5 text-sm font-semibold text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
