@@ -7,6 +7,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import ConsentGatedAnalytics from "@/components/analytics/ConsentGatedAnalytics";
 import PerformanceResourceHints from "@/components/seo/PerformanceResourceHints";
+import { logoPreload } from "@/components/seo/LogoPreload";
 import { routing } from "@/lib/i18n/routing";
 import { env } from "@/env";
 import ConsentBanner  from "@/components/analytics/ConsentBanner";
@@ -53,6 +54,8 @@ export default async function PublicLocaleLayout({ children, params }: Props) {
       return !href.includes("/admin");
     }),
   };
+
+  logoPreload(publicSiteSettings.logoUrl);
 
   return (
     <>

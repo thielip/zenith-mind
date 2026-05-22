@@ -31,10 +31,10 @@ export function heroLcpPreload(imageUrl: string, title: string): void {
   const { props } = getImageProps({
     src: imageUrl,
     alt: title,
-    width: 1400,
-    height: 788,
-    sizes: "(max-width: 768px) 100vw, 1400px",
-    quality: 75,
+    width: HERO_FALLBACK_WIDTH,
+    height: heroRenderHeightForWidth(HERO_FALLBACK_WIDTH),
+    sizes: HERO_IMAGE_SIZES,
+    quality: HERO_IMAGE_QUALITY,
     priority: true,
   });
   preload(props.src, {

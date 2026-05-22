@@ -119,7 +119,7 @@ export default function Header({ locale, settings }: Props) {
               height={32}
               responsiveWidths={[106, 168, 212]}
               sizes="106px"
-              quality={80}
+              quality={72}
               className="relative z-[1] h-8 w-auto max-w-[132px] object-contain sm:h-10 sm:max-w-[168px]"
               priority
               fetchPriority="high"

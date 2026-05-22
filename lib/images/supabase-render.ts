@@ -53,7 +53,7 @@ export function buildSupabaseSrcSet(
 ): { src: string; srcSet: string } {
   const opts: BuildSupabaseSrcSetOptions =
     typeof qualityOrOptions === "number" ? { quality: qualityOrOptions } : qualityOrOptions;
-  const quality = opts.quality ?? 75;
+  const quality = opts.quality ?? 68;
   const sorted = [...widths].filter((w) => w > 0).sort((a, b) => a - b);
   if (sorted.length === 0) {
     return { src: objectPublicUrl, srcSet: "" };

@@ -1,5 +1,7 @@
 // components/admin/AdminHeader.tsx — Server Component
 
+import { getPublicLocaleHomeUrl } from "@/lib/site/url";
+
 interface Props {
   userEmail: string;
 }
@@ -19,12 +21,12 @@ export default function AdminHeader({ userEmail }: Props) {
 
       <section className="flex items-center gap-3 text-sm text-gray-500" aria-label="目前登入資訊">
         <a
-          href="/zh-TW"
+          href={getPublicLocaleHomeUrl("zh-TW")}
           target="_blank"
           rel="noopener noreferrer"
           className="rounded-lg border border-blue-200 px-3 py-1.5 text-sm font-semibold text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          回前台
+          回到首頁
         </a>
         <span aria-label={`目前登入：${userEmail}`}>{userEmail}</span>
       </section>

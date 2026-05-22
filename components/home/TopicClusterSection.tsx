@@ -75,9 +75,9 @@ export default function TopicClusterSection({ locale, topics, copy }: Props) {
                     src={imageUrlPrimary}
                     alt={imageAlt}
                     fill
-                    responsiveWidths={[320, 480, 640]}
+                    responsiveWidths={[280, 360, 480]}
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    quality={62}
+                    quality={54}
                     className="object-cover transition duration-500 group-hover:scale-[1.02]"
                   />
                 </div>

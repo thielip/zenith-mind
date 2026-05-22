@@ -107,9 +107,9 @@ export default function ImageCarousel({ locale, items, autoplaySeconds = 0, copy
                   src={item.imageUrl}
                   alt={item.imageAlt || item.title}
                   fill
-                  responsiveWidths={[288, 320, 640]}
+                  responsiveWidths={[288, 320, 400]}
                   sizes="(max-width: 640px) 18rem, 320px"
-                  quality={62}
+                  quality={54}
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-blue-950/30 to-transparent" />

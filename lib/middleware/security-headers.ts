@@ -11,7 +11,7 @@ export function generateNonce(): string {
   return btoa(String.fromCharCode(...array));
 }
 
-function buildCsp(nonce: string, isProd: boolean): string {
+export function buildCsp(nonce: string, isProd: boolean): string {
   const scriptSrc = [
     "'self'",
     `'nonce-${nonce}'`,
@@ -50,6 +50,8 @@ function buildCsp(nonce: string, isProd: boolean): string {
       "https://www.clarity.ms",
       "https://region.upstash.io",    // Upstash Redis
       "*.supabase.co",                // Supabase
+      "https://*.ingest.sentry.io",   // Sentry 錯誤回報
+      "https://*.ingest.us.sentry.io",
     ].join(" "),
 
     "frame-src": [

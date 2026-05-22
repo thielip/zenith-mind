@@ -1,6 +1,6 @@
 import { prisma } from "@/infrastructure/db/prisma";
 import { DEFAULT_CATEGORIES } from "@/lib/categories/defaults";
-import { DEFAULT_SITE_LOGO_PATH } from "@/lib/site/brand";
+import { DEFAULT_SITE_LOGO_PATH, resolveSiteLogoSrc } from "@/lib/site/brand";
 import { DEFAULT_QUICK_LINKS } from "@/lib/site/default-quick-links";
 import { isPrismaMissingColumnError } from "@/lib/site/prisma-compat";
 import type {
@@ -354,7 +354,7 @@ export type SiteSettingsDbRow = {
 /** 供 Prisma / Supabase REST 共用（公開站 Edge 映射） */
 export function mapSiteSettingsRow(row: SiteSettingsDbRow): SiteSettingsData {
   return {
-    logoUrl: row.logoUrl ?? "",
+    logoUrl: resolveSiteLogoSrc(row.logoUrl),
     logoAlt: row.logoAlt ?? DEFAULT_SITE_SETTINGS.logoAlt,
     quickLinks: asQuickLinks(row.quickLinks),
     socialLinks: asSocialLinks(row.socialLinks),

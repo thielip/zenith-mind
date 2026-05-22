@@ -6,3 +6,8 @@ export function getPublicSiteUrl(): string {
   const fromEnv = process.env["NEXT_PUBLIC_SITE_URL"]?.trim();
   return fromEnv || DEFAULT_PRODUCTION_SITE_URL;
 }
+
+/** 後台「回前台」等連結：固定導向公開站語系首頁 */
+export function getPublicLocaleHomeUrl(locale: "zh-TW" | "en" = "zh-TW"): string {
+  return `${getPublicSiteUrl().replace(/\/$/, "")}/${locale}`;
+}
