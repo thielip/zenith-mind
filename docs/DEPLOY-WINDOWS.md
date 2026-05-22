@@ -17,7 +17,7 @@
 ### 方法 1：GitHub Actions（推薦）
 
 1. 打開 https://github.com/thielip/zenith-mind/actions/workflows/deploy.yml  
-2. **Run workflow** → 分支 `main`  
+2. **Run workflow** → 分支 `main`（須為最新 workflow；若 job 顯示 Skipped，請 pull 含 `workflow_dispatch` if 修正的 commit）  
 3. 確認 Secrets 已設：`CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`  
 4. 等綠燈後驗證 https://www.getzenithmind.com/zh-TW  
 
