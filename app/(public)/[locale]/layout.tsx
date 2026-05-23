@@ -13,13 +13,13 @@ import ConsentBanner  from "@/components/analytics/ConsentBanner";
 import SkipToMain     from "@/components/layout/SkipToMain";
 import Header         from "@/components/layout/Header";
 import Footer         from "@/components/layout/Footer";
-import DeferredSocialSidebar from "@/components/layout/deferred-social-sidebar";
+import {
+  DeferredBackToTop,
+  DeferredSocialSidebar,
+} from "@/components/layout/client-deferred-widgets";
 import { buildOrganizationSchema } from "@/lib/seo/schemas/article.schema";
 import JsonLd from "@/components/seo/JsonLd";
 import { getSafeSiteSettings } from "@/lib/site/safe-site-settings";
-import dynamic from "next/dynamic";
-
-const BackToTop = dynamic(() => import("@/components/layout/BackToTop"), { ssr: false });
 
 /** 與子頁 revalidate 一致；版型設定透過 unstable_cache + tag 失效 */
 export const revalidate = 3600;
@@ -73,7 +73,7 @@ export default async function PublicLocaleLayout({ children, params }: Props) {
           </main>
 
           <DeferredSocialSidebar locale={locale} settings={publicSiteSettings} />
-          <BackToTop locale={locale} />
+          <DeferredBackToTop locale={locale} />
 
           <Footer locale={locale} settings={publicSiteSettings} />
 
