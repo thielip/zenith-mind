@@ -20,6 +20,7 @@ import {
   ACCESS_TOKEN_COOKIE_MAX_AGE_SEC,
   REFRESH_TOKEN_COOKIE_MAX_AGE_SEC,
 } from "@/lib/auth/constants";
+import { checkRateLimit, rateLimitKeyIp } from "@/lib/security/rate-limit";
 
 // ── Cookie 設定 ───────────────────────────────────────────
 
@@ -63,6 +64,15 @@ export async function loginAction(
   const meta = await getRequestMeta();
 
   try {
+    const rl = await checkRateLimit(
+      rateLimitKeyIp(meta.ip, "auth:login"),
+      10,
+      60
+    );
+    if (!rl.allowed) {
+      return { success: false, data: null, error: Errors.rateLimit() };
+    }
+
     // Step 3：Zod Validation
     const parsed = loginSchema.safeParse(input);
     if (!parsed.success) {

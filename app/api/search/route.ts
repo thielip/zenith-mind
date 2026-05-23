@@ -1,9 +1,8 @@
 // app/api/search/route.ts — 公開文章搜尋（PostgreSQL ILIKE MVP）
-// 未來可改接 Algolia / OpenSearch，維持 DTO 輸出穩定
+// CF：Supabase REST；Vercel：Prisma（PublicContentRepository）
 
 import { NextResponse } from "next/server";
-import { prisma } from "@/infrastructure/db/prisma";
-import { toPublicPostListItemDto } from "@/lib/dto/post-public.dto";
+import { getPublicContentRepository } from "@/lib/public-content/get-repository";
 
 export const dynamic = "force-dynamic";
 
@@ -20,33 +19,15 @@ export async function GET(req: Request) {
     );
   }
 
-  const posts = await prisma.post.findMany({
-    where: {
-      status: "PUBLISHED",
-      deletedAt: null,
-      OR: [
-        { title: { contains: q, mode: "insensitive" } },
-        { titleEn: { contains: q, mode: "insensitive" } },
-        { excerpt: { contains: q, mode: "insensitive" } },
-        { excerptEn: { contains: q, mode: "insensitive" } },
-      ],
-    },
-    select: {
-      id: true,
-      slug: true,
-      title: true,
-      titleEn: true,
-      excerpt: true,
-      excerptEn: true,
-      publishedAt: true,
-      readingTime: true,
-      category: { select: { slug: true, name: true, nameEn: true } },
-    },
-    orderBy: [{ publishedAt: "desc" }],
-    take: 30,
-  });
-
-  const items = posts.map((p) => toPublicPostListItemDto(p, locale));
-
-  return NextResponse.json({ query: q, locale, items });
+  try {
+    const repo = await getPublicContentRepository();
+    const items = await repo.searchPublishedPosts(q, locale);
+    return NextResponse.json({ query: q, locale, items });
+  } catch (e: unknown) {
+    console.error("[search] error:", e);
+    return NextResponse.json(
+      { error: "SEARCH_UNAVAILABLE", items: [] },
+      { status: 503 }
+    );
+  }
 }

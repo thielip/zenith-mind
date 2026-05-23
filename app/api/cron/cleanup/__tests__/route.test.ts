@@ -28,7 +28,6 @@ describe("GET /api/cron/cleanup", () => {
     process.env["CRON_SECRET"] = "cron-secret";
     cleanupPageViewsMock.mockResolvedValue(2);
     cleanupAuditLogsMock.mockResolvedValue(3);
-    prismaMock.eventOutbox.findMany.mockResolvedValue([]);
   });
 
   it("fails closed when CRON_SECRET is missing", async () => {
@@ -50,10 +49,7 @@ describe("GET /api/cron/cleanup", () => {
     expect(response.status).toBe(401);
   });
 
-  it("runs cleanup and processes outbox when authorized", async () => {
-    prismaMock.eventOutbox.findMany.mockResolvedValue([{ id: "evt-1", eventType: "POST_PUBLISHED" }]);
-    prismaMock.eventOutbox.update.mockResolvedValue({});
-
+  it("runs data retention cleanup when authorized", async () => {
     const response = await GET(
       new Request("http://localhost/api/cron/cleanup", {
         headers: { Authorization: "Bearer cron-secret" },
@@ -64,9 +60,7 @@ describe("GET /api/cron/cleanup", () => {
     expect(response.status).toBe(200);
     expect(body.deletedPageViews).toBe(2);
     expect(body.deletedAuditLogs).toBe(3);
-    expect(body.processedEvents).toBe(1);
-    expect(prismaMock.eventOutbox.update).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: "evt-1" } })
-    );
+    expect(body.processedEvents).toBeUndefined();
+    expect(prismaMock.eventOutbox.findMany).not.toHaveBeenCalled();
   });
 });

@@ -1,8 +1,11 @@
 import nextEnv from "@next/env";
 import { PrismaClient } from "@prisma/client";
+import { assertSeedAllowed } from "./lib/assert-seed-allowed.mjs";
 
 const { loadEnvConfig } = nextEnv;
 loadEnvConfig(process.cwd());
+
+assertSeedAllowed("seed-cms-defaults");
 
 const prisma = new PrismaClient();
 

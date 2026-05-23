@@ -1,8 +1,9 @@
-// app/(public)/go/[slug]/route.ts — Node Runtime
-// 聯盟連結轉址（301 永久轉址 + 點擊計數非同步）
+// app/(public)/go/[slug]/route.ts
+// 聯盟連結轉址（301）+ 點擊計數（Vercel Prisma；CF 僅轉址）
 
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/infrastructure/db/prisma";
+import { isCfPublicRuntime } from "@/lib/db/cf-public-runtime";
+import { getPublicContentRepository } from "@/lib/public-content/get-repository";
 import { recordAffiliateClick } from "@/lib/affiliate/record-click";
 
 export const dynamic = "force-dynamic";
@@ -17,19 +18,23 @@ export async function GET(
 ): Promise<NextResponse> {
   const { slug } = await params;
 
-  const link = await prisma.affiliateLink.findUnique({
-    where: { slug, isActive: true },
-  });
+  try {
+    const repo = await getPublicContentRepository();
+    const link = await repo.findActiveAffiliateLinkBySlug(slug);
 
-  if (!link) {
-    // 找不到或已停用 → 導回首頁
+    if (!link) {
+      return NextResponse.redirect(new URL("/", _req.url), { status: 302 });
+    }
+
+    if (!isCfPublicRuntime()) {
+      void recordAffiliateClick(link.id).catch((err: unknown) => {
+        console.error("[AffiliateLink] click count update failed:", err);
+      });
+    }
+
+    return NextResponse.redirect(link.targetUrl, { status: 301 });
+  } catch (e: unknown) {
+    console.error("[go] redirect error:", e);
     return NextResponse.redirect(new URL("/", _req.url), { status: 302 });
   }
-
-  void recordAffiliateClick(link.id).catch((err: unknown) => {
-    console.error("[AffiliateLink] click count update failed:", err);
-  });
-
-  // 301 永久轉址（瀏覽器快取，GA4 可追蹤）
-  return NextResponse.redirect(link.targetUrl, { status: 301 });
 }

@@ -37,3 +37,13 @@ export async function gateAdminWrite(
 export function forbiddenResult(): { success: false; data: null; error: ActionError } {
   return { success: false, data: null, error: Errors.forbidden() };
 }
+
+/** 僅 ADMIN（拒絕 GUEST）— 用於 AI Job、Audit 匯出等 */
+export async function gateAdminOnly(): Promise<AdminActionGate> {
+  const gate = await gateAdminRead();
+  if (!gate.ok) return gate;
+  if (gate.session.role !== "ADMIN") {
+    return { ok: false, result: forbiddenResult() };
+  }
+  return gate;
+}

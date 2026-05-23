@@ -5,9 +5,7 @@ export async function purgePublicSiteCache(input: {
   type: "path" | "tag";
   value: string;
 }): Promise<void> {
-  const secret =
-    process.env["REVALIDATE_SECRET"]?.trim() ??
-    process.env["WEBHOOK_SECRET"]?.trim();
+  const secret = process.env["REVALIDATE_SECRET"]?.trim();
   if (!secret) {
     console.error("[purge-public-site] missing REVALIDATE_SECRET");
     return;

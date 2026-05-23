@@ -1,12 +1,13 @@
 jest.mock("@/lib/auth/resolve-admin-action", () => ({
-  gateAdminRead: jest.fn(),
+  gateAdminOnly: jest.fn(),
 }));
 jest.mock("@/lib/admin/load-audit-logs", () => ({
   loadAuditLogsForExport: jest.fn(),
 }));
 
 import { NextRequest } from "next/server";
-import { gateAdminRead } from "@/lib/auth/resolve-admin-action";
+import { Errors } from "@/domain/shared/core.types";
+import { gateAdminOnly } from "@/lib/auth/resolve-admin-action";
 import { loadAuditLogsForExport } from "@/lib/admin/load-audit-logs";
 import { GET } from "../route";
 
@@ -14,7 +15,7 @@ function exportRequest() {
   return new NextRequest("http://localhost/api/admin/audit-log/export");
 }
 
-const gateAdminReadMock = jest.mocked(gateAdminRead);
+const gateAdminOnlyMock = jest.mocked(gateAdminOnly);
 const loadAuditLogsForExportMock = jest.mocked(loadAuditLogsForExport);
 
 describe("GET /api/admin/audit-log/export", () => {
@@ -35,17 +36,35 @@ describe("GET /api/admin/audit-log/export", () => {
   });
 
   it("returns 401 when not authenticated", async () => {
-    gateAdminReadMock.mockResolvedValue({
+    gateAdminOnlyMock.mockResolvedValue({
       ok: false,
-      result: { success: false, data: null, error: { code: "AUTH" } },
+      result: {
+        success: false,
+        data: null,
+        error: Errors.auth(),
+      },
     });
 
     const res = await GET(exportRequest());
     expect(res.status).toBe(401);
   });
 
+  it("returns 403 for GUEST", async () => {
+    gateAdminOnlyMock.mockResolvedValue({
+      ok: false,
+      result: {
+        success: false,
+        data: null,
+        error: Errors.forbidden(),
+      },
+    });
+
+    const res = await GET(exportRequest());
+    expect(res.status).toBe(403);
+  });
+
   it("returns CSV for authenticated admin", async () => {
-    gateAdminReadMock.mockResolvedValue({
+    gateAdminOnlyMock.mockResolvedValue({
       ok: true,
       session: { userId: "u1", email: "admin@example.com", role: "ADMIN" },
     });

@@ -1,5 +1,8 @@
 import { prismaMock, resetPrismaMock } from "@/test-utils/prisma-mock";
 
+jest.mock("@/lib/db/cf-public-runtime", () => ({
+  isCfPublicRuntime: jest.fn().mockReturnValue(false),
+}));
 jest.mock("@/infrastructure/db/prisma", () => ({
   prisma: require("@/test-utils/prisma-mock").prismaMock,
 }));
@@ -19,7 +22,7 @@ describe("GET /go/:slug", () => {
   });
 
   it("redirects inactive or missing affiliate links to home", async () => {
-    prismaMock.affiliateLink.findUnique.mockResolvedValue(null);
+    prismaMock.affiliateLink.findFirst.mockResolvedValue(null);
 
     const response = await GET(new Request("http://localhost/go/missing") as never, {
       params: Promise.resolve({ slug: "missing" }),
@@ -30,7 +33,7 @@ describe("GET /go/:slug", () => {
   });
 
   it("redirects active links and increments click count", async () => {
-    prismaMock.affiliateLink.findUnique.mockResolvedValue({
+    prismaMock.affiliateLink.findFirst.mockResolvedValue({
       id: "link-1",
       slug: "tool",
       targetUrl: "https://example.com/tool",

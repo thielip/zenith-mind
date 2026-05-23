@@ -1,8 +1,14 @@
 import { DEFAULT_SITE_LOGO_PATH, resolveSiteLogoSrc } from "@/lib/site/brand";
 
 describe("resolveSiteLogoSrc", () => {
-  it("falls back when logo URL host is blocked", () => {
+  it("keeps valid external logo URLs including common hotlink hosts", () => {
     expect(resolveSiteLogoSrc("https://duk.tw/0MFnJo.png")).toBe(
+      "https://duk.tw/0MFnJo.png"
+    );
+  });
+
+  it("falls back when logo URL format is invalid", () => {
+    expect(resolveSiteLogoSrc("https://duk.tw/no-extension")).toBe(
       DEFAULT_SITE_LOGO_PATH
     );
   });

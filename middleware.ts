@@ -17,10 +17,26 @@ import {
   injectSecurityHeaders,
 } from "@/lib/middleware/security-headers";
 import { canonicalHostRedirect } from "@/lib/middleware/canonical-host-redirect";
+import { resolveClientIpFromHeaders } from "@/lib/request/client-ip";
+import { checkRateLimit, rateLimitKeyIp } from "@/lib/security/rate-limit";
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
   const isProd = process.env["NODE_ENV"] === "production";
   const pathname = request.nextUrl.pathname;
+
+  if (
+    request.method === "POST" &&
+    (pathname.startsWith("/api/auth/") || pathname === "/api/webhook")
+  ) {
+    const ip = resolveClientIpFromHeaders(request.headers);
+    const routeKey = pathname.startsWith("/api/auth/") ? "auth:api" : "webhook";
+    const rl = await checkRateLimit(rateLimitKeyIp(ip, routeKey), 30, 60);
+    if (!rl.allowed) {
+      return secureEarlyNextResponse(
+        NextResponse.json({ error: "RATE_LIMIT" }, { status: 429 })
+      );
+    }
+  }
 
   // *.vercel.app / *.workers.dev 公開頁 → www（避免重複內容；/admin 除外）
   const canonicalRedirect = canonicalHostRedirect(request);

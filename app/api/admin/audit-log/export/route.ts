@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { gateAdminRead } from "@/lib/auth/resolve-admin-action";
+import { gateAdminOnly } from "@/lib/auth/resolve-admin-action";
 import { parseAuditLogListParams } from "@/lib/admin/audit-log-params";
 import { loadAuditLogsForExport } from "@/lib/admin/load-audit-logs";
 
@@ -13,9 +13,10 @@ function csvEscape(value: string): string {
 }
 
 export async function GET(req: NextRequest) {
-  const gate = await gateAdminRead();
+  const gate = await gateAdminOnly();
   if (!gate.ok) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const status = gate.result.error?.httpStatus ?? 401;
+    return NextResponse.json({ error: "FORBIDDEN" }, { status });
   }
 
   const sp = Object.fromEntries(req.nextUrl.searchParams.entries());

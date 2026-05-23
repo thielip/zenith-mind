@@ -86,7 +86,8 @@ const nextConfig: NextConfig = {
     deviceSizes: [640, 750, 828, 1080, 1200, 1400, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     minimumCacheTTL: 31536000,
-    qualities: [75],
+    // 須涵蓋全站 next/image 的 quality（見 lib/images/hero-presets、Header、ImageCarousel 等）
+    qualities: [52, 54, 72, 75],
   },
 
   // Vercel 全站：build 跑 tsc + ESLint（CI 亦執行 type-check / lint）

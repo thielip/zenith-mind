@@ -3,30 +3,23 @@
 // idempotencyKey UNIQUE 防止 UI 連點重複送出
 
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import type { Prisma } from "@prisma/client";
-import { verifyAccessToken } from "@/lib/auth/jwt";
+import { gateAdminOnly } from "@/lib/auth/resolve-admin-action";
 import { CreateAiJobSchema } from "@/domain/ai/ai.validator";
 import { prisma } from "@/infrastructure/db/prisma";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  // ── JWT 驗證（Admin 專用）────────────────────────────
-  const jar   = await cookies();
-  const token = jar.get("access_token")?.value ?? "";
-
-  if (!token) {
-    return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+  const gate = await gateAdminOnly();
+  if (!gate.ok) {
+    const status = gate.result.error?.httpStatus ?? 401;
+    return NextResponse.json(
+      { error: gate.result.error?.code ?? "UNAUTHORIZED" },
+      { status }
+    );
   }
-
-  let userId: string;
-  try {
-    const payload = await verifyAccessToken(token);
-    userId = payload.userId;
-  } catch {
-    return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
-  }
+  const userId = gate.session.userId;
 
   // ── 解析 + Zod 驗證 ──────────────────────────────────
   let body: unknown;

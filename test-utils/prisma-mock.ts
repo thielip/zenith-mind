@@ -12,7 +12,7 @@ export const prismaMock: Record<string, any> = {
   postTag: model(["findMany", "deleteMany", "createMany"]),
   seoMetadata: model(["upsert", "deleteMany"]),
   pageView: model(["create", "count"]),
-  affiliateLink: model(["findUnique", "findMany", "count", "create", "update", "updateMany", "delete", "deleteMany"]),
+  affiliateLink: model(["findUnique", "findFirst", "findMany", "count", "create", "update", "updateMany", "delete", "deleteMany"]),
   adSlot: model(["findFirst", "findMany"]),
   aiJob: model(["findFirst", "findUnique", "findUniqueOrThrow", "findMany", "create", "update", "updateMany", "count"]),
   auditLog: model(["create", "findMany", "count", "deleteMany"]),

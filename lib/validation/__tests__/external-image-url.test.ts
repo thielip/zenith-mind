@@ -1,4 +1,5 @@
 import {
+  checkExternalImageUrl,
   isValidExternalImageUrl,
   optionalExternalImageUrlSchema,
   requiredExternalImageUrlSchema,
@@ -12,8 +13,11 @@ describe("isValidExternalImageUrl", () => {
     expect(isValidExternalImageUrl("https://x.com/pic.webp?v=1")).toBe(true);
   });
 
-  it("rejects blocked hotlink hosts", () => {
-    expect(isValidExternalImageUrl("https://duk.tw/0MFnJo.png")).toBe(false);
+  it("accepts duk.tw URLs (format valid; may warn in UI)", () => {
+    expect(isValidExternalImageUrl("https://duk.tw/BiJVOF.png")).toBe(true);
+    expect(isValidExternalImageUrl("https://duk.tw/0MFnJo.png")).toBe(true);
+    expect(checkExternalImageUrl("https://duk.tw/BiJVOF.png").warning).toBeTruthy();
+    expect(checkExternalImageUrl("https://cdn.example.com/x.jpg").warning).toBeUndefined();
   });
 
   it("rejects missing protocol, wrong extension, or non-http(s)", () => {

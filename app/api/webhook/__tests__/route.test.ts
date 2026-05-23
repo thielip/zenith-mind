@@ -10,6 +10,10 @@ jest.mock("@/env", () => ({
 jest.mock("@/infrastructure/redis/webhook-nonce", () => ({
   consumeWebhookNonce: jest.fn(),
 }));
+jest.mock("@/lib/security/rate-limit", () => ({
+  checkRateLimit: jest.fn().mockResolvedValue({ allowed: true, remaining: 59 }),
+  rateLimitKeyIp: (ip: string, route: string) => `${route}:${ip}`,
+}));
 
 import { consumeWebhookNonce } from "@/infrastructure/redis/webhook-nonce";
 import { POST } from "../route";

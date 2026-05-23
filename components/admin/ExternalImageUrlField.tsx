@@ -6,7 +6,7 @@ import { ImageIcon, Loader2, Upload } from "lucide-react";
 import { uploadSiteAssetAction } from "@/actions/site.actions";
 import {
   EXTERNAL_IMAGE_URL_HINT,
-  isValidExternalImageUrl,
+  checkExternalImageUrl,
 } from "@/lib/validation/external-image-url";
 import { cn } from "@/shared/lib/cn";
 
@@ -45,9 +45,19 @@ export default function ExternalImageUrlField({
   const canUpload = Boolean(uploadFolder);
 
   const validation = useMemo(() => {
-    if (!trimmed) return { valid: null as boolean | null, showError: false };
-    const valid = isValidExternalImageUrl(trimmed);
-    return { valid, showError: !valid };
+    if (!trimmed) {
+      return {
+        valid: null as boolean | null,
+        showError: false,
+        warning: undefined as string | undefined,
+      };
+    }
+    const check = checkExternalImageUrl(trimmed);
+    return {
+      valid: check.valid,
+      showError: !check.valid,
+      warning: check.warning,
+    };
   }, [trimmed]);
 
   const showPreview = validation.valid === true && !previewBroken;
@@ -146,6 +156,11 @@ export default function ExternalImageUrlField({
       {validation.showError ? (
         <p role="alert" className="mt-1 text-xs text-red-600">
           {EXTERNAL_IMAGE_URL_HINT}
+        </p>
+      ) : null}
+      {validation.warning ? (
+        <p className="mt-1 text-xs text-amber-700" role="status">
+          {validation.warning}
         </p>
       ) : null}
       <div

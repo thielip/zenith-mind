@@ -28,7 +28,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return jsonResponse({ error: "UNAUTHORIZED" }, 401);
     }
 
-    const expectedSecret = process.env["REVALIDATE_SECRET"] ?? process.env["WEBHOOK_SECRET"];
+    const expectedSecret = process.env["REVALIDATE_SECRET"]?.trim();
     if (!expectedSecret) {
       return jsonResponse({ error: "REVALIDATE_SECRET_REQUIRED" }, 401);
     }

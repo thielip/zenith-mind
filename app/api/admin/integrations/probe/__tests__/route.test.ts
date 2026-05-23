@@ -14,6 +14,7 @@ jest.mock("@/services/google/search-console", () => ({
   fetchSearchConsoleSummary: jest.fn(),
 }));
 
+import { Errors } from "@/domain/shared/core.types";
 import { gateAdminRead } from "@/lib/auth/resolve-admin-action";
 import { probeDatabase } from "@/infrastructure/health/probes";
 import { fetchSearchConsoleSummary } from "@/services/google/search-console";
@@ -29,14 +30,16 @@ describe("POST /api/admin/integrations/probe", () => {
     probeDatabaseMock.mockResolvedValue({ ok: true, message: "ok" });
     fetchGscMock.mockResolvedValue({
       ok: true,
-      totals: { clicks: 10, impressions: 100, ctr: 0.1, position: 5 },
+      queries: [],
+      landingPages: [],
+      totals: { clicks: 10, impressions: 100, ctr: 0.1 },
     });
   });
 
   it("returns 401 without admin session", async () => {
     gateAdminReadMock.mockResolvedValue({
       ok: false,
-      result: { success: false, data: null, error: { code: "AUTH" } },
+      result: { success: false, data: null, error: Errors.auth() },
     });
 
     const res = await POST(
