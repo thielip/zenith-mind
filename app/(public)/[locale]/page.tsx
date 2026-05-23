@@ -8,9 +8,8 @@ import { headers } from "next/headers";
 import { env } from "@/env";
 import JsonLd from "@/components/seo/JsonLd";
 import { buildHomeWebPageSchema } from "@/lib/seo/schemas/article.schema";
+import HeroBlock from "@/components/home/HeroBlock";
 import HeroSection from "@/components/home/HeroSection";
-import HeroSlider from "@/components/home/HeroSlider";
-import { heroLcpPreload } from "@/components/home/HeroLcpPreload";
 import SocialProofSection from "@/components/home/SocialProofSection";
 import DeferredHomePageViewTracker from "@/components/analytics/DeferredHomePageViewTracker";
 import {
@@ -77,11 +76,6 @@ export default async function HomePage({ params }: Props) {
     homePageViews,
   } = await loadHomepageData(siteLocale);
 
-  const firstHeroSlide = heroSlides.find((s) => s.isActive && s.imageUrl);
-  if (firstHeroSlide?.imageUrl) {
-    heroLcpPreload(firstHeroSlide.imageUrl, firstHeroSlide.title);
-  }
-
   const h = await headers();
   const nonce = h.get("x-nonce") ?? "";
   const homeWebPageSchema = buildHomeWebPageSchema({
@@ -114,7 +108,7 @@ export default async function HomePage({ params }: Props) {
       <DeferredHomePageViewTracker locale={locale} />
 
       {heroSlides.length > 0 ? (
-        <HeroSlider
+        <HeroBlock
           locale={locale}
           slides={heroSlides}
           autoplaySeconds={siteSettings.heroAutoplaySeconds}

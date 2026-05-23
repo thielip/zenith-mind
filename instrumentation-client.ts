@@ -3,13 +3,14 @@ import * as Sentry from "@sentry/nextjs";
 import { getSentryDsn, isSentryEnabled } from "@/lib/sentry/dsn";
 
 if (isSentryEnabled()) {
+  const isProd = process.env.NODE_ENV === "production";
   Sentry.init({
     dsn: getSentryDsn(),
-    integrations: [Sentry.replayIntegration()],
-    tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1,
-    enableLogs: true,
-    replaysSessionSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1,
-    replaysOnErrorSampleRate: 1,
+    integrations: isProd ? [] : [Sentry.replayIntegration()],
+    tracesSampleRate: isProd ? 0.05 : 1,
+    enableLogs: !isProd,
+    replaysSessionSampleRate: 0,
+    replaysOnErrorSampleRate: isProd ? 0.1 : 1,
     sendDefaultPii: false,
     environment: process.env.NODE_ENV,
   });

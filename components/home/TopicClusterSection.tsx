@@ -46,8 +46,9 @@ export default function TopicClusterSection({ locale, topics, copy }: Props) {
       </header>
 
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {topics.map((topic) => {
+        {topics.map((topic, topicIndex) => {
           const title = isEn ? topic.nameEn : topic.name;
+          const isPriorityRow = topicIndex < 3;
           const imageUrlPrimary = isEn
             ? (topic.imageUrlEn?.trim() || topic.imageUrl?.trim() || "")
             : (topic.imageUrl?.trim() || "");
@@ -75,9 +76,13 @@ export default function TopicClusterSection({ locale, topics, copy }: Props) {
                     src={imageUrlPrimary}
                     alt={imageAlt}
                     fill
-                    responsiveWidths={[280, 360, 480]}
+                    priority={isPriorityRow}
+                    fetchPriority={isPriorityRow ? "high" : "auto"}
+                    responsiveWidths={
+                      isPriorityRow ? [240, 320, 400] : [200, 280, 360]
+                    }
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    quality={54}
+                    quality={isPriorityRow ? 50 : 48}
                     className="object-cover transition duration-500 group-hover:scale-[1.02]"
                   />
                 </div>

@@ -17,7 +17,7 @@ export const DeferredAdSlotBanner = dynamic(
 
 export const DeferredTopicClusterSection = dynamic(
   () => import("@/components/home/TopicClusterSection"),
-  { loading: sk("min-h-[520px]") }
+  { loading: sk("min-h-[520px]"), ssr: true }
 );
 
 export const DeferredImageCarousel = dynamic(

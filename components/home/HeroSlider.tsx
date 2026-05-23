@@ -19,9 +19,16 @@ interface Props {
   locale: string;
   /** 自動切換間隔（秒）；0 或缺省則不自動 */
   autoplaySeconds?: number;
+  /** 首圖已由 Server 繪製時，index=0 不重複載入 client 圖 */
+  serverLcpPainted?: boolean;
 }
 
-export default function HeroSlider({ slides, locale, autoplaySeconds = 0 }: Props) {
+export default function HeroSlider({
+  slides,
+  locale,
+  autoplaySeconds = 0,
+  serverLcpPainted = false,
+}: Props) {
   const isEn = locale === "en";
   const [index, setIndex] = useState(0);
   const activeSlides = useMemo(
@@ -41,7 +48,7 @@ export default function HeroSlider({ slides, locale, autoplaySeconds = 0 }: Prop
       setIndex((c) => (c + 1) % activeSlides.length);
     }, ms);
     return () => window.clearInterval(id);
-  }, [autoplaySeconds, activeSlides]);
+  }, [autoplaySeconds, activeSlides.length]);
 
   if (!slide) return null;
 
@@ -52,16 +59,16 @@ export default function HeroSlider({ slides, locale, autoplaySeconds = 0 }: Prop
   const imageHref = slide.imageHref?.trim() ?? "";
   const external = imageHref ? isExternalHttpUrl(imageHref) : false;
   const isFirstSlide = index === 0;
-  /** LCP 圖勿包外部連結，避免瀏覽器對第三方（如 spinrise player API）建立關鍵路徑 */
   const wrapImageWithLink = Boolean(imageHref) && !(isFirstSlide && external);
+  const showClientImage = !serverLcpPainted || !isFirstSlide;
 
-  const imageEl = (
+  const imageEl = showClientImage ? (
     <ResponsiveImage
       src={slide.imageUrl}
       alt={slide.imageAlt || slide.title}
       fill
-      priority={isFirstSlide}
-      fetchPriority={isFirstSlide ? "high" : "auto"}
+      priority={isFirstSlide && !serverLcpPainted}
+      fetchPriority={isFirstSlide && !serverLcpPainted ? "high" : "auto"}
       responsiveWidths={[...HERO_IMAGE_WIDTHS]}
       sizes={HERO_IMAGE_SIZES}
       quality={HERO_IMAGE_QUALITY}
@@ -71,34 +78,36 @@ export default function HeroSlider({ slides, locale, autoplaySeconds = 0 }: Prop
       }}
       className="object-cover"
     />
-  );
+  ) : null;
 
   return (
-    <section className="relative h-[560px] max-h-[90svh] overflow-hidden bg-neutral-200 text-white">
-      <div className="absolute inset-0 z-0">
-        {!wrapImageWithLink ? (
-          imageEl
-        ) : external ? (
-          <a
-            href={imageHref}
-            target="_blank"
-            rel={EXTERNAL_LINK_REL}
-            className="absolute inset-0 block outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
-            aria-label={isEn ? "Open hero image link" : "開啟大圖連結"}
-          >
-            {imageEl}
-          </a>
-        ) : (
-          <Link
-            href={imageHref}
-            prefetch={false}
-            className="absolute inset-0 block outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
-            aria-label={isEn ? "Open hero image link" : "開啟大圖連結"}
-          >
-            {imageEl}
-          </Link>
-        )}
-      </div>
+    <>
+      {showClientImage ? (
+        <div className="absolute inset-0 z-[1]">
+          {!wrapImageWithLink ? (
+            imageEl
+          ) : external ? (
+            <a
+              href={imageHref}
+              target="_blank"
+              rel={EXTERNAL_LINK_REL}
+              className="absolute inset-0 block outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+              aria-label={isEn ? "Open hero image link" : "開啟大圖連結"}
+            >
+              {imageEl}
+            </a>
+          ) : (
+            <Link
+              href={imageHref}
+              prefetch={false}
+              className="absolute inset-0 block outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+              aria-label={isEn ? "Open hero image link" : "開啟大圖連結"}
+            >
+              {imageEl}
+            </Link>
+          )}
+        </div>
+      ) : null}
 
       <div
         className="pointer-events-auto absolute z-10 max-w-[min(38rem,calc(100%-2rem))] -translate-y-1/2 rounded-3xl border border-white/20 bg-neutral-950/90 px-5 py-6 text-white shadow-2xl shadow-black/50 ring-1 ring-black/25 backdrop-blur-sm sm:px-7 sm:py-8"
@@ -166,6 +175,6 @@ export default function HeroSlider({ slides, locale, autoplaySeconds = 0 }: Prop
           </button>
         </div>
       )}
-    </section>
+    </>
   );
 }

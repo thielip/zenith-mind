@@ -1,54 +1,107 @@
 "use client";
 
 import Image from "next/image";
-import QRCode from "qrcode";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { SiteSettingsData } from "@/lib/site/types";
+import LazyFacebookEmbed from "@/components/layout/LazyFacebookEmbed";
 
 interface Props {
   settings: SiteSettingsData;
   locale: string;
 }
 
+function LazyInstagramEmbed({ embedUrl }: { embedUrl: string }) {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    const el = hostRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setShow(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: "240px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  return (
+    <div ref={hostRef} className="min-h-[220px] w-full">
+      {show ? (
+        <iframe
+          title="Instagram embed"
+          src={embedUrl}
+          height="220"
+          className="w-full rounded-xl border border-gray-100"
+          loading="lazy"
+        />
+      ) : null}
+    </div>
+  );
+}
+
 export default function SocialSidebar({ settings, locale }: Props) {
   const isEn = locale === "en";
-  const { facebookPageUrl, youtubeChannelUrl, instagramUrl, lineUrl, lineLabel } = settings.socialLinks;
+  const { facebookPageUrl, youtubeChannelUrl, instagramUrl, lineUrl, lineLabel } =
+    settings.socialLinks;
   const [lineQrCode, setLineQrCode] = useState("");
+  const [visible, setVisible] = useState(false);
+  const asideRef = useRef<HTMLElement>(null);
   const hasSocial =
     settings.socialSidebarActive &&
     (facebookPageUrl || youtubeChannelUrl || instagramUrl || settings.instagramEmbedUrl || lineUrl);
 
   useEffect(() => {
-    let isMounted = true;
-    if (!lineUrl) {
+    const el = asideRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setVisible(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: "320px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!visible || !lineUrl) {
       setLineQrCode("");
       return;
     }
-
-    QRCode.toDataURL(lineUrl, {
-      margin: 1,
-      width: 180,
-      color: {
-        dark: "#111827",
-        light: "#ffffff",
-      },
-    })
+    let cancelled = false;
+    import("qrcode")
+      .then((QRCode) =>
+        QRCode.toDataURL(lineUrl, {
+          margin: 1,
+          width: 180,
+          color: { dark: "#111827", light: "#ffffff" },
+        })
+      )
       .then((url) => {
-        if (isMounted) setLineQrCode(url);
+        if (!cancelled) setLineQrCode(url);
       })
       .catch(() => {
-        if (isMounted) setLineQrCode("");
+        if (!cancelled) setLineQrCode("");
       });
-
     return () => {
-      isMounted = false;
+      cancelled = true;
     };
-  }, [lineUrl]);
+  }, [lineUrl, visible]);
 
   if (!hasSocial) return null;
 
   return (
     <aside
+      ref={asideRef}
       aria-label={isEn ? "Social channels" : "社群頻道"}
       className="mx-auto w-full max-w-6xl px-4 pb-10 xl:fixed xl:right-4 xl:top-36 xl:z-30 xl:w-72 xl:px-0 xl:pb-0"
     >
@@ -59,19 +112,7 @@ export default function SocialSidebar({ settings, locale }: Props) {
           </p>
         </div>
         <div className="space-y-3 p-4">
-          {facebookPageUrl && (
-            <iframe
-              title="Facebook Page"
-              src={`https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(
-                facebookPageUrl
-              )}&tabs=timeline&width=260&height=180&small_header=true&adapt_container_width=true&hide_cover=false&show_facepile=true`}
-              width="260"
-              height="180"
-              className="w-full rounded-xl border-0"
-              loading="lazy"
-              allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-            />
-          )}
+          {facebookPageUrl ? <LazyFacebookEmbed pageUrl={facebookPageUrl} /> : null}
 
           {youtubeChannelUrl && (
             <a
@@ -88,13 +129,7 @@ export default function SocialSidebar({ settings, locale }: Props) {
           )}
 
           {settings.instagramEmbedUrl ? (
-            <iframe
-              title="Instagram embed"
-              src={settings.instagramEmbedUrl}
-              height="220"
-              className="w-full rounded-xl border border-gray-100"
-              loading="lazy"
-            />
+            <LazyInstagramEmbed embedUrl={settings.instagramEmbedUrl} />
           ) : instagramUrl ? (
             <a
               href={instagramUrl}

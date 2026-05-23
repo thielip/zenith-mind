@@ -59,11 +59,16 @@ export default function ConsentGatedAnalytics({ ga4Id, gtmId, nonce }: Props) {
       window.addEventListener(name, arm, { once: true, passive: true });
     }
 
-    const fallbackMs = 20_000;
-    const timer = window.setTimeout(arm, fallbackMs);
+    const idleId =
+      typeof window.requestIdleCallback === "function"
+        ? window.requestIdleCallback(arm, { timeout: 12_000 })
+        : undefined;
+    const timerId =
+      idleId === undefined ? globalThis.setTimeout(arm, 12_000) : undefined;
 
     return () => {
-      window.clearTimeout(timer);
+      if (idleId !== undefined) window.cancelIdleCallback(idleId);
+      if (timerId !== undefined) globalThis.clearTimeout(timerId);
       for (const name of interactionEvents) {
         window.removeEventListener(name, arm);
       }

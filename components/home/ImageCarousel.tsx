@@ -18,26 +18,38 @@ interface Props {
 export default function ImageCarousel({ locale, items, autoplaySeconds = 0, copy }: Props) {
   const isEn = locale === "en";
   const scrollRef = useRef<HTMLDivElement>(null);
+  const maxScrollRef = useRef(0);
   const activeItems = useMemo(() => items.filter((item) => item.isActive && item.imageUrl), [items]);
 
   useEffect(() => {
-    if (autoplaySeconds <= 0 || activeItems.length <= 1) return;
-    const el = scrollRef.current;
-    if (!el) return;
-    const step = () => {
-      requestAnimationFrame(() => {
-        const node = scrollRef.current;
-        if (!node) return;
-        const delta = 340;
-        const maxScroll = node.scrollWidth - node.clientWidth - 2;
-        if (node.scrollLeft >= maxScroll) {
-          node.scrollTo({ left: 0, behavior: "smooth" });
-        } else {
-          node.scrollBy({ left: delta, behavior: "smooth" });
-        }
-      });
+    const node = scrollRef.current;
+    if (!node) return;
+
+    const measure = () => {
+      maxScrollRef.current = Math.max(0, node.scrollWidth - node.clientWidth - 2);
     };
-    const id = window.setInterval(step, autoplaySeconds * 1000);
+
+    measure();
+    const ro = new ResizeObserver(() => {
+      requestAnimationFrame(measure);
+    });
+    ro.observe(node);
+    return () => ro.disconnect();
+  }, [activeItems.length]);
+
+  useEffect(() => {
+    if (autoplaySeconds <= 0 || activeItems.length <= 1) return;
+    const delta = 340;
+    const id = window.setInterval(() => {
+      const node = scrollRef.current;
+      if (!node) return;
+      const maxScroll = maxScrollRef.current;
+      if (node.scrollLeft >= maxScroll) {
+        node.scrollTo({ left: 0, behavior: "smooth" });
+      } else {
+        node.scrollBy({ left: delta, behavior: "smooth" });
+      }
+    }, autoplaySeconds * 1000);
     return () => window.clearInterval(id);
   }, [autoplaySeconds, activeItems.length]);
 
@@ -107,9 +119,9 @@ export default function ImageCarousel({ locale, items, autoplaySeconds = 0, copy
                   src={item.imageUrl}
                   alt={item.imageAlt || item.title}
                   fill
-                  responsiveWidths={[288, 320, 400]}
+                  responsiveWidths={[256, 288, 320]}
                   sizes="(max-width: 640px) 18rem, 320px"
-                  quality={54}
+                  quality={50}
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-blue-950/30 to-transparent" />
