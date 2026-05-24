@@ -35,7 +35,8 @@ function wrapClient(apiKey: string): GeminiCompatClient {
       completions: {
         create: (params) => {
           if (params.stream) {
-            const { stream: _s, ...rest } = params;
+            const rest = { ...params };
+            delete rest.stream;
             return createGeminiChatCompletionStream(
               apiKey,
               rest
