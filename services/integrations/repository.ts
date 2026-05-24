@@ -47,6 +47,23 @@ export async function getIntegrationPayload(
   }
 }
 
+/** 表單留空的 secret 欄位沿用 DB 既有值，避免儲存時誤清空 */
+export async function mergeIntegrationFormValues(
+  provider: IntegrationProviderId,
+  values: Record<string, string>,
+  secretKeys: string[]
+): Promise<Record<string, string>> {
+  const stored = await listIntegrationFormValues();
+  const prev = stored[provider] ?? {};
+  const merged = { ...values };
+  for (const key of secretKeys) {
+    if (!merged[key]?.trim() && prev[key]?.trim()) {
+      merged[key] = prev[key];
+    }
+  }
+  return merged;
+}
+
 export async function listIntegrationFormValues(): Promise<
   Partial<Record<IntegrationProviderId, Record<string, string>>>
 > {

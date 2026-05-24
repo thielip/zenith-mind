@@ -60,7 +60,12 @@ export const INTEGRATION_PROVIDERS: IntegrationProviderDef[] = [
     fields: [
       { key: "GOOGLE_ADS_CLIENT_ID", label: "OAuth Client ID" },
       { key: "GOOGLE_ADS_CLIENT_SECRET", label: "Client Secret", secret: true },
-      { key: "GOOGLE_ADS_REFRESH_TOKEN", label: "Refresh Token", secret: true },
+      {
+        key: "GOOGLE_ADS_REFRESH_TOKEN",
+        label: "Refresh Token",
+        secret: true,
+        placeholder: "執行 npm run ads:oauth 取得；留空儲存時保留既有值",
+      },
       { key: "GOOGLE_ADS_DEVELOPER_TOKEN", label: "Developer Token", secret: true },
       { key: "GOOGLE_ADS_CUSTOMER_ID", label: "Customer ID" },
     ],

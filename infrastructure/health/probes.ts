@@ -100,8 +100,15 @@ export async function probeGoogleAdsOAuth(): Promise<ProbeResult> {
   const clientSecret = process.env["GOOGLE_ADS_CLIENT_SECRET"]?.trim();
   const refreshToken = process.env["GOOGLE_ADS_REFRESH_TOKEN"]?.trim();
 
-  if (!clientId || !clientSecret || !refreshToken) {
-    return { ok: false, message: "OAuth 變數未齊全" };
+  if (!clientId || !clientSecret) {
+    return { ok: false, message: "缺少 OAuth Client ID 或 Client Secret" };
+  }
+  if (!refreshToken) {
+    return {
+      ok: false,
+      message:
+        "缺少 Refresh Token。請執行 scripts/google-ads-oauth-grant.mjs 重新授權後貼上。",
+    };
   }
 
   try {
@@ -117,11 +124,25 @@ export async function probeGoogleAdsOAuth(): Promise<ProbeResult> {
         }),
       })
     );
-    const body = (await res.json()) as { access_token?: string; error?: string };
+    const body = (await res.json()) as {
+      access_token?: string;
+      error?: string;
+      error_description?: string;
+    };
     if (!res.ok || !body.access_token) {
+      const detail = body.error_description?.trim();
+      if (body.error === "invalid_grant") {
+        return {
+          ok: false,
+          message: detail
+            ? `invalid_grant：${detail}（請重新執行 google-ads-oauth-grant 取得新 Refresh Token）`
+            : "invalid_grant：Refresh Token 已失效或與 Client ID 不符，請重新授權",
+        };
+      }
       return {
         ok: false,
-        message: body.error ?? `Token 交換失敗（HTTP ${res.status}）`,
+        message:
+          detail ?? body.error ?? `Token 交換失敗（HTTP ${res.status}）`,
       };
     }
     return { ok: true, message: "Refresh Token 可換取 Access Token" };

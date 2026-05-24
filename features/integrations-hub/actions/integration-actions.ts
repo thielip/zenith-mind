@@ -16,6 +16,7 @@ import {
 } from "@/lib/integrations/providers";
 import {
   markIntegrationStatus,
+  mergeIntegrationFormValues,
   saveIntegrationDraft,
 } from "@/services/integrations/repository";
 import { probeIntegrationProvider } from "@/services/integrations/probe-provider";
@@ -23,12 +24,20 @@ import { withIntegrationValues } from "@/services/integrations/runtime-env";
 
 const valuesSchema = z.record(z.string(), z.string());
 
+function secretFieldKeys(provider: IntegrationProviderId) {
+  return getProviderDef(provider).fields.filter((f) => f.secret).map((f) => f.key);
+}
+
 export async function saveIntegrationAction(
   providerRaw: string,
   valuesRaw: Record<string, string>
 ) {
   const provider = integrationProviderIdSchema.parse(providerRaw);
-  const values = valuesSchema.parse(valuesRaw);
+  const values = await mergeIntegrationFormValues(
+    provider,
+    valuesSchema.parse(valuesRaw),
+    secretFieldKeys(provider)
+  );
   await saveIntegrationDraft(provider, values);
   revalidateCommandCenterCache();
   revalidatePath("/admin/dashboard/integrations", "page");
@@ -41,8 +50,12 @@ export async function activateIntegrationAction(
   valuesRaw: Record<string, string>
 ) {
   const provider = integrationProviderIdSchema.parse(providerRaw);
-  const values = valuesSchema.parse(valuesRaw);
   const def = getProviderDef(provider);
+  const values = await mergeIntegrationFormValues(
+    provider,
+    valuesSchema.parse(valuesRaw),
+    secretFieldKeys(provider)
+  );
 
   await saveIntegrationDraft(provider, values);
 

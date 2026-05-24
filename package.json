@@ -31,6 +31,10 @@
     "verify:sentry": "node scripts/verify-sentry-env.mjs",
     "admin:ensure": "node scripts/ensure-admin.mjs",
     "guest:ensure": "node scripts/ensure-guest.mjs",
+    "ads:oauth": "npx tsx --env-file=.env.local scripts/google-ads-oauth-grant.mjs",
+    "ads:probe": "npx tsx --env-file=.env.local scripts/probe-google-ads-oauth.mjs",
+    "ads:upsert": "npx tsx --env-file=.env.local scripts/upsert-google-ads-from-env.mjs",
+    "ads:sync-cf": "npx tsx --env-file=.env.local scripts/sync-wrangler-google-ads-secrets.mjs",
     "redirects:warm": "node scripts/warm-redirect-cache.mjs",
     "db:generate:local": "node scripts/prisma-with-local-env.mjs generate",
     "postinstall": "prisma generate"
