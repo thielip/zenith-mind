@@ -5,6 +5,7 @@
 import { isCfPublicRuntime } from "@/lib/db/cf-public-runtime";
 import { fetchPostViewTotal } from "@/lib/analytics/post-view-totals";
 import { logBlogRenderError } from "@/lib/blog/log-blog-render-error";
+import { toSafeDate } from "@/lib/blog/safe-blog-dates";
 import { supabaseRestWithFallback } from "@/lib/db/supabase-rest";
 import type {
   BlogPostDetail,
@@ -186,7 +187,7 @@ function mapPostDetailRow(
     titleEn: row.titleEn,
     excerpt: row.excerpt,
     excerptEn: row.excerptEn,
-    content: row.content,
+    content: typeof row.content === "string" ? row.content : "",
     contentEn: row.contentEn,
     contentType: row.contentType ?? "markdown",
     contentBlocks: row.contentBlocks,
@@ -196,8 +197,8 @@ function mapPostDetailRow(
     coverImageWidth: row.coverImageWidth,
     coverImageHeight: row.coverImageHeight,
     publishedAt: parseDate(row.publishedAt),
-    createdAt: new Date(row.createdAt),
-    updatedAt: new Date(row.updatedAt),
+    createdAt: toSafeDate(row.createdAt),
+    updatedAt: toSafeDate(row.updatedAt),
     categoryId: row.categoryId,
     readingTime: row.readingTime ?? 0,
     isPasswordProtected: Boolean(row.isPasswordProtected),

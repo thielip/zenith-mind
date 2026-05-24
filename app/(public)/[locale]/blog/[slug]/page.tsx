@@ -143,7 +143,8 @@ export default async function BlogPostPage({ params }: Props) {
       slug,
       cfRuntime: isCfPublicRuntime(),
     });
-    throw error;
+    // 避免未處理例外變成白屏 500（資料偶發異常或 Worker 逾時）
+    notFound();
   }
 }
 
@@ -275,7 +276,9 @@ async function renderBlogPostPage(locale: string, slug: string) {
           <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600">
             <time dateTime={publishedIso}>
               {publishedIso
-                ? post.publishedAt?.toLocaleDateString(isEn ? "en-US" : "zh-TW")
+                ? toSafeDate(post.publishedAt).toLocaleDateString(
+                    isEn ? "en-US" : "zh-TW"
+                  )
                 : null}
             </time>
             <span className="hidden sm:inline" aria-hidden="true">
