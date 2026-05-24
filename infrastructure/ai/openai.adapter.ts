@@ -1,8 +1,12 @@
 // infrastructure/ai/openai.adapter.ts — Node Runtime Only
-// AiPort 實作：透過 OpenAI SDK 呼叫 Gemini OpenAI 相容端點
+// AiPort 實作：透過 Gemini OpenAI 相容端點（原生 fetch）
 // ⚠ GEMINI_API_KEY 絕不可 NEXT_PUBLIC_
 
-import OpenAI from "openai";
+import {
+  createGeminiChatCompletionStream,
+  GeminiApiError,
+} from "@/lib/ai/gemini-compat-api";
+import { env } from "@/env";
 import {
   GEMINI_FLASH_LITE_MODEL,
   getGeminiOpenAIClient,
@@ -12,7 +16,6 @@ import type { ActionResult } from "@/domain/shared/core.types";
 import { Errors } from "@/domain/shared/core.types";
 
 export class OpenAiAdapter implements AiPort {
-
   async generate(
     prompt: string,
     options?: AiPromptOptions
@@ -21,10 +24,10 @@ export class OpenAiAdapter implements AiPort {
       const client = getGeminiOpenAIClient();
 
       const response = await client.chat.completions.create({
-        model:       GEMINI_FLASH_LITE_MODEL,
+        model: GEMINI_FLASH_LITE_MODEL,
         temperature: options?.temperature ?? 0.7,
-        max_tokens:  options?.maxTokens ?? 2000,
-        messages:    [{ role: "user", content: prompt }],
+        max_tokens: options?.maxTokens ?? 2000,
+        messages: [{ role: "user", content: prompt }],
         ...(options?.jsonMode ? { response_format: { type: "json_object" } } : {}),
       });
 
@@ -36,17 +39,16 @@ export class OpenAiAdapter implements AiPort {
       return {
         success: true,
         data: {
-          text:         choice.message.content,
-          model:        response.model,
-          inputTokens:  response.usage?.prompt_tokens    ?? 0,
+          text: choice.message.content,
+          model: response.model,
+          inputTokens: response.usage?.prompt_tokens ?? 0,
           outputTokens: response.usage?.completion_tokens ?? 0,
-          totalTokens:  response.usage?.total_tokens      ?? 0,
+          totalTokens: response.usage?.total_tokens ?? 0,
         },
         error: null,
       };
-
     } catch (e: unknown) {
-      if (e instanceof OpenAI.APIError) {
+      if (e instanceof GeminiApiError) {
         if (e.status === 429) return { success: false, data: null, error: Errors.aiRateLimit() };
         if (e.status === 504) return { success: false, data: null, error: Errors.aiTimeout() };
       }
@@ -56,14 +58,12 @@ export class OpenAiAdapter implements AiPort {
   }
 
   async *stream(prompt: string, options?: AiPromptOptions): AsyncIterable<string> {
-    const client = getGeminiOpenAIClient();
-    const stream = await client.chat.completions.create({
-      model:    GEMINI_FLASH_LITE_MODEL,
+    for await (const chunk of createGeminiChatCompletionStream(env.GEMINI_API_KEY, {
+      model: GEMINI_FLASH_LITE_MODEL,
       messages: [{ role: "user", content: prompt }],
-      stream:   true,
-    });
-
-    for await (const chunk of stream) {
+      temperature: options?.temperature,
+      max_tokens: options?.maxTokens,
+    })) {
       const delta = chunk.choices[0]?.delta?.content;
       if (delta) yield delta;
     }

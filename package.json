@@ -37,6 +37,8 @@
     "ads:sync-cf": "npx tsx --env-file=.env.local scripts/sync-wrangler-google-ads-secrets.mjs",
     "gsc:sync-cf": "npx tsx --env-file=.env.local scripts/sync-wrangler-gsc-secrets.mjs",
     "gsc:test": "npx tsx --env-file=.env.local scripts/test-search-console.mjs",
+    "test:war-room": "npx tsx --env-file=.env.local scripts/test-war-room-no-deprecation.mjs",
+    "test:admin": "npx playwright test tests/admin/admin-buttons.spec.ts",
     "redirects:warm": "node scripts/warm-redirect-cache.mjs",
     "db:generate:local": "node scripts/prisma-with-local-env.mjs generate",
     "postinstall": "prisma generate"
@@ -79,7 +81,6 @@
     "next": "^15.5.18",
     "next-intl": "^4.11.2",
     "nodemailer": "^8.0.7",
-    "openai": "4.98.0",
     "pg": "^8.20.0",
     "prisma": "6.8.0",
     "qrcode": "1.5.4",
