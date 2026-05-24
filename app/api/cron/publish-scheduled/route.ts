@@ -56,6 +56,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 
   revalidateTag("posts");
+  revalidateTag("sitemap");
+  revalidatePath("/sitemap.xml");
   revalidatePath("/zh-TW/blog");
   revalidatePath("/en/blog");
 

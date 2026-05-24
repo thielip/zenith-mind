@@ -3,7 +3,9 @@ import { assertRevalidateTarget } from "@/lib/security/revalidate-target";
 describe("assertRevalidateTarget", () => {
   it("accepts safe paths and tags", () => {
     expect(assertRevalidateTarget("path", "/zh-TW/blog")).toBe(true);
+    expect(assertRevalidateTarget("path", "/sitemap.xml")).toBe(true);
     expect(assertRevalidateTarget("tag", "posts")).toBe(true);
+    expect(assertRevalidateTarget("tag", "sitemap")).toBe(true);
   });
 
   it("rejects path traversal and odd targets", () => {

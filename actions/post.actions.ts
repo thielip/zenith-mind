@@ -278,6 +278,8 @@ export async function updatePostAction(
 
     // ISR 重新驗證
     revalidateTag("posts");
+    revalidateTag("sitemap");
+    revalidatePath("/sitemap.xml");
     revalidatePath(`/zh-TW/blog/${post.slug}`);
     revalidatePath(`/en/blog/${post.slug}`);
     revalidatePath("/zh-TW/blog");
@@ -418,6 +420,8 @@ export async function deletePostAction(
     });
 
     revalidateTag("posts");
+    revalidateTag("sitemap");
+    revalidatePath("/sitemap.xml");
     revalidatePath("/zh-TW/blog");
     revalidatePath("/en/blog");
     revalidatePath(`/zh-TW/blog/${post.slug}`);

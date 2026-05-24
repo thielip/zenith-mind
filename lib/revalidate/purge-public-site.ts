@@ -46,7 +46,9 @@ export async function purgePublicSiteAfterPostChange(slug: string): Promise<void
   await Promise.all([
     purgePublicSiteCache({ type: "tag", value: "posts" }),
     purgePublicSiteCache({ type: "tag", value: "blog" }),
+    purgePublicSiteCache({ type: "tag", value: "sitemap" }),
     purgePublicSiteCache({ type: "tag", value: "page-view-stats" }),
+    purgePublicSiteCache({ type: "path", value: "/sitemap.xml" }),
     purgePublicSiteCache({ type: "path", value: `/zh-TW/blog/${slug}` }),
     purgePublicSiteCache({ type: "path", value: `/en/blog/${slug}` }),
     purgePublicSiteCache({ type: "path", value: "/zh-TW/blog" }),
