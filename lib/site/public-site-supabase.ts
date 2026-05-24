@@ -153,7 +153,7 @@ export async function getSiteSettingsViaSupabase(): Promise<SiteSettingsData> {
     "site_settings",
     {
       select:
-        "logoUrl,logoAlt,quickLinks,socialLinks,homepageCopy,aboutSections,instagramEmbedUrl,socialSidebarActive,heroAutoplaySeconds,carouselAutoplaySeconds",
+        "logoUrl,logoAlt,quickLinks,socialLinks,homepageCopy,aboutSections,privacyPolicySections,termsOfServiceSections,privacyPolicyHtml,privacyPolicyHtmlEn,termsOfServiceHtml,termsOfServiceHtmlEn,instagramEmbedUrl,socialSidebarActive,heroAutoplaySeconds,carouselAutoplaySeconds",
       id: "eq.site",
       limit: "1",
     },

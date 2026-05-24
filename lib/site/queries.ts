@@ -3,6 +3,18 @@ import { DEFAULT_CATEGORIES } from "@/lib/categories/defaults";
 import { DEFAULT_SITE_LOGO_PATH, resolveSiteLogoSrc } from "@/lib/site/brand";
 import { DEFAULT_QUICK_LINKS } from "@/lib/site/default-quick-links";
 import { isPrismaMissingColumnError } from "@/lib/site/prisma-compat";
+import {
+  DEFAULT_PRIVACY_POLICY_SECTIONS,
+  DEFAULT_TERMS_OF_SERVICE_SECTIONS,
+} from "@/lib/site/legal-defaults";
+import {
+  DEFAULT_PRIVACY_POLICY_HTML,
+  DEFAULT_PRIVACY_POLICY_HTML_EN,
+  DEFAULT_TERMS_OF_SERVICE_HTML,
+  DEFAULT_TERMS_OF_SERVICE_HTML_EN,
+  resolveLegalHtml,
+} from "@/lib/site/legal-html";
+import { decodeLegalHtmlSections } from "@/lib/site/legal-storage";
 import type {
   QuickLinkItem,
   SiteSettingsData,
@@ -154,6 +166,12 @@ export const DEFAULT_SITE_SETTINGS: SiteSettingsData = {
   socialLinks: {},
   homepageCopy: DEFAULT_HOMEPAGE_COPY,
   aboutSections: DEFAULT_ABOUT_SECTIONS,
+  privacyPolicySections: DEFAULT_PRIVACY_POLICY_SECTIONS,
+  termsOfServiceSections: DEFAULT_TERMS_OF_SERVICE_SECTIONS,
+  privacyPolicyHtml: DEFAULT_PRIVACY_POLICY_HTML,
+  privacyPolicyHtmlEn: DEFAULT_PRIVACY_POLICY_HTML_EN,
+  termsOfServiceHtml: DEFAULT_TERMS_OF_SERVICE_HTML,
+  termsOfServiceHtmlEn: DEFAULT_TERMS_OF_SERVICE_HTML_EN,
   instagramEmbedUrl: "",
   socialSidebarActive: false,
   heroAutoplaySeconds: 8,
@@ -169,11 +187,15 @@ function asQuickLinks(value: unknown): QuickLinkItem[] {
     const label = typeof record["label"] === "string" ? record["label"] : "";
     const href = typeof record["href"] === "string" ? record["href"] : "";
     if (!label || !href) continue;
-    links.push({
-      label,
-      labelEn: typeof record["labelEn"] === "string" ? record["labelEn"] : "",
-      href,
-    });
+    const hrefKey = href.trim().toLowerCase();
+    const def = DEFAULT_QUICK_LINKS.find(
+      (d) => d.href.trim().toLowerCase() === hrefKey
+    );
+    const labelEn =
+      typeof record["labelEn"] === "string" && record["labelEn"].trim()
+        ? record["labelEn"].trim()
+        : (def?.labelEn ?? "");
+    links.push({ label, labelEn, href });
   }
   if (links.length === 0) return DEFAULT_QUICK_LINKS;
 
@@ -299,24 +321,49 @@ export function asHomepageCopy(value: unknown): HomepageCopy {
   };
 }
 
-function asAboutSections(value: unknown): AboutSectionData[] {
-  if (!Array.isArray(value)) return DEFAULT_ABOUT_SECTIONS;
+function parseContentSections(
+  value: unknown,
+  fallback: AboutSectionData[],
+  idPrefix: string
+): AboutSectionData[] {
+  if (!Array.isArray(value)) return fallback;
   const sections: AboutSectionData[] = [];
   value.forEach((item, index) => {
     if (!item || typeof item !== "object") return;
     const record = item as Record<string, unknown>;
     const section: AboutSectionData = {
-        id: asText(record["id"], `about-${index}`),
-        title: asText(record["title"]),
-        titleEn: asText(record["titleEn"]),
-        body: asText(record["body"]),
-        bodyEn: asText(record["bodyEn"]),
-        sortOrder: typeof record["sortOrder"] === "number" ? record["sortOrder"] : index,
+      id: asText(record["id"], `${idPrefix}-${index}`),
+      title: asText(record["title"]),
+      titleEn: asText(record["titleEn"]),
+      body: asText(record["body"]),
+      bodyEn: asText(record["bodyEn"]),
+      sortOrder:
+        typeof record["sortOrder"] === "number" ? record["sortOrder"] : index,
     };
     if (section.title || section.body) sections.push(section);
   });
   sections.sort((a, b) => a.sortOrder - b.sortOrder);
-  return sections.length > 0 ? sections : DEFAULT_ABOUT_SECTIONS;
+  return sections.length > 0 ? sections : fallback;
+}
+
+function asAboutSections(value: unknown): AboutSectionData[] {
+  return parseContentSections(value, DEFAULT_ABOUT_SECTIONS, "about");
+}
+
+function asPrivacyPolicySections(value: unknown): AboutSectionData[] {
+  return parseContentSections(
+    value,
+    DEFAULT_PRIVACY_POLICY_SECTIONS,
+    "privacy"
+  );
+}
+
+function asTermsOfServiceSections(value: unknown): AboutSectionData[] {
+  return parseContentSections(
+    value,
+    DEFAULT_TERMS_OF_SERVICE_SECTIONS,
+    "terms"
+  );
 }
 
 function asSocialLinks(value: unknown): SocialLinks {
@@ -345,14 +392,38 @@ export type SiteSettingsDbRow = {
   socialLinks: unknown;
   homepageCopy: unknown;
   aboutSections: unknown;
+  privacyPolicySections?: unknown;
+  termsOfServiceSections?: unknown;
+  privacyPolicyHtml?: string | null;
+  privacyPolicyHtmlEn?: string | null;
+  termsOfServiceHtml?: string | null;
+  termsOfServiceHtmlEn?: string | null;
   instagramEmbedUrl: string | null;
   socialSidebarActive: boolean;
   heroAutoplaySeconds?: number | null;
   carouselAutoplaySeconds?: number | null;
 };
 
+function resolveLegalFields(
+  sections: AboutSectionData[],
+  html: string | null | undefined,
+  htmlEn: string | null | undefined,
+  locale: "zh" | "en"
+): string {
+  const decoded = decodeLegalHtmlSections(sections);
+  if (decoded.html || decoded.htmlEn) {
+    return locale === "en"
+      ? decoded.htmlEn || decoded.html
+      : decoded.html || decoded.htmlEn;
+  }
+  return resolveLegalHtml(html, htmlEn, sections, locale);
+}
+
 /** 供 Prisma / Supabase REST 共用（公開站 Edge 映射） */
 export function mapSiteSettingsRow(row: SiteSettingsDbRow): SiteSettingsData {
+  const privacySections = asPrivacyPolicySections(row.privacyPolicySections);
+  const termsSections = asTermsOfServiceSections(row.termsOfServiceSections);
+
   return {
     logoUrl: resolveSiteLogoSrc(row.logoUrl),
     logoAlt: row.logoAlt ?? DEFAULT_SITE_SETTINGS.logoAlt,
@@ -360,6 +431,32 @@ export function mapSiteSettingsRow(row: SiteSettingsDbRow): SiteSettingsData {
     socialLinks: asSocialLinks(row.socialLinks),
     homepageCopy: asHomepageCopy(row.homepageCopy),
     aboutSections: asAboutSections(row.aboutSections),
+    privacyPolicySections: decodeLegalHtmlSections(privacySections).sections,
+    termsOfServiceSections: decodeLegalHtmlSections(termsSections).sections,
+    privacyPolicyHtml: resolveLegalFields(
+      privacySections,
+      row.privacyPolicyHtml,
+      row.privacyPolicyHtmlEn,
+      "zh"
+    ),
+    privacyPolicyHtmlEn: resolveLegalFields(
+      privacySections,
+      row.privacyPolicyHtml,
+      row.privacyPolicyHtmlEn,
+      "en"
+    ),
+    termsOfServiceHtml: resolveLegalFields(
+      termsSections,
+      row.termsOfServiceHtml,
+      row.termsOfServiceHtmlEn,
+      "zh"
+    ),
+    termsOfServiceHtmlEn: resolveLegalFields(
+      termsSections,
+      row.termsOfServiceHtml,
+      row.termsOfServiceHtmlEn,
+      "en"
+    ),
     instagramEmbedUrl: row.instagramEmbedUrl ?? "",
     socialSidebarActive: row.socialSidebarActive,
     heroAutoplaySeconds:
@@ -388,29 +485,35 @@ export async function getSiteSettings(): Promise<SiteSettingsData> {
       return DEFAULT_SITE_SETTINGS;
     }
 
-    type LegacyRow = {
-      id: string;
-      logoUrl: string | null;
-      logoAlt: string | null;
-      quickLinks: unknown;
-      socialLinks: unknown;
-      homepageCopy: unknown;
-      aboutSections: unknown;
-      instagramEmbedUrl: string | null;
-      socialSidebarActive: boolean;
-    };
+    type LegacyRow = SiteSettingsDbRow & { id: string };
 
-    const rows = await prisma.$queryRaw<LegacyRow[]>`
-      SELECT id, "logoUrl", "logoAlt", "quickLinks", "socialLinks", "homepageCopy",
-             "aboutSections", "instagramEmbedUrl", "socialSidebarActive"
-      FROM site_settings
-      WHERE id = 'site'
-      LIMIT 1
-    `;
-    const row = rows[0];
-    if (!row) return DEFAULT_SITE_SETTINGS;
-
-    return mapSiteSettingsRow(row);
+    try {
+      const rows = await prisma.$queryRaw<LegacyRow[]>`
+        SELECT id, "logoUrl", "logoAlt", "quickLinks", "socialLinks", "homepageCopy",
+               "aboutSections", "privacyPolicySections", "termsOfServiceSections",
+               "instagramEmbedUrl", "socialSidebarActive"
+        FROM site_settings
+        WHERE id = 'site'
+        LIMIT 1
+      `;
+      const row = rows[0];
+      if (!row) return DEFAULT_SITE_SETTINGS;
+      return mapSiteSettingsRow(row);
+    } catch (inner) {
+      if (!isPrismaMissingColumnError(inner)) {
+        return DEFAULT_SITE_SETTINGS;
+      }
+      const rows = await prisma.$queryRaw<LegacyRow[]>`
+        SELECT id, "logoUrl", "logoAlt", "quickLinks", "socialLinks", "homepageCopy",
+               "aboutSections", "instagramEmbedUrl", "socialSidebarActive"
+        FROM site_settings
+        WHERE id = 'site'
+        LIMIT 1
+      `;
+      const row = rows[0];
+      if (!row) return DEFAULT_SITE_SETTINGS;
+      return mapSiteSettingsRow(row);
+    }
   }
 }
 

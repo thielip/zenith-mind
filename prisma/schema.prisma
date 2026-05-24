@@ -507,6 +507,12 @@ model SiteSettings {
   socialLinks         Json?
   homepageCopy        Json?
   aboutSections       Json?
+  privacyPolicySections Json?
+  termsOfServiceSections Json?
+  privacyPolicyHtml      String? @db.Text
+  privacyPolicyHtmlEn    String? @db.Text
+  termsOfServiceHtml     String? @db.Text
+  termsOfServiceHtmlEn   String? @db.Text
   instagramEmbedUrl   String?
   socialSidebarActive Boolean @default(false)
 

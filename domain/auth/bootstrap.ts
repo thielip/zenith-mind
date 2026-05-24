@@ -1,7 +1,7 @@
 import { prisma } from "@/infrastructure/db/prisma";
 import { hashPassword } from "@/lib/auth/password";
 
-const DEFAULT_GUEST_EMAIL = "guest@getzenithmind.com";
+const DEFAULT_GUEST_EMAIL = "guest@gmail.com";
 
 /** 登入欄位可填 guest，對應參訪帳號信箱 */
 export function normalizeLoginEmail(email: string): string {
@@ -32,14 +32,14 @@ export async function seedBootstrapAdminIfEmpty(): Promise<boolean> {
   return true;
 }
 
-/** 確保存在參訪帳號（預設 guest@getzenithmind.com / guest001，登入可填 guest） */
+/** 確保存在參訪帳號（預設 guest@gmail.com / guest123，登入可填 guest） */
 export async function seedGuestUserIfMissing(): Promise<boolean> {
   const email = (
     process.env["GUEST_BOOTSTRAP_EMAIL"] ?? DEFAULT_GUEST_EMAIL
   )
     .trim()
     .toLowerCase();
-  const password = process.env["GUEST_BOOTSTRAP_PASSWORD"] ?? "guest001";
+  const password = process.env["GUEST_BOOTSTRAP_PASSWORD"] ?? "guest123";
 
   const existing = await prisma.user.findFirst({
     where: { email, deletedAt: null },

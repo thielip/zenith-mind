@@ -1,5 +1,6 @@
 // components/layout/Footer.tsx — Server Component
 
+import { resolveQuickLinkLabel } from "@/lib/site/footer-labels";
 import type { SiteSettingsData } from "@/lib/site/types";
 
 interface Props {
@@ -35,7 +36,7 @@ export default function Footer({ locale, settings }: Props) {
     .filter((link) => link.label.trim() && link.href.trim() && !isHiddenFrontendLink(link.href))
     .map((item) => ({
       href: normalizeHomeHref(prefix, item.href),
-      label: isEn ? (item.labelEn?.trim() ? item.labelEn : item.label) : item.label,
+      label: resolveQuickLinkLabel(item, isEn),
     }));
 
   const exploreLinks: FooterLink[] = [
@@ -43,49 +44,66 @@ export default function Footer({ locale, settings }: Props) {
     ...homepageAnchorLinks,
   ];
 
-  const { facebookPageUrl, youtubeChannelUrl, instagramUrl, lineUrl } = settings.socialLinks;
+  const { facebookPageUrl, youtubeChannelUrl, instagramUrl, lineUrl } =
+    settings.socialLinks;
 
-  const communityLinks: FooterLink[] = [
-    { href: `${prefix}/about`, label: isEn ? "About" : "關於我們" },
-  ];
-
+  const socialLinks: FooterLink[] = [];
   if (facebookPageUrl?.trim()) {
-    communityLinks.push({
+    socialLinks.push({
       href: facebookPageUrl.trim(),
       label: "Facebook",
       external: true,
     });
   }
   if (youtubeChannelUrl?.trim()) {
-    communityLinks.push({
+    socialLinks.push({
       href: youtubeChannelUrl.trim(),
       label: "YouTube",
       external: true,
     });
   }
   if (instagramUrl?.trim()) {
-    communityLinks.push({
+    socialLinks.push({
       href: instagramUrl.trim(),
       label: "Instagram",
       external: true,
     });
   }
   if (lineUrl?.trim()) {
-    communityLinks.push({
+    socialLinks.push({
       href: lineUrl.trim(),
       label: isEn ? "LINE Official Account" : "LINE 官方帳號",
       external: true,
     });
   }
 
-  const sitemapGroups = [
+  const otherLinks: FooterLink[] = [
+    {
+      href: `${prefix}/about`,
+      label: isEn ? "About" : "關於我們",
+    },
+    {
+      href: "/privacy-policy",
+      label: isEn ? "Privacy Policy" : "隱私權政策",
+    },
+    {
+      href: "/terms-of-service",
+      label: isEn ? "Terms of Service" : "服務條款",
+    },
+  ];
+
+  const footerGroups = [
     {
       title: isEn ? "Explore" : "探索內容",
       links: exploreLinks,
     },
     {
       title: isEn ? "Community" : "社群",
-      links: communityLinks,
+      links: socialLinks,
+    },
+    {
+      title: isEn ? "Other" : "其他",
+      links: otherLinks,
     },
     {
       title: isEn ? "Technical" : "技術導覽",
@@ -108,25 +126,31 @@ export default function Footer({ locale, settings }: Props) {
 
           <nav
             aria-label={isEn ? "Full site navigation" : "全站導覽"}
-            className="grid gap-8 sm:grid-cols-3"
+            className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4"
           >
-            {sitemapGroups.map((group) => (
+            {footerGroups.map((group) => (
               <section key={group.title}>
                 <h2 className="text-sm font-semibold text-white">{group.title}</h2>
                 <ul className="mt-3 space-y-2 text-sm text-gray-300">
-                  {group.links.map((link) => (
-                    <li key={`${group.title}-${link.href}-${link.label}`}>
-                      <a
-                        href={link.href}
-                        {...(link.external
-                          ? { target: "_blank", rel: "noopener noreferrer" }
-                          : {})}
-                        className="inline-flex rounded-sm hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      >
-                        {link.label}
-                      </a>
+                  {group.links.length === 0 ? (
+                    <li className="text-gray-500">
+                      {isEn ? "No links configured." : "尚未設定連結。"}
                     </li>
-                  ))}
+                  ) : (
+                    group.links.map((link) => (
+                      <li key={`${group.title}-${link.href}-${link.label}`}>
+                        <a
+                          href={link.href}
+                          {...(link.external
+                            ? { target: "_blank", rel: "noopener noreferrer" }
+                            : {})}
+                          className="inline-flex rounded-sm hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        >
+                          {link.label}
+                        </a>
+                      </li>
+                    ))
+                  )}
                 </ul>
               </section>
             ))}

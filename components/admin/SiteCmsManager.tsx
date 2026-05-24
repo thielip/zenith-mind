@@ -9,6 +9,7 @@ import {
   updateSiteSettingsAction,
 } from "@/actions/site.actions";
 import CmsAccordionSection from "@/components/admin/CmsAccordionSection";
+import LegalHtmlCmsEditor from "@/components/admin/LegalHtmlCmsEditor";
 import ExternalImageUrlField from "@/components/admin/ExternalImageUrlField";
 import SortableList from "@/components/admin/SortableList";
 import HeroSlider from "@/components/home/HeroSlider";
@@ -114,6 +115,9 @@ function formatCmsSaveError(prefix: string, err: ActionError): string {
     if (parts.length > 0) {
       return `${prefix}（${err.code}）：${parts.join("；")}`;
     }
+  }
+  if (err.code === "INTERNAL_ERROR") {
+    return `${prefix}（伺服器錯誤）。若剛更新程式，請確認已執行 npm run db:deploy；其餘請確認 Hero／輪播圖片網址與標題是否有效。`;
   }
   return `${prefix}（${err.code}）。請確認：圖片為 http(s) 開頭且結尾為 .jpg/.jpeg/.png/.webp、標題非空；按鈕連結請用 /、# 錨點或完整 https URL。`;
 }
@@ -438,6 +442,8 @@ export default function SiteCmsManager({
           <a href="#home-affiliate" className="rounded-lg bg-white px-3 py-1.5 font-semibold text-gray-700 ring-1 ring-gray-200 hover:bg-gray-100">8 聯盟</a>
           <a href="#home-programmatic" className="rounded-lg bg-white px-3 py-1.5 font-semibold text-gray-700 ring-1 ring-gray-200 hover:bg-gray-100">9 SEO</a>
           <a href="#about-page" className="rounded-lg bg-white px-3 py-1.5 font-semibold text-gray-500 ring-1 ring-gray-200 hover:bg-gray-100">關於頁</a>
+          <a href="#privacy-policy" className="rounded-lg bg-white px-3 py-1.5 font-semibold text-gray-500 ring-1 ring-gray-200 hover:bg-gray-100">隱私權</a>
+          <a href="#terms-of-service" className="rounded-lg bg-white px-3 py-1.5 font-semibold text-gray-500 ring-1 ring-gray-200 hover:bg-gray-100">服務條款</a>
         </nav>
       </div>
 
@@ -1146,6 +1152,42 @@ export default function SiteCmsManager({
                   <button type="button" onClick={() => setSettings((prev) => ({ ...prev, aboutSections: prev.aboutSections.filter((_, i) => i !== index) }))} className="mt-3 text-sm font-semibold text-red-600">刪除段落</button>
                 </article>
               )}
+            />
+          </CmsAccordionSection>
+
+          <CmsAccordionSection
+            id="privacy-policy"
+            eyebrow="全站設定"
+            title="隱私權政策（/privacy-policy）"
+            description="公開雙語頁面。使用 HTML 編輯器撰寫繁中與英文內容，儲存後約 1 小時內同步至公開站。"
+          >
+            <LegalHtmlCmsEditor
+              htmlZh={settings.privacyPolicyHtml}
+              htmlEn={settings.privacyPolicyHtmlEn}
+              onChangeZh={(privacyPolicyHtml) =>
+                setSettings((prev) => ({ ...prev, privacyPolicyHtml }))
+              }
+              onChangeEn={(privacyPolicyHtmlEn) =>
+                setSettings((prev) => ({ ...prev, privacyPolicyHtmlEn }))
+              }
+            />
+          </CmsAccordionSection>
+
+          <CmsAccordionSection
+            id="terms-of-service"
+            eyebrow="全站設定"
+            title="服務條款（/terms-of-service）"
+            description="公開雙語頁面。使用 HTML 編輯器撰寫繁中與英文內容。"
+          >
+            <LegalHtmlCmsEditor
+              htmlZh={settings.termsOfServiceHtml}
+              htmlEn={settings.termsOfServiceHtmlEn}
+              onChangeZh={(termsOfServiceHtml) =>
+                setSettings((prev) => ({ ...prev, termsOfServiceHtml }))
+              }
+              onChangeEn={(termsOfServiceHtmlEn) =>
+                setSettings((prev) => ({ ...prev, termsOfServiceHtmlEn }))
+              }
             />
           </CmsAccordionSection>
         </div>

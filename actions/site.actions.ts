@@ -12,9 +12,11 @@ import {
   optionalExternalImageUrlSchema,
   requiredExternalImageUrlSchema,
 } from "@/lib/validation/external-image-url";
-import { sanitizeText } from "@/lib/sanitize/html";
+import { sanitizeRichText, sanitizeText } from "@/lib/sanitize/html";
 import { getHeroSlides, getHomeCarouselItems } from "@/lib/site/hero-carousel-queries";
 import { asHomepageCopy, getSiteSettings } from "@/lib/site/queries";
+import { upsertSiteSettings } from "@/lib/site/site-settings-persist";
+import { isPrismaMissingColumnError } from "@/lib/site/prisma-compat";
 import type {
   HeroSlideData,
   HomeCarouselItemData,
@@ -188,12 +190,29 @@ const aboutSectionSchema = z.object({
   sortOrder: z.coerce.number().int().min(0).max(999).default(0),
 });
 
+const legalSectionSchema = z.object({
+  id: z.string().trim().min(1).max(80),
+  title: z.string().trim().max(200).default(""),
+  titleEn: z.string().trim().max(200).default(""),
+  body: z.string().trim().max(20000).default(""),
+  bodyEn: z.string().trim().max(20000).default(""),
+  sortOrder: z.coerce.number().int().min(0).max(999).default(0),
+});
+
+const legalHtmlSchema = z.string().max(200_000).default("");
+
 const siteSettingsSchema = z.object({
   logoUrl: optionalExternalImageUrlSchema,
   logoAlt: z.string().trim().max(80).default("Zenith Mind"),
   quickLinks: z.array(quickLinkSchema).max(14).default([]),
   homepageCopy: homepageCopySchema,
   aboutSections: z.array(aboutSectionSchema).max(12).default([]),
+  privacyPolicySections: z.array(legalSectionSchema).max(24).default([]),
+  termsOfServiceSections: z.array(legalSectionSchema).max(24).default([]),
+  privacyPolicyHtml: legalHtmlSchema,
+  privacyPolicyHtmlEn: legalHtmlSchema,
+  termsOfServiceHtml: legalHtmlSchema,
+  termsOfServiceHtmlEn: legalHtmlSchema,
   socialLinks: z.object({
     facebookPageUrl: optionalUrlSchema.default(""),
     youtubeChannelUrl: optionalUrlSchema.default(""),
@@ -241,6 +260,8 @@ function revalidatePublicPages() {
   revalidatePath("/zh-TW", "page");
   revalidatePath("/en", "page");
   revalidatePath("/", "layout");
+  revalidatePath("/privacy-policy");
+  revalidatePath("/terms-of-service");
 }
 
 export async function uploadSiteAssetAction(
@@ -370,47 +391,30 @@ export async function updateSiteSettingsAction(
     }
 
     const data = parsed.data;
-    await prisma.siteSettings.upsert({
-      where: { id: "site" },
-      create: {
-        id: "site",
-        logoUrl: data.logoUrl || null,
-        logoAlt: sanitizeText(data.logoAlt),
-        quickLinks: data.quickLinks.map((link) => ({
-          label: sanitizeText(link.label),
-          labelEn: sanitizeText(link.labelEn ?? ""),
-          href: link.href,
-        })),
-        homepageCopy: data.homepageCopy,
-        aboutSections: data.aboutSections,
-        socialLinks: {
-          ...data.socialLinks,
-          lineLabel: sanitizeText(data.socialLinks.lineLabel || "官方帳號"),
-        },
-        instagramEmbedUrl: data.instagramEmbedUrl || null,
-        socialSidebarActive: data.socialSidebarActive,
-        heroAutoplaySeconds: data.heroAutoplaySeconds,
-        carouselAutoplaySeconds: data.carouselAutoplaySeconds,
+    await upsertSiteSettings({
+      logoUrl: data.logoUrl || null,
+      logoAlt: sanitizeText(data.logoAlt),
+      quickLinks: data.quickLinks.map((link) => ({
+        label: sanitizeText(link.label),
+        labelEn: sanitizeText(link.labelEn ?? ""),
+        href: link.href,
+      })),
+      homepageCopy: data.homepageCopy,
+      aboutSections: data.aboutSections,
+      privacyPolicySections: data.privacyPolicySections,
+      termsOfServiceSections: data.termsOfServiceSections,
+      privacyPolicyHtml: sanitizeRichText(data.privacyPolicyHtml),
+      privacyPolicyHtmlEn: sanitizeRichText(data.privacyPolicyHtmlEn),
+      termsOfServiceHtml: sanitizeRichText(data.termsOfServiceHtml),
+      termsOfServiceHtmlEn: sanitizeRichText(data.termsOfServiceHtmlEn),
+      socialLinks: {
+        ...data.socialLinks,
+        lineLabel: sanitizeText(data.socialLinks.lineLabel || "官方帳號"),
       },
-      update: {
-        logoUrl: data.logoUrl || null,
-        logoAlt: sanitizeText(data.logoAlt),
-        quickLinks: data.quickLinks.map((link) => ({
-          label: sanitizeText(link.label),
-          labelEn: sanitizeText(link.labelEn ?? ""),
-          href: link.href,
-        })),
-        homepageCopy: data.homepageCopy,
-        aboutSections: data.aboutSections,
-        socialLinks: {
-          ...data.socialLinks,
-          lineLabel: sanitizeText(data.socialLinks.lineLabel || "官方帳號"),
-        },
-        instagramEmbedUrl: data.instagramEmbedUrl || null,
-        socialSidebarActive: data.socialSidebarActive,
-        heroAutoplaySeconds: data.heroAutoplaySeconds,
-        carouselAutoplaySeconds: data.carouselAutoplaySeconds,
-      },
+      instagramEmbedUrl: data.instagramEmbedUrl || null,
+      socialSidebarActive: data.socialSidebarActive,
+      heroAutoplaySeconds: data.heroAutoplaySeconds,
+      carouselAutoplaySeconds: data.carouselAutoplaySeconds,
     });
 
     void writeAuditLog({
@@ -425,6 +429,17 @@ export async function updateSiteSettingsAction(
     return { success: true, data: await getSiteSettings(), error: null };
   } catch (e: unknown) {
     console.error(`[Site] settings error [${meta.requestId}]:`, e);
+    if (isPrismaMissingColumnError(e)) {
+      return {
+        success: false,
+        data: null,
+        error: Errors.validation({
+          formErrors: [
+            "資料庫尚未套用最新 migration（缺少法律頁或 site_settings 欄位）。請在 Vercel 或本機執行：npm run db:deploy",
+          ],
+        }),
+      };
+    }
     return { success: false, data: null, error: Errors.internal(meta.requestId) };
   }
 }

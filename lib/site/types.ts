@@ -148,6 +148,12 @@ export interface SiteSettingsData {
   socialLinks: SocialLinks;
   homepageCopy: HomepageCopy;
   aboutSections: AboutSectionData[];
+  privacyPolicySections: AboutSectionData[];
+  termsOfServiceSections: AboutSectionData[];
+  privacyPolicyHtml: string;
+  privacyPolicyHtmlEn: string;
+  termsOfServiceHtml: string;
+  termsOfServiceHtmlEn: string;
   instagramEmbedUrl: string;
   socialSidebarActive: boolean;
   /** 首頁大圖輪播自動切換間隔（秒），0=關閉 */

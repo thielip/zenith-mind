@@ -30,6 +30,7 @@
     "db:migrate:status": "node scripts/prisma-with-local-env.mjs migrate status",
     "verify:sentry": "node scripts/verify-sentry-env.mjs",
     "admin:ensure": "node scripts/ensure-admin.mjs",
+    "guest:ensure": "node scripts/ensure-guest.mjs",
     "redirects:warm": "node scripts/warm-redirect-cache.mjs",
     "db:generate:local": "node scripts/prisma-with-local-env.mjs generate",
     "postinstall": "prisma generate"

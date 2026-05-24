@@ -9,5 +9,5 @@ export const DEFAULT_QUICK_LINKS: QuickLinkItem[] = [
   { label: "AI 工作流", labelEn: "AI workflow", href: "#conversion-banner" },
   { label: "商業定位", labelEn: "Monetization", href: "#monetization" },
   { label: "推薦資源", labelEn: "Resources", href: "#affiliate-links" },
-  { label: "SEO資源", labelEn: "SEO resources", href: "#programmatic-seo" },
+  { label: "SEO 引擎", labelEn: "SEO engine", href: "#programmatic-seo" },
 ];

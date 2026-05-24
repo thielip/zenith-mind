@@ -12,6 +12,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/zh-TW`,       lastModified: new Date(), changeFrequency: "daily",   priority: 1.0 },
     { url: `${base}/zh-TW/blog`,  lastModified: new Date(), changeFrequency: "daily",   priority: 0.9 },
     { url: `${base}/zh-TW/about`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
+    { url: `${base}/privacy-policy`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
+    { url: `${base}/terms-of-service`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
     { url: `${base}/en`,          lastModified: new Date(), changeFrequency: "daily",   priority: 0.9 },
     { url: `${base}/en/blog`,     lastModified: new Date(), changeFrequency: "daily",   priority: 0.8 },
     { url: `${base}/en/about`,   lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
