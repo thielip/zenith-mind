@@ -39,7 +39,17 @@ if (!/GA4_PROPERTY_ID=536903218/.test(content)) {
 }
 
 writeFileSync(envPath, content.endsWith("\n") ? content : `${content}\n`);
+
+const { createPrivateKey } = await import("node:crypto");
+try {
+  createPrivateKey(private_key);
+} catch (e) {
+  console.error("匯入後私鑰仍無法解析:", e instanceof Error ? e.message : e);
+  process.exit(1);
+}
+
 console.log("已更新 .env.local：", client_email);
 console.log("請執行：");
 console.log("  node scripts/sync-ga4-env.mjs");
+console.log("  npm run ga4:sync-vercel");
 console.log("  npx tsx --env-file=.env.local scripts/ga4-diagnose.mjs");

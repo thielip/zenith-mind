@@ -1,4 +1,5 @@
 import { GoogleAuth, OAuth2Client } from "google-auth-library";
+import { normalizeServiceAccountPrivateKey } from "@/lib/google/normalize-private-key";
 
 const GSC_SCOPES = ["https://www.googleapis.com/auth/webmasters.readonly"];
 
@@ -10,7 +11,7 @@ export function getServiceAccountCredentials() {
   }
   return {
     client_email: clientEmail,
-    private_key: privateKeyRaw.replace(/\\n/g, "\n"),
+    private_key: normalizeServiceAccountPrivateKey(privateKeyRaw),
   };
 }
 

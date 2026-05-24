@@ -5,6 +5,7 @@
 
 import { BetaAnalyticsDataClient } from "@google-analytics/data";
 import { env } from "@/env";
+import { normalizeServiceAccountPrivateKey } from "@/lib/google/normalize-private-key";
 
 let _client: BetaAnalyticsDataClient | null = null;
 let _clientFingerprint: string | null = null;
@@ -19,7 +20,7 @@ function ga4RuntimeEnv() {
     process.env["GA4_PROPERTY_ID"]?.trim() || env.GA4_PROPERTY_ID;
   return {
     clientEmail,
-    privateKey: privateKeyRaw.replace(/\\n/g, "\n"),
+    privateKey: normalizeServiceAccountPrivateKey(privateKeyRaw),
     propertyId,
   };
 }

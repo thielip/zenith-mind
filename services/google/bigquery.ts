@@ -1,4 +1,6 @@
 import { google } from "googleapis";
+import { validateServiceAccountPrivateKey } from "@/lib/google/normalize-private-key";
+import { applyConnectedIntegrations } from "@/services/integrations/runtime-env";
 import { createGoogleAuth, getServiceAccountCredentials } from "./auth";
 
 const SCOPES = ["https://www.googleapis.com/auth/bigquery.readonly"];
@@ -31,6 +33,8 @@ export async function fetchBigQueryHealth(): Promise<{
   message: string;
   rowCount?: number;
 }> {
+  await applyConnectedIntegrations(["ga4"]);
+
   const datasetId = process.env["BIGQUERY_DATASET_ID"]?.trim();
   const projectId = resolveProjectId();
 
@@ -41,6 +45,19 @@ export async function fetchBigQueryHealth(): Promise<{
   const auth = createGoogleAuth(SCOPES);
   if (!auth) {
     return { ok: false, message: "GA4 服務帳號未設定（GA4_CLIENT_EMAIL / GA4_PRIVATE_KEY）" };
+  }
+
+  const privateKeyRaw = process.env["GA4_PRIVATE_KEY"]?.trim();
+  if (privateKeyRaw) {
+    const keyCheck = validateServiceAccountPrivateKey(privateKeyRaw);
+    if (!keyCheck.ok) {
+      return {
+        ok: false,
+        message:
+          `GA4_PRIVATE_KEY 格式無法解析：${keyCheck.error ?? "unknown"}。` +
+          " 請從 GCP JSON 金鑰重新匯入（npm run ga4:import-key）並執行 npm run ga4:sync-vercel。",
+      };
+    }
   }
 
   const creds = getServiceAccountCredentials();
@@ -72,6 +89,14 @@ export async function fetchBigQueryHealth(): Promise<{
       return {
         ok: false,
         message: `資料集 ${projectId}:${datasetId} 不存在。請在 BigQuery 建立資料集或修正 BIGQUERY_DATASET_ID。`,
+      };
+    }
+    if (/DECODER|unsupported|PEM|private key/i.test(raw)) {
+      return {
+        ok: false,
+        message:
+          "GA4_PRIVATE_KEY 無法被 OpenSSL 解析（常見於 Vercel 多行私鑰被截斷或引號錯誤）。" +
+          " 請執行 npm run ga4:sync-vercel 從本機 .env.local 重新同步後再部署。",
       };
     }
     return { ok: false, message: raw };
