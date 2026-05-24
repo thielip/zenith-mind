@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
 import { isSentryEnabled, warnIfSentryDisabled } from "@/lib/sentry/dsn";
+import { isIgnorableRequestError } from "@/lib/sentry/request-error";
 
 export async function register() {
   if (!isSentryEnabled()) {
@@ -16,4 +17,10 @@ export async function register() {
   }
 }
 
-export const onRequestError = Sentry.captureRequestError;
+export const onRequestError: typeof Sentry.captureRequestError = (
+  ...args
+) => {
+  const err = args[0];
+  if (isIgnorableRequestError(err)) return;
+  return Sentry.captureRequestError(...args);
+};

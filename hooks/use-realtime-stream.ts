@@ -45,7 +45,11 @@ class RealtimeConnectionManager {
   }
 
   private cleanup() {
-    this.source?.close();
+    if (this.source) {
+      this.source.onmessage = null;
+      this.source.onerror = null;
+      this.source.close();
+    }
     this.source = null;
     this.subscribers = 0;
   }
