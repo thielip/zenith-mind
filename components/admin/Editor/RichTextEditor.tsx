@@ -64,6 +64,7 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(
     const sourceLabel = modeLabels?.source ?? "HTML 原始碼";
 
     const editor = useEditor({
+      immediatelyRender: false,
       extensions: [
         StarterKit,
         ImageExt.configure({ inline: false }),

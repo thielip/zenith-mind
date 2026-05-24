@@ -1,7 +1,10 @@
+import path from "node:path";
 import { config } from "dotenv";
 import { defineConfig, devices } from "playwright/test";
 
 config({ path: ".env.local" });
+
+const adminAuthFile = path.join("playwright", ".auth", "admin.json");
 
 export default defineConfig({
   testDir: "./tests",
@@ -13,7 +16,24 @@ export default defineConfig({
   },
   projects: [
     {
+      name: "admin-setup",
+      testMatch: /admin\/auth\.setup\.ts/,
+      timeout: 120_000,
+    },
+    {
+      name: "admin",
+      testMatch: /admin\/.*\.spec\.ts/,
+      dependencies: ["admin-setup"],
+      timeout: 90_000,
+      expect: { timeout: 10_000 },
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: adminAuthFile,
+      },
+    },
+    {
       name: "chromium",
+      testIgnore: /tests\/admin\//,
       use: { ...devices["Desktop Chrome"] },
     },
   ],

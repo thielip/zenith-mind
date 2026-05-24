@@ -29,6 +29,18 @@ node_modules/
 lighthouse*.json
 coverage/
 test-results/
+playwright/.auth/
+
+# 本機 IDE / MCP（勿上傳）
+.cursor/mcp.json
+.mcp.json
+.vscode/mcp.json
+opencode.json
+.audit-file-list.txt
+.audit-inventory.json
+.audit-source-files.txt
+wrangler.deploy.test.toml
+wrangler.deploy.test2.toml
 tsconfig.tsbuildinfo
 
 # 本地文件／需求文件（勿上傳）
