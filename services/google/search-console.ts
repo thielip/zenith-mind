@@ -118,6 +118,10 @@ export async function fetchSearchConsoleSummary(): Promise<{
     };
   } catch (e) {
     let message = e instanceof Error ? e.message : "Search Console API 失敗";
+    if (/invalid_client/i.test(message)) {
+      message =
+        "invalid_client：OAuth Client Secret 與 Client ID 不符（常見於重設 Secret 後 GSC_OAUTH_CLIENT_SECRET 未更新）。請與 GOOGLE_ADS_CLIENT_SECRET 同步或執行 npm run gsc:sync-cf";
+    }
     if (/sufficient permission/i.test(message)) {
       const mode = getSearchConsoleAuthMode();
       if (mode === "service_account") {

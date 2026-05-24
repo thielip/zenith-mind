@@ -35,6 +35,8 @@
     "ads:probe": "npx tsx --env-file=.env.local scripts/probe-google-ads-oauth.mjs",
     "ads:upsert": "npx tsx --env-file=.env.local scripts/upsert-google-ads-from-env.mjs",
     "ads:sync-cf": "npx tsx --env-file=.env.local scripts/sync-wrangler-google-ads-secrets.mjs",
+    "gsc:sync-cf": "npx tsx --env-file=.env.local scripts/sync-wrangler-gsc-secrets.mjs",
+    "gsc:test": "npx tsx --env-file=.env.local scripts/test-search-console.mjs",
     "redirects:warm": "node scripts/warm-redirect-cache.mjs",
     "db:generate:local": "node scripts/prisma-with-local-env.mjs generate",
     "postinstall": "prisma generate"
