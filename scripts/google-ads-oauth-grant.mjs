@@ -14,7 +14,11 @@ import { execSync } from "node:child_process";
 const CLIENT_ID = process.env.GOOGLE_ADS_CLIENT_ID?.trim();
 const CLIENT_SECRET = process.env.GOOGLE_ADS_CLIENT_SECRET?.trim();
 const REDIRECT_URI = "http://localhost:8766/callback";
-const SCOPE = "https://www.googleapis.com/auth/adwords";
+/** 一次授權：Ads API + Search Console（與 GSC_OAUTH_* 共用同一 Refresh Token） */
+const SCOPE = [
+  "https://www.googleapis.com/auth/adwords",
+  "https://www.googleapis.com/auth/webmasters.readonly",
+].join(" ");
 
 const codeArg = process.argv.find((a) => a.startsWith("--code="))?.slice(7);
 
@@ -94,7 +98,9 @@ if (codeArg) {
     process.exit(1);
   });
 } else {
-  console.log("\n請用【擁有 Google Ads 帳戶 8702788584 權限】的 Google 帳號登入並授權。");
+  console.log(
+    "\n請用【擁有 Google Ads 8702788584 + Search Console 網站權限】的 Google 帳號登入並授權。"
+  );
   console.log("授權後若本機回呼失敗，複製網址列 code= 參數：");
   console.log(
     "  npx tsx --env-file=.env.local scripts/google-ads-oauth-grant.mjs --code=貼上code\n"
