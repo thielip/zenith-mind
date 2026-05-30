@@ -1,8 +1,9 @@
 -- Supabase 新安全規範：明確 GRANT + ENABLE RLS + POLICY
 -- 執行後：NOTIFY pgrst 重新載入 schema cache
 
--- ── 1. service_role 維持 BYPASSRLS ─────────────────────────────────────
-ALTER ROLE service_role WITH BYPASSRLS;
+-- ── 1. GRANT（略過 ALTER ROLE service_role）──────────────────────────────
+-- Supabase 託管環境：service_role 為保留角色，僅 superuser 可 ALTER。
+-- 平台預設已具 BYPASSRLS；Prisma / service_role key 不受下方 RLS 限制。
 
 GRANT USAGE ON SCHEMA public TO service_role, anon, authenticated, authenticator;
 

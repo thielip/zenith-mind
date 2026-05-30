@@ -1,0 +1,14 @@
+title = "zenith-mind"
+
+[allowlist]
+description = "測試假資料、已自 repo 移除的本地文件路徑"
+paths = [
+  '''(?i)(^|/)docs/archive/''',
+  '''(?i)(^|/)docs/integrations/''',
+  '''(?i)jest\.setup\.ts$''',
+  '''(?i)test-utils/env-mock\.ts$''',
+  '''(?i)lib/admin/__tests__/integration-health\.test\.ts$''',
+  '''(?i)lib/google/__tests__/normalize-private-key\.test\.ts$''',
+  '''(?i)playwright/\.auth/''',
+  '''(?i)docs/可公開\.txt$''',
+]

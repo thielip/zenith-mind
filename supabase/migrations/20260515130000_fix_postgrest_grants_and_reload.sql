@@ -1,9 +1,7 @@
 -- 修復 PostgREST 403 + 讓新建的 View 出現在 schema cache
 -- 在 Supabase SQL Editor 執行（migration 已成功後若 REST 仍 403/404 請跑此檔）
 
--- 1) 確保 service_role 具備 BYPASSRLS 與 public schema 權限
-ALTER ROLE service_role WITH BYPASSRLS;
-
+-- 1) public schema 權限（略過 ALTER ROLE service_role — Supabase 託管保留角色）
 GRANT USAGE ON SCHEMA public TO service_role, anon, authenticated, authenticator;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO service_role;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO service_role;

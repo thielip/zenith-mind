@@ -47,6 +47,9 @@ tsconfig.tsbuildinfo
 *.docx
 圖稿/
 docs/可公開.txt
+docs/archive/
+docs/integrations/
+*.rar
 
 .vercel
 .env*.local
