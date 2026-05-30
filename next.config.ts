@@ -128,7 +128,7 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // 裸網域 → www：Cloudflare Redirect Rules（見 cloudflare/DASHBOARD_STEPS.txt）
+  // 裸網域 → www：Cloudflare Redirect Rules（見 docs/operations/cloudflare-dashboard-steps.txt）
   // *.vercel.app 公開頁 → www：middleware `canonical-host-redirect`（/admin 除外，避免與 CF 迴圈）
   // 勿在此寫 has:host redirects：OpenNext on Workers 可能異常；Vercel 亦由 middleware 統一處理。
 

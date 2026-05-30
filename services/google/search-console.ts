@@ -32,6 +32,55 @@ export interface GscAeoAppearanceTotals {
   richResultClicks: number;
 }
 
+function formatGscProbeError(e: unknown, siteUrl: string): string {
+  let message = e instanceof Error ? e.message : "Search Console API 失敗";
+  if (/invalid_client/i.test(message)) {
+    message =
+      "invalid_client：OAuth Client Secret 與 Client ID 不符（常見於重設 Secret 後 GSC_OAUTH_CLIENT_SECRET 未更新）。請與 GOOGLE_ADS_CLIENT_SECRET 同步或執行 npm run gsc:sync-cf";
+  }
+  if (/sufficient permission/i.test(message)) {
+    const mode = getSearchConsoleAuthMode();
+    if (mode === "service_account") {
+      message = `${message} — 目前用服務帳號 ${process.env["GA4_CLIENT_EMAIL"] ?? ""}，但 GSC 無法加入該 Email 時，請在 .env.local 設定 GSC_OAUTH_CLIENT_ID / GSC_OAUTH_CLIENT_SECRET / GSC_OAUTH_REFRESH_TOKEN`;
+    } else if (mode === "oauth") {
+      message = `${message} — OAuth 用的 Google 帳號須在 GSC 對「${siteUrl}」具備完整權限；並確認 GOOGLE_SEARCH_CONSOLE_SITE_URL 與 GSC 資源字串完全一致`;
+    }
+  }
+  return message;
+}
+
+/** 輕量連線探測：驗證 OAuth / 服務帳號與 GSC 資源權限（非 28 日 analytics） */
+export async function probeSearchConsoleApi(): Promise<{
+  ok: boolean;
+  message?: string;
+}> {
+  const siteUrl = normalizeGscSiteUrl(process.env["GOOGLE_SEARCH_CONSOLE_SITE_URL"]);
+  if (!siteUrl) {
+    return {
+      ok: false,
+      message: "未設定 GOOGLE_SEARCH_CONSOLE_SITE_URL（例：https://www.getzenithmind.com/）",
+    };
+  }
+
+  const auth = createSearchConsoleAuth();
+  if (!auth) {
+    return {
+      ok: false,
+      message:
+        "未設定 GSC 認證：請設 GSC_OAUTH_*（建議）或 GA4_CLIENT_EMAIL + GA4_PRIVATE_KEY",
+    };
+  }
+
+  try {
+    const searchconsole = google.searchconsole({ version: "v1", auth });
+    const res = await searchconsole.sites.get({ siteUrl });
+    const level = res.data.permissionLevel ?? "unknown";
+    return { ok: true, message: `GSC 可存取 ${siteUrl}（${level}）` };
+  } catch (e) {
+    return { ok: false, message: formatGscProbeError(e, siteUrl) };
+  }
+}
+
 export async function fetchSearchConsoleSummary(): Promise<{
   ok: boolean;
   message?: string;
@@ -117,22 +166,9 @@ export async function fetchSearchConsoleSummary(): Promise<{
       },
     };
   } catch (e) {
-    let message = e instanceof Error ? e.message : "Search Console API 失敗";
-    if (/invalid_client/i.test(message)) {
-      message =
-        "invalid_client：OAuth Client Secret 與 Client ID 不符（常見於重設 Secret 後 GSC_OAUTH_CLIENT_SECRET 未更新）。請與 GOOGLE_ADS_CLIENT_SECRET 同步或執行 npm run gsc:sync-cf";
-    }
-    if (/sufficient permission/i.test(message)) {
-      const mode = getSearchConsoleAuthMode();
-      if (mode === "service_account") {
-        message = `${message} — 目前用服務帳號 ${process.env["GA4_CLIENT_EMAIL"] ?? ""}，但 GSC 無法加入該 Email 時，請在 .env.local 設定 GSC_OAUTH_CLIENT_ID / GSC_OAUTH_CLIENT_SECRET / GSC_OAUTH_REFRESH_TOKEN（見 docs/COMMAND-CENTER-INTEGRATIONS.md §2.2b）`;
-      } else if (mode === "oauth") {
-        message = `${message} — OAuth 用的 Google 帳號須在 GSC 對「${siteUrl}」具備完整權限；並確認 GOOGLE_SEARCH_CONSOLE_SITE_URL 與 GSC 資源字串完全一致`;
-      }
-    }
     return {
       ok: false,
-      message,
+      message: formatGscProbeError(e, siteUrl),
       queries: [],
       landingPages: [],
       totals: { clicks: 0, impressions: 0, ctr: 0 },

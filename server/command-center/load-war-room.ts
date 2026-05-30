@@ -47,12 +47,13 @@ function spark(values: number[]): number[] {
 }
 
 export async function loadWarRoomPayload(): Promise<WarRoomPayload> {
-  const [ga4, db, insights, healthReport] = await Promise.all([
+  const [ga4, db] = await Promise.all([
     getCachedGa4Bundle(),
     getCachedDbSnapshot(),
-    getCachedInsights(),
-    getCachedHealthReport(),
   ]);
+  // 先跑整合健康（含 Gemini models.list），再跑 AI 洞察 completion，避免搶 API 配額
+  const healthReport = await getCachedHealthReport();
+  const insights = await getCachedInsights();
 
   const statusPills: StatusPill[] = [
     {

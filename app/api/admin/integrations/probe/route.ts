@@ -6,11 +6,10 @@ import {
   probeGemini,
   probeGoogleAdsOAuth,
   probeRedis,
+  probeSearchConsole,
   probeSupabaseStorage,
   type ProbeResult,
 } from "@/infrastructure/health/probes";
-import { fetchSearchConsoleSummary } from "@/services/google/search-console";
-import { withProbeTimeout } from "@/infrastructure/health/probes";
 
 export const dynamic = "force-dynamic";
 
@@ -21,16 +20,7 @@ const PROBES: Record<string, () => Promise<ProbeResult>> = {
   gemini: probeGemini,
   "ga4-reporting": probeGa4Reporting,
   "google-ads-oauth": probeGoogleAdsOAuth,
-  "search-console-live": async () => {
-    const r = await withProbeTimeout(fetchSearchConsoleSummary(), 25_000);
-    if (r.ok) {
-      return {
-        ok: true,
-        message: `28 日點擊 ${r.totals.clicks}、曝光 ${r.totals.impressions}`,
-      };
-    }
-    return { ok: false, message: r.message ?? "Search Console 失敗" };
-  },
+  "search-console-live": probeSearchConsole,
 };
 
 export async function POST(req: NextRequest) {

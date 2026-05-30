@@ -8,31 +8,23 @@ jest.mock("@/infrastructure/health/probes", () => ({
   probeGoogleAdsOAuth: jest.fn(),
   probeRedis: jest.fn(),
   probeSupabaseStorage: jest.fn(),
-  withProbeTimeout: jest.fn((p: Promise<unknown>) => p),
-}));
-jest.mock("@/services/google/search-console", () => ({
-  fetchSearchConsoleSummary: jest.fn(),
+  probeSearchConsole: jest.fn(),
 }));
 
 import { Errors } from "@/domain/shared/core.types";
 import { gateAdminRead } from "@/lib/auth/resolve-admin-action";
-import { probeDatabase } from "@/infrastructure/health/probes";
-import { fetchSearchConsoleSummary } from "@/services/google/search-console";
+import { probeSearchConsole } from "@/infrastructure/health/probes";
 import { POST } from "../route";
 
 const gateAdminReadMock = jest.mocked(gateAdminRead);
-const probeDatabaseMock = jest.mocked(probeDatabase);
-const fetchGscMock = jest.mocked(fetchSearchConsoleSummary);
+const probeSearchConsoleMock = jest.mocked(probeSearchConsole);
 
 describe("POST /api/admin/integrations/probe", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    probeDatabaseMock.mockResolvedValue({ ok: true, message: "ok" });
-    fetchGscMock.mockResolvedValue({
+    probeSearchConsoleMock.mockResolvedValue({
       ok: true,
-      queries: [],
-      landingPages: [],
-      totals: { clicks: 10, impressions: 100, ctr: 0.1 },
+      message: "GSC 可存取 https://example.com/（siteOwner）",
     });
   });
 
@@ -51,7 +43,7 @@ describe("POST /api/admin/integrations/probe", () => {
     expect(res.status).toBe(401);
   });
 
-  it("probes postgres and search-console-live", async () => {
+  it("probes search-console-live via probeSearchConsole", async () => {
     gateAdminReadMock.mockResolvedValue({
       ok: true,
       session: { userId: "u1", email: "a@b.com", role: "ADMIN" },
@@ -64,8 +56,9 @@ describe("POST /api/admin/integrations/probe", () => {
       }) as never
     );
     expect(res.status).toBe(200);
-    const json = (await res.json()) as { ok: boolean };
+    const json = (await res.json()) as { ok: boolean; message?: string };
     expect(json.ok).toBe(true);
-    expect(fetchGscMock).toHaveBeenCalled();
+    expect(probeSearchConsoleMock).toHaveBeenCalled();
+    expect(json.message).toContain("GSC 可存取");
   });
 });

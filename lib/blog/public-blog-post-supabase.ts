@@ -6,7 +6,12 @@ import { isCfPublicRuntime } from "@/lib/db/cf-public-runtime";
 import { fetchPostViewTotal } from "@/lib/analytics/post-view-totals";
 import { logBlogRenderError } from "@/lib/blog/log-blog-render-error";
 import { toSafeDate } from "@/lib/blog/safe-blog-dates";
-import { supabaseRestWithFallback } from "@/lib/db/supabase-rest";
+import {
+  supabaseRest,
+  supabaseRestWithFallback,
+} from "@/lib/db/supabase-rest";
+
+const PUBLIC_KEY = "public" as const;
 import type {
   BlogPostDetail,
   BlogPostFaq,
@@ -222,7 +227,8 @@ async function fetchPostTagsForPost(
     },
     [],
     undefined,
-    postCache
+    postCache,
+    PUBLIC_KEY
   );
   return mapPostTags(rows);
 }
@@ -238,9 +244,33 @@ async function fetchSeoForPost(postId: string): Promise<BlogPostSeo | null> {
     },
     [],
     undefined,
-    postCache
+    postCache,
+    PUBLIC_KEY
   );
   return rows[0] ? mapSeo(rows[0]) : null;
+}
+
+/** 輕量探測：區分「真的沒有文章」與「載入失敗」 */
+export async function probePublishedPostSlugExists(slug: string): Promise<boolean> {
+  try {
+    const rows = await supabaseRest<{ slug: string }[]>(
+      "posts",
+      {
+        select: "slug",
+        slug: `eq.${slug}`,
+        status: "eq.PUBLISHED",
+        deletedAt: "is.null",
+        limit: "1",
+      },
+      undefined,
+      { kind: "fresh" },
+      PUBLIC_KEY
+    );
+    return rows.length > 0;
+  } catch (error) {
+    logBlogRenderError("probePublishedPostSlugExists", error, { slug });
+    return false;
+  }
 }
 
 export async function fetchBlogPostBySlugViaSupabase(
@@ -257,7 +287,7 @@ export async function fetchBlogPostBySlugViaSupabase(
 async function fetchBlogPostBySlugViaSupabaseInner(
   slug: string
 ): Promise<BlogPostDetail | null> {
-  const rows = await supabaseRestWithFallback<PostDetailRow[]>(
+  const rows = await supabaseRest<PostDetailRow[]>(
     "posts",
     {
       select: POST_DETAIL_CORE_SELECT,
@@ -266,9 +296,9 @@ async function fetchBlogPostBySlugViaSupabaseInner(
       deletedAt: "is.null",
       limit: "1",
     },
-    [],
     undefined,
-    postCache
+    postCache,
+    PUBLIC_KEY
   );
   const row = rows[0];
   if (!row) return null;
@@ -309,7 +339,8 @@ export async function fetchRecommendedPostsViaSupabase(
     params,
     [],
     undefined,
-    postCache
+    postCache,
+    PUBLIC_KEY
   );
 
   return rows.map((row) => ({
@@ -336,7 +367,8 @@ export async function fetchPublishedPostSlugsViaSupabase(
     },
     [],
     undefined,
-    postCache
+    postCache,
+    PUBLIC_KEY
   );
   return rows.map((r) => r.slug);
 }
@@ -367,7 +399,8 @@ export async function fetchSitemapPostsViaSupabase(
       },
       [],
       undefined,
-      cache
+      cache,
+      PUBLIC_KEY
     );
     if (rows.length === 0) break;
     for (const row of rows) {

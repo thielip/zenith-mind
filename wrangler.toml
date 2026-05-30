@@ -47,3 +47,8 @@ GOOGLE_ADS_LOGIN_CUSTOMER_ID = "4708073999"
 GOOGLE_SEARCH_CONSOLE_SITE_URL = "https://www.getzenithmind.com/"
 GOOGLE_MERCHANT_CENTER_ACCOUNT_ID = "5788433025"
 BIGQUERY_DATASET_ID = "my_getzenithmind"
+
+# apex → www（zenith-mind.com 在另一 CF 帳號，請在該區域設 301 到 www.getzenithmind.com）
+[[routes]]
+pattern = "getzenithmind.com/*"
+zone_name = "getzenithmind.com"

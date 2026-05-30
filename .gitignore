@@ -46,6 +46,7 @@ tsconfig.tsbuildinfo
 # 本地文件／需求文件（勿上傳）
 *.docx
 圖稿/
+docs/可公開.txt
 
 .vercel
 .env*.local

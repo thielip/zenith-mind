@@ -4,6 +4,8 @@
  */
 import { fetchPostViewTotalsMap } from "@/lib/analytics/post-view-totals";
 import { supabaseCount, supabaseRestWithFallback } from "@/lib/db/supabase-rest";
+
+const PUBLIC_KEY = "public" as const;
 import { safeQuery } from "@/lib/db/safe-query";
 import type {
   BlogListCategory,
@@ -116,7 +118,8 @@ async function fetchTagsForPosts(
     },
     [],
     undefined,
-    { kind: "public", revalidate: 3600, tags: ["posts"] }
+    { kind: "public", revalidate: 3600, tags: ["posts"] },
+    PUBLIC_KEY
   );
 
   for (const row of rows) {
@@ -139,7 +142,14 @@ export async function fetchBlogListPostsViaSupabase(
   params.limit = String(take);
   params.offset = String(skip);
 
-  const rows = await supabaseRestWithFallback<BlogPostRow[]>("posts", params, []);
+  const rows = await supabaseRestWithFallback<BlogPostRow[]>(
+    "posts",
+    params,
+    [],
+    undefined,
+    { kind: "public", revalidate: 3600, tags: ["posts"] },
+    PUBLIC_KEY
+  );
   const tagsByPostId = await safeQuery(
     "blog.postTags",
     () => fetchTagsForPosts(rows.map((r) => r.id)),
@@ -161,7 +171,7 @@ export async function countBlogListPostsViaSupabase(
   delete params.order;
   delete params.limit;
   delete params.offset;
-  return supabaseCount("posts", params);
+  return supabaseCount("posts", params, undefined, PUBLIC_KEY);
 }
 
 export async function fetchBlogCategoriesViaSupabase(): Promise<BlogListCategory[]> {
@@ -173,7 +183,10 @@ export async function fetchBlogCategoriesViaSupabase(): Promise<BlogListCategory
       order: "name.asc",
       limit: "50",
     },
-    []
+    [],
+    undefined,
+    undefined,
+    PUBLIC_KEY
   );
 }
 
@@ -186,7 +199,10 @@ export async function fetchBlogTagsViaSupabase(): Promise<BlogListTag[]> {
       order: "name.asc",
       limit: "18",
     },
-    []
+    [],
+    undefined,
+    undefined,
+    PUBLIC_KEY
   );
 }
 

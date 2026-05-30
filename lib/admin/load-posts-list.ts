@@ -12,6 +12,7 @@ export interface AdminPostListRow {
   slug: string;
   status: string;
   publishedAt: string | null;
+  scheduledAt: string | null;
   createdAt: string;
   categoryName: string | null;
   categorySlug: string | null;
@@ -97,6 +98,7 @@ export async function loadAdminPostsList(params: AdminPostsListParams) {
     slug: post.slug,
     status: post.status,
     publishedAt: post.publishedAt?.toISOString() ?? null,
+    scheduledAt: post.scheduledAt?.toISOString() ?? null,
     createdAt: post.createdAt.toISOString(),
     categoryName: post.category?.name ?? null,
     categorySlug: post.category?.slug ?? null,

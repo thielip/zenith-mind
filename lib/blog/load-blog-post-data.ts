@@ -18,25 +18,47 @@ async function loadBlogPostBySlugCf(slug: string): Promise<BlogPostDetail | null
   return fetchBlogPostBySlugViaSupabase(slug);
 }
 
-export const loadBlogPostBySlug = cache(async (slug: string): Promise<BlogPostDetail | null> => {
-  try {
-    if (isCfPublicRuntime()) {
-      return await safeQuery(`blog.post.${slug}`, () => loadBlogPostBySlugCf(slug), null);
-    }
+export type BlogPostLoadResult =
+  | { status: "found"; post: BlogPostDetail }
+  | { status: "missing" }
+  | { status: "unavailable" };
 
-    const { prisma } = await import("@/infrastructure/db/prisma");
-    const { loadBlogPostBySlugPrisma } = await import(
-      "@/lib/blog/load-blog-post-data-prisma"
-    );
-    return await loadBlogPostBySlugPrisma(prisma, slug);
-  } catch (error) {
-    logBlogRenderError("loadBlogPostBySlug", error, {
-      slug,
-      cfRuntime: isCfPublicRuntime(),
-    });
-    return null;
+export const loadBlogPostBySlug = cache(
+  async (slug: string): Promise<BlogPostDetail | null> => {
+    const result = await loadBlogPostWithStatus(slug);
+    return result.status === "found" ? result.post : null;
   }
-});
+);
+
+export const loadBlogPostWithStatus = cache(
+  async (slug: string): Promise<BlogPostLoadResult> => {
+    try {
+      if (isCfPublicRuntime()) {
+        const post = await loadBlogPostBySlugCf(slug);
+        if (post) return { status: "found", post };
+
+        const { probePublishedPostSlugExists } = await import(
+          "@/lib/blog/public-blog-post-supabase"
+        );
+        const exists = await probePublishedPostSlugExists(slug);
+        return exists ? { status: "unavailable" } : { status: "missing" };
+      }
+
+      const { prisma } = await import("@/infrastructure/db/prisma");
+      const { loadBlogPostBySlugPrisma } = await import(
+        "@/lib/blog/load-blog-post-data-prisma"
+      );
+      const post = await loadBlogPostBySlugPrisma(prisma, slug);
+      return post ? { status: "found", post } : { status: "missing" };
+    } catch (error) {
+      logBlogRenderError("loadBlogPostWithStatus", error, {
+        slug,
+        cfRuntime: isCfPublicRuntime(),
+      });
+      return { status: "unavailable" };
+    }
+  }
+);
 
 export async function loadRecommendedPosts(
   currentPostId: string,

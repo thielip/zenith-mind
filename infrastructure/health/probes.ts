@@ -7,8 +7,14 @@ import { formatApiError } from "@/lib/admin/format-api-error";
 import { fetchRealtimeActiveUsers } from "@/infrastructure/ga4/reporting.client";
 import { redis } from "@/infrastructure/redis/client";
 import { env } from "@/env";
+import { probeSearchConsoleApi } from "@/services/google/search-console";
 
-const PROBE_TIMEOUT_MS = 15_000;
+import {
+  PROBE_TIMEOUT_MS,
+  SLOW_PROBE_TIMEOUT_MS,
+  withProbeTimeout,
+} from "@/infrastructure/health/probe-timeout";
+export { PROBE_TIMEOUT_MS, SLOW_PROBE_TIMEOUT_MS, withProbeTimeout };
 const SITE_ASSETS_BUCKET = "site-assets";
 const GEMINI_COMPAT_BASE_URL =
   "https://generativelanguage.googleapis.com/v1beta/openai/";
@@ -20,18 +26,6 @@ export interface ProbeResult {
 
 function sanitizeError(error: unknown): string {
   return formatApiError(error);
-}
-
-export function withProbeTimeout<T>(
-  promise: Promise<T>,
-  ms = PROBE_TIMEOUT_MS
-): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error("探測逾時")), ms);
-    }),
-  ]);
 }
 
 export async function probeDatabase(): Promise<ProbeResult> {
@@ -78,9 +72,20 @@ export async function probeGemini(): Promise<ProbeResult> {
     if (!client) {
       return { ok: false, message: "GEMINI_API_KEY 未設定" };
     }
-    const models = await withProbeTimeout(client.models.list(), 25_000);
+    const models = await withProbeTimeout(client.models.list(), SLOW_PROBE_TIMEOUT_MS);
     const count = models.data?.length ?? 0;
     return { ok: true, message: `Gemini 相容 API 可連線（模型列表 ${count} 筆）` };
+  } catch (e) {
+    return { ok: false, message: sanitizeError(e) };
+  }
+}
+
+export async function probeSearchConsole(): Promise<ProbeResult> {
+  try {
+    const r = await withProbeTimeout(probeSearchConsoleApi(), SLOW_PROBE_TIMEOUT_MS);
+    return r.ok
+      ? { ok: true, message: r.message }
+      : { ok: false, message: r.message ?? "Search Console 失敗" };
   } catch (e) {
     return { ok: false, message: sanitizeError(e) };
   }

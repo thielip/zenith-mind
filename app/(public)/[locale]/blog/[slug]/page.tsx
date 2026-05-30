@@ -11,13 +11,14 @@ import Link from "next/link";
 import ResponsiveImage from "@/components/ui/ResponsiveImage";
 import { Clock } from "lucide-react";
 import { env } from "@/env";
+import BlogPostUnavailable from "@/components/blog/BlogPostUnavailable";
 import {
   loadBlogPostBySlug,
-  loadPublishedPostSlugsForStaticParams,
+  loadBlogPostWithStatus,
 } from "@/lib/blog/load-blog-post-data";
 import { logBlogRenderError } from "@/lib/blog/log-blog-render-error";
 import { isNextNavigationError } from "@/lib/blog/next-navigation-error";
-import { toIsoStringSafe } from "@/lib/blog/safe-blog-dates";
+import { toIsoStringSafe, toSafeDate } from "@/lib/blog/safe-blog-dates";
 import {
   buildArticleSchema,
   buildFaqSchema,
@@ -33,19 +34,11 @@ import { isCfPublicRuntime } from "@/lib/db/cf-public-runtime";
 
 export const revalidate = 3600;
 
+/** OpenNext on CF：SSG + generateStaticParams 會讓 params 為 undefined（locale 解構失敗） */
+export const dynamic = "force-dynamic";
+
 interface Props {
   params: Promise<{ locale: string; slug: string }>;
-}
-
-// ── ISR 預生成：最近 100 篇文章 ─────────────────────────
-
-export async function generateStaticParams(): Promise<
-  Array<{ locale: string; slug: string }>
-> {
-  const slugs = await loadPublishedPostSlugsForStaticParams(100);
-  return ["zh-TW", "en"].flatMap((locale) =>
-    slugs.map((slug) => ({ locale, slug }))
-  );
 }
 
 // ── generateMetadata ──────────────────────────────────────
@@ -143,30 +136,43 @@ export default async function BlogPostPage({ params }: Props) {
       slug,
       cfRuntime: isCfPublicRuntime(),
     });
-    // 避免未處理例外變成白屏 500（資料偶發異常或 Worker 逾時）
-    notFound();
+    return (
+      <BlogPostUnavailable locale={locale} slug={slug} reason="unavailable" />
+    );
   }
 }
 
 async function renderBlogPostPage(locale: string, slug: string) {
   const isEn = locale === "en";
-  const t = await getTranslations("blog");
-  const h = await headers();
-  const nonce = h.get("x-nonce") ?? "";
   const siteUrl = env.NEXT_PUBLIC_SITE_URL;
 
-  let post;
+  let loadResult;
   try {
-    post = await loadBlogPostBySlug(slug);
+    loadResult = await loadBlogPostWithStatus(slug);
   } catch (error) {
     if (isNextNavigationError(error)) throw error;
-    logBlogRenderError("loadBlogPostBySlug", error, { locale, slug });
-    throw error;
+    logBlogRenderError("loadBlogPostWithStatus", error, { locale, slug });
+    return (
+      <BlogPostUnavailable locale={locale} slug={slug} reason="unavailable" />
+    );
   }
-  if (!post) {
+
+  if (loadResult.status === "unavailable") {
+    return (
+      <BlogPostUnavailable locale={locale} slug={slug} reason="unavailable" />
+    );
+  }
+
+  if (loadResult.status === "missing") {
     await redirectArchivedPostIfNeeded(locale, slug);
     notFound();
   }
+
+  const post = loadResult.post;
+
+  const t = await getTranslations("blog");
+  const h = await headers();
+  const nonce = h.get("x-nonce") ?? "";
 
   const title = isEn ? (post.titleEn ?? post.title) : post.title;
   const unlocked =

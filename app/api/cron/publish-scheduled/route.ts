@@ -31,7 +31,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       deletedAt: null,
       scheduledAt: { lte: now },
     },
-    select: { id: true, slug: true, scheduledAt: true },
+    select: { id: true, slug: true, scheduledAt: true, content: true },
   });
 
   if (due.length === 0) {
@@ -39,7 +39,15 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 
   const slugs: string[] = [];
+  const skipped: string[] = [];
   for (const post of due) {
+    const visibleContent = post.content.replace(/<[^>]+>/g, "").trim();
+    if (visibleContent.length === 0) {
+      skipped.push(post.slug);
+      logger.warn("Skipped scheduled post with empty content", { meta: { slug: post.slug } });
+      continue;
+    }
+
     await prisma.post.update({
       where: { id: post.id },
       data: {
@@ -61,7 +69,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   revalidatePath("/zh-TW/blog");
   revalidatePath("/en/blog");
 
-  logger.info("Scheduled posts published", { meta: { count: slugs.length, slugs } });
+  logger.info("Scheduled posts published", {
+    meta: { count: slugs.length, slugs, skipped },
+  });
 
-  return NextResponse.json({ published: slugs.length, slugs });
+  return NextResponse.json({ published: slugs.length, slugs, skipped });
 }

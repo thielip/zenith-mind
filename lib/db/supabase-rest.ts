@@ -1,6 +1,7 @@
 /** Supabase PostgREST（fetch only，Edge / Worker 安全） */
 
 import { assertAllowedSupabaseTable } from "@/lib/db/supabase-rest-tables";
+import { readWorkerEnv } from "@/lib/runtime/read-worker-env";
 
 export type SupabaseFetchCache =
   /** 公開內容：配合頁面 revalidate=3600，降低重複 egress */
@@ -37,13 +38,36 @@ export function isSupabaseAuthOrForbidden(error: unknown): boolean {
 
 type SupabaseRestConfig = { base: string; key: string };
 
-export function getSupabaseRestConfig(): SupabaseRestConfig | null {
-  const base = process.env["NEXT_PUBLIC_SUPABASE_URL"]?.trim();
-  const key =
-    process.env["SUPABASE_SERVICE_ROLE_KEY"]?.trim() ||
-    process.env["NEXT_PUBLIC_SUPABASE_ANON_KEY"]?.trim();
+export type SupabaseRestKeyMode = "default" | "public";
+
+function resolveSupabaseBase(): string | null {
+  const base = readWorkerEnv("NEXT_PUBLIC_SUPABASE_URL");
+  return base ? base.replace(/\/$/, "") : null;
+}
+
+/** 公開頁讀取：僅 anon key（RLS 允許的 PUBLISHED 內容），避免 CF 上失效的 service_role 熔斷成空陣列 */
+export function getPublicSupabaseRestConfig(): SupabaseRestConfig | null {
+  const base = resolveSupabaseBase();
+  const key = readWorkerEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
   if (!base || !key) return null;
-  return { base: base.replace(/\/$/, ""), key };
+  return { base, key };
+}
+
+export function getSupabaseRestConfig(): SupabaseRestConfig | null {
+  const base = resolveSupabaseBase();
+  const key =
+    readWorkerEnv("SUPABASE_SERVICE_ROLE_KEY") ||
+    readWorkerEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  if (!base || !key) return null;
+  return { base, key };
+}
+
+function resolveRestConfig(
+  keyMode: SupabaseRestKeyMode = "default"
+): SupabaseRestConfig | null {
+  return keyMode === "public"
+    ? getPublicSupabaseRestConfig()
+    : getSupabaseRestConfig();
 }
 
 function restHeaders(
@@ -99,10 +123,11 @@ export async function supabaseRest<T>(
   table: string,
   params: Record<string, string>,
   init?: RequestInit,
-  cachePolicy: SupabaseFetchCache = SUPABASE_PUBLIC_CACHE
+  cachePolicy: SupabaseFetchCache = SUPABASE_PUBLIC_CACHE,
+  keyMode: SupabaseRestKeyMode = "default"
 ): Promise<T> {
   assertAllowedSupabaseTable(table);
-  const cfg = getSupabaseRestConfig();
+  const cfg = resolveRestConfig(keyMode);
   if (!cfg) {
     throw new SupabaseRestError(table, 0, "Supabase REST is not configured");
   }
@@ -141,10 +166,11 @@ export async function supabaseRestWithFallback<T>(
   params: Record<string, string>,
   fallback: T,
   init?: RequestInit,
-  cachePolicy: SupabaseFetchCache = SUPABASE_PUBLIC_CACHE
+  cachePolicy: SupabaseFetchCache = SUPABASE_PUBLIC_CACHE,
+  keyMode: SupabaseRestKeyMode = "default"
 ): Promise<T> {
   try {
-    return await supabaseRest<T>(table, params, init, cachePolicy);
+    return await supabaseRest<T>(table, params, init, cachePolicy, keyMode);
   } catch (error) {
     const status = isSupabaseRestError(error) ? error.status : 0;
     const detail = error instanceof Error ? error.message : String(error);
@@ -157,10 +183,11 @@ export async function supabaseRestWithFallback<T>(
 export async function supabaseCount(
   table: string,
   params: Record<string, string>,
-  cachePolicy: SupabaseFetchCache = SUPABASE_PUBLIC_CACHE
+  cachePolicy: SupabaseFetchCache = SUPABASE_PUBLIC_CACHE,
+  keyMode: SupabaseRestKeyMode = "default"
 ): Promise<number> {
   assertAllowedSupabaseTable(table);
-  const cfg = getSupabaseRestConfig();
+  const cfg = resolveRestConfig(keyMode);
   if (!cfg) {
     console.error(`[supabase-rest] ${table} count skipped: not configured`);
     return 0;

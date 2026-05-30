@@ -1,7 +1,6 @@
 import { fetchGa4DashboardBundle } from "@/infrastructure/ga4/dashboard-bundle";
-import { probeGemini, probeGoogleAdsOAuth } from "@/infrastructure/health/probes";
+import { probeGemini, probeGoogleAdsOAuth, probeSearchConsole } from "@/infrastructure/health/probes";
 import { fetchBigQueryHealth } from "@/services/google/bigquery";
-import { fetchSearchConsoleSummary } from "@/services/google/search-console";
 import type { IntegrationProviderId } from "@/lib/integrations/providers";
 export async function probeIntegrationProvider(
   provider: IntegrationProviderId
@@ -23,7 +22,7 @@ export async function probeIntegrationProvider(
         return { ok: r.ok, message: r.message ?? "Ads OAuth 探測完成" };
       }
       case "search_console": {
-        const r = await fetchSearchConsoleSummary();
+        const r = await probeSearchConsole();
         return {
           ok: r.ok,
           message: r.message ?? "Search Console 探測完成",

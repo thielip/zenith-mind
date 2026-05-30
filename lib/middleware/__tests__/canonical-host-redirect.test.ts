@@ -38,4 +38,22 @@ describe("canonicalHostRedirect", () => {
     const req = new NextRequest("https://www.getzenithmind.com/zh-TW");
     expect(canonicalHostRedirect(req)).toBeNull();
   });
+
+  it("301 zenith-mind.com to www", () => {
+    const req = new NextRequest(
+      "https://zenith-mind.com/zh-TW/blog/software-industry"
+    );
+    const res = canonicalHostRedirect(req);
+    expect(res?.status).toBe(301);
+    expect(res?.headers.get("location")).toBe(
+      "https://www.getzenithmind.com/zh-TW/blog/software-industry"
+    );
+  });
+
+  it("301 getzenithmind.com apex to www", () => {
+    const req = new NextRequest("https://getzenithmind.com/zh-TW");
+    const res = canonicalHostRedirect(req);
+    expect(res?.status).toBe(301);
+    expect(res?.headers.get("location")).toBe("https://www.getzenithmind.com/zh-TW");
+  });
 });

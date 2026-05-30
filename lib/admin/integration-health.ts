@@ -4,10 +4,9 @@ import {
   probeGemini,
   probeGoogleAdsOAuth,
   probeRedis,
+  probeSearchConsole,
   probeSupabaseStorage,
-  withProbeTimeout,
 } from "@/infrastructure/health/probes";
-import { fetchSearchConsoleSummary } from "@/services/google/search-console";
 import { fetchBigQueryHealth } from "@/services/google/bigquery";
 import {
   deriveGcpProjectId,
@@ -171,7 +170,7 @@ export async function runIntegrationHealthChecks(
   const gscLiveBase: IntegrationHealthItem = {
     id: "search-console-live",
     name: "Search Console API",
-    description: "28 日搜尋成效探測",
+    description: "連線與資源權限探測",
     status: gscEnv.status,
     missing: gscEnv.missing,
   };
@@ -225,16 +224,7 @@ export async function runIntegrationHealthChecks(
     ? Promise.resolve(mergeProbe(postgresBase, options.databaseProbe))
     : probeItem(postgresBase, probeDatabase);
 
-  const gscLivePromise = probeItem(gscLiveBase, async () => {
-    const r = await withProbeTimeout(fetchSearchConsoleSummary(), 25_000);
-    if (r.ok) {
-      return {
-        ok: true,
-        message: `28 日點擊 ${r.totals.clicks}、曝光 ${r.totals.impressions}`,
-      };
-    }
-    return { ok: false, message: r.message ?? "Search Console 失敗" };
-  });
+  const gscLivePromise = probeItem(gscLiveBase, probeSearchConsole);
 
   const bigQueryEnv = bigQueryBase();
 

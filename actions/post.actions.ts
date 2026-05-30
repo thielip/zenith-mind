@@ -103,8 +103,19 @@ export async function updatePostAction(
     const d = parsed.data;
 
     const visibleContent = d.content.replace(/<[^>]+>/g, "").trim();
-    if (d.status === "PUBLISHED" && visibleContent.length === 0) {
-      return { success: false, data: null, error: Errors.validation("Published posts require content") };
+    if (
+      (d.status === "PUBLISHED" || d.status === "SCHEDULED") &&
+      visibleContent.length === 0
+    ) {
+      return {
+        success: false,
+        data: null,
+        error: Errors.validation(
+          d.status === "SCHEDULED"
+            ? "排程發布需先填寫文章內容"
+            : "Published posts require content"
+        ),
+      };
     }
 
     const scheduledAt = d.scheduledAt ? new Date(d.scheduledAt) : null;

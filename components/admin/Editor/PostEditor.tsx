@@ -120,6 +120,7 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
       : []
   );
   const [saveStatus,  setSaveStatus]  = useState<"idle" | "saving" | "saved" | "published" | "error">("idle");
+  const [saveErrorMsg, setSaveErrorMsg] = useState("");
   const [isPending,   startTransition] = useTransition();
 
   const {
@@ -177,6 +178,28 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
 
   const onSubmit = (status: "DRAFT" | "PUBLISHED" | "SCHEDULED") =>
     handleSubmit(async (values) => {
+      setSaveErrorMsg("");
+
+      if (status === "SCHEDULED") {
+        if (!values.scheduledAt?.trim()) {
+          setSaveStatus("error");
+          setSaveErrorMsg("排程發布需設定未來的發布時間");
+          return;
+        }
+        const scheduled = new Date(values.scheduledAt);
+        if (Number.isNaN(scheduled.getTime()) || scheduled.getTime() <= Date.now()) {
+          setSaveStatus("error");
+          setSaveErrorMsg("排程時間必須晚於現在（以瀏覽器本地時間為準）");
+          return;
+        }
+        const visibleContent = contentZh.replace(/<[^>]+>/g, "").trim();
+        if (visibleContent.length === 0) {
+          setSaveStatus("error");
+          setSaveErrorMsg("排程發布需先填寫文章內容");
+          return;
+        }
+      }
+
       setSaveStatus("saving");
       startTransition(async () => {
         const result = await updatePostAction({
@@ -207,10 +230,28 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
             setTimeout(() => router.push("/admin/posts?published=1"), 700);
             return;
           }
+          if (status === "SCHEDULED") {
+            setSaveStatus("saved");
+            sessionStorage.setItem("admin-posts-message", "scheduled");
+            setTimeout(() => router.push("/admin/posts?scheduled=1"), 700);
+            return;
+          }
           setSaveStatus("saved");
           setTimeout(() => setSaveStatus("idle"), 3000);
         } else {
           setSaveStatus("error");
+          const err = result.error;
+          if (err.code === "VALIDATION_ERROR") {
+            setSaveErrorMsg(
+              typeof err.details === "string"
+                ? err.details
+                : "欄位格式不正確，請檢查表單"
+            );
+          } else if (err.code === "AUTH_FAILED") {
+            setSaveErrorMsg("登入狀態已失效，請重新登入");
+          } else {
+            setSaveErrorMsg(`儲存失敗，請稍後再試（${err.code}）`);
+          }
         }
       });
     })();
@@ -240,7 +281,7 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
           )}
           {saveStatus === "error" && (
             <span className="text-xs text-red-600" aria-live="assertive">
-              儲存失敗，請重試
+              {saveErrorMsg || "儲存失敗，請重試"}
             </span>
           )}
 
@@ -532,7 +573,7 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
               </p>
               <div>
                 <label htmlFor="scheduledAt" className="mb-1.5 block text-sm text-gray-600">
-                  發布時間（選填；排程發布時必填，未填則立即發布）
+                  排程時間（本地時間；排程發布時必填未來時間）
                 </label>
                 <input
                   id="scheduledAt"
@@ -545,6 +586,9 @@ export default function PostEditor({ post, categories, readOnly = false }: Props
                   }}
                   className="w-full max-w-xs rounded-lg border border-gray-300 px-3 py-2 text-sm disabled:opacity-50"
                 />
+                <p className="mt-1.5 text-xs text-gray-500">
+                  實際發布由系統每日 04:00 UTC 批次執行；若排程時間已過該批次，將於下一個批次發布。
+                </p>
               </div>
             </div>
 

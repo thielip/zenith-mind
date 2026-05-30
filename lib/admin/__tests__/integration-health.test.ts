@@ -1,6 +1,9 @@
 import { summarizeHealth } from "@/lib/admin/integration-health";
 import type { IntegrationHealthItem } from "@/lib/admin/integration-health.types";
 
+jest.mock("@/services/google/bigquery", () => ({
+  fetchBigQueryHealth: jest.fn(async () => ({ ok: true, message: "bq ok" })),
+}));
 jest.mock("@/infrastructure/health/probes", () => ({
   probeDatabase: jest.fn(async () => ({ ok: true, message: "db ok" })),
   probeRedis: jest.fn(async () => ({ ok: true, message: "redis ok" })),
@@ -8,6 +11,7 @@ jest.mock("@/infrastructure/health/probes", () => ({
   probeGemini: jest.fn(async () => ({ ok: true, message: "gemini ok" })),
   probeGa4Reporting: jest.fn(async () => ({ ok: true, message: "ga4 ok" })),
   probeGoogleAdsOAuth: jest.fn(async () => ({ ok: true, message: "ads ok" })),
+  probeSearchConsole: jest.fn(async () => ({ ok: true, message: "gsc ok" })),
 }));
 
 describe("summarizeHealth", () => {

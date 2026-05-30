@@ -219,7 +219,7 @@ export default function AdminPostsList({
         <table className="min-w-full divide-y divide-gray-100" aria-label="文章列表">
           <thead className="bg-gray-50">
             <tr>
-              {["標題", "分類", "狀態", "發布時間", "操作"].map((h) => (
+              {["標題", "分類", "狀態", "發布/排程時間", "操作"].map((h) => (
                 <th
                   key={h}
                   scope="col"
@@ -233,8 +233,11 @@ export default function AdminPostsList({
           <tbody className="divide-y divide-gray-50">
             {posts.map((post) => {
               const path = publicPath(post.slug);
-              const canViewPublic = post.status === "PUBLISHED" || post.status === "SCHEDULED";
-              const displayDate = post.publishedAt ?? post.createdAt;
+              const canViewPublic = post.status === "PUBLISHED";
+              const displayDate =
+                post.status === "SCHEDULED" && post.scheduledAt
+                  ? post.scheduledAt
+                  : post.publishedAt ?? post.createdAt;
 
               return (
                 <tr key={post.id} className="hover:bg-gray-50">
@@ -260,7 +263,9 @@ export default function AdminPostsList({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <span className="cursor-default border-b border-dotted border-gray-300">
-                          {formatDateZh(post.publishedAt)}
+                          {post.status === "SCHEDULED"
+                            ? formatDateTimeZh(post.scheduledAt)
+                            : formatDateZh(post.publishedAt)}
                         </span>
                       </TooltipTrigger>
                       <TooltipContent>{formatDateTimeZh(displayDate)}</TooltipContent>
@@ -283,7 +288,7 @@ export default function AdminPostsList({
                       ) : (
                         <span
                           className="inline-flex cursor-not-allowed items-center gap-1 rounded-lg border border-gray-100 px-2 py-1 text-xs text-gray-300"
-                          title="僅已發布或排程中的文章可於前台查看"
+                          title="僅已發布的文章可於前台查看"
                         >
                           <Eye size={14} aria-hidden />
                           查看

@@ -1,6 +1,12 @@
 import { createCookieJar } from "@/test-utils/next-mocks";
 import { prismaMock, resetPrismaMock } from "@/test-utils/prisma-mock";
 
+jest.mock("@/lib/db/cf-public-runtime", () => ({
+  isCfPublicRuntime: jest.fn(() => false),
+}));
+jest.mock("@/lib/blog/post-access-supabase", () => ({
+  fetchProtectedPostHashBySlug: jest.fn(),
+}));
 jest.mock("next/headers", () => ({
   cookies: jest.fn(),
 }));
