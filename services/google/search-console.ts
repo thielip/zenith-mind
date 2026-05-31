@@ -1,6 +1,7 @@
 import { google } from "googleapis";
 import { createSearchConsoleAuth, getSearchConsoleAuthMode } from "./auth";
 import { normalizeGscSiteUrl } from "@/lib/google/gsc-site-url";
+import { probeSearchConsoleRest } from "./search-console-probe";
 
 export interface GscQueryRow {
   query: string;
@@ -49,36 +50,17 @@ function formatGscProbeError(e: unknown, siteUrl: string): string {
   return message;
 }
 
-/** 輕量連線探測：驗證 OAuth / 服務帳號與 GSC 資源權限（非 28 日 analytics） */
+/** 輕量連線探測：REST + AbortSignal（避免 googleapis 在 serverless 無逾時卡住） */
 export async function probeSearchConsoleApi(): Promise<{
   ok: boolean;
   message?: string;
 }> {
   const siteUrl = normalizeGscSiteUrl(process.env["GOOGLE_SEARCH_CONSOLE_SITE_URL"]);
-  if (!siteUrl) {
-    return {
-      ok: false,
-      message: "未設定 GOOGLE_SEARCH_CONSOLE_SITE_URL（例：https://www.getzenithmind.com/）",
-    };
+  const result = await probeSearchConsoleRest();
+  if (!result.ok && siteUrl && result.message) {
+    return { ok: false, message: formatGscProbeError(new Error(result.message), siteUrl) };
   }
-
-  const auth = createSearchConsoleAuth();
-  if (!auth) {
-    return {
-      ok: false,
-      message:
-        "未設定 GSC 認證：請設 GSC_OAUTH_*（建議）或 GA4_CLIENT_EMAIL + GA4_PRIVATE_KEY",
-    };
-  }
-
-  try {
-    const searchconsole = google.searchconsole({ version: "v1", auth });
-    const res = await searchconsole.sites.get({ siteUrl });
-    const level = res.data.permissionLevel ?? "unknown";
-    return { ok: true, message: `GSC 可存取 ${siteUrl}（${level}）` };
-  } catch (e) {
-    return { ok: false, message: formatGscProbeError(e, siteUrl) };
-  }
+  return result;
 }
 
 export async function fetchSearchConsoleSummary(): Promise<{
