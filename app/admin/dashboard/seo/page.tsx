@@ -1,8 +1,8 @@
 import { SeoPageView } from "@/features/seo-intelligence/components/seo-page-view";
-import { seoModuleMeta } from "@/server/command-center/modules/seo/meta";
 import { loadCommandCenterModule } from "@/server/command-center/registry";
 
-export const revalidate = seoModuleMeta.revalidate;
+/** 須為字面常數（Next.js segment config）；與 seoModuleMeta.revalidate 保持同步 */
+export const revalidate = 60;
 
 export default async function Page() {
   const data = await loadCommandCenterModule("seo");

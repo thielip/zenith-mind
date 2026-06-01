@@ -49,11 +49,13 @@ if (/load-seo|search-console|googleapis/.test(registryManifest)) {
 }
 
 if (/modules\/seo\/module/.test(seoPage)) {
-  fail("seo page.tsx imports full module (should use meta.ts only)");
-} else if (!/seoModuleMeta/.test(seoPage)) {
-  fail("seo page.tsx should import seoModuleMeta for revalidate");
+  fail("seo page.tsx imports full module chunk");
+} else if (/seoModuleMeta\.revalidate/.test(seoPage)) {
+  fail("seo page.tsx must use literal revalidate (Next.js segment config)");
+} else if (!/export const revalidate = \d+/.test(seoPage)) {
+  fail("seo page.tsx missing literal export const revalidate");
 } else {
-  ok("seo page.tsx imports only lightweight meta");
+  ok("seo page.tsx avoids heavy imports and uses literal revalidate");
 }
 
 console.log("[audit:architecture] 1b/3 Registry Jest isolation");
