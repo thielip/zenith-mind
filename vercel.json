@@ -3,6 +3,11 @@
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "installCommand": "npm ci",
+  "build": {
+    "env": {
+      "SKIP_ENV_VALIDATION": "true"
+    }
+  },
   "regions": ["hnd1"],
   "crons": [
     {
