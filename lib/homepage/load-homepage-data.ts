@@ -1,71 +1,20 @@
-import { isCfPublicRuntime } from "@/lib/db/cf-public-runtime";
 import { safeQuery } from "@/lib/db/safe-query";
 import {
   getHeroSlidesForHomepage,
   getHomeCarouselForHomepage,
 } from "@/lib/site/homepage-data-cache";
-import { getSafeSiteSettings } from "@/lib/site/safe-site-settings";
-import {
-  countCategoriesViaSupabase,
-  countHomePageViewsViaSupabase,
-  countPublishedPostsViaSupabase,
-  fetchAffiliateLinksViaSupabase,
-  fetchFeaturedPostsViaSupabase,
-} from "@/lib/site/public-site-supabase";
-import type { HomePostCard } from "@/components/home/FeaturedPostsSection";
+import { getPublicReadRepository } from "@/lib/public-content/get-repository";
+import { DEFAULT_SITE_SETTINGS } from "@/lib/site/queries";
+import type {
+  AffiliateLinkItem,
+  FeaturedPostItem,
+} from "@/lib/homepage/homepage-types";
 import type { SiteLocale, SiteSettingsData } from "@/lib/site/types";
 
-export type FeaturedPostItem = HomePostCard;
-
-export type AffiliateLinkItem = {
-  name: string;
-  slug: string;
-  platform: string | null;
-  commission: string | null;
-};
+export type { AffiliateLinkItem, FeaturedPostItem } from "@/lib/homepage/homepage-types";
 
 const EMPTY_POSTS: FeaturedPostItem[] = [];
 const EMPTY_AFFILIATES: AffiliateLinkItem[] = [];
-
-async function loadFeaturedPostsPrisma(): Promise<FeaturedPostItem[]> {
-  const { prisma } = await import("@/infrastructure/db/prisma");
-  return prisma.post.findMany({
-    where: { status: "PUBLISHED", deletedAt: null },
-    select: {
-      id: true,
-      slug: true,
-      title: true,
-      titleEn: true,
-      excerpt: true,
-      excerptEn: true,
-      publishedAt: true,
-      readingTime: true,
-      category: { select: { name: true, nameEn: true, slug: true } },
-    },
-    orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
-    take: 6,
-  });
-}
-
-async function loadAffiliateLinksPrisma(): Promise<AffiliateLinkItem[]> {
-  const { prisma } = await import("@/infrastructure/db/prisma");
-  return prisma.affiliateLink.findMany({
-    where: { isActive: true },
-    select: { name: true, slug: true, platform: true, commission: true },
-    orderBy: { createdAt: "desc" },
-    take: 6,
-  });
-}
-
-async function loadFeaturedPosts(): Promise<FeaturedPostItem[]> {
-  if (isCfPublicRuntime()) return fetchFeaturedPostsViaSupabase();
-  return loadFeaturedPostsPrisma();
-}
-
-async function loadAffiliateLinks(): Promise<AffiliateLinkItem[]> {
-  if (isCfPublicRuntime()) return fetchAffiliateLinksViaSupabase();
-  return loadAffiliateLinksPrisma();
-}
 
 export type HomepageData = {
   featuredPosts: FeaturedPostItem[];
@@ -78,29 +27,11 @@ export type HomepageData = {
   homePageViews: number;
 };
 
-/** 首頁區塊各自降級；CF Worker 不載入 Prisma */
+/** 首頁區塊各自降級；資料平面由 PublicReadRepository 統一分派 */
 export async function loadHomepageData(
   siteLocale: SiteLocale
 ): Promise<HomepageData> {
-  const loadPostCount = async () => {
-    if (isCfPublicRuntime()) return countPublishedPostsViaSupabase();
-    const { prisma } = await import("@/infrastructure/db/prisma");
-    return prisma.post.count({
-      where: { status: "PUBLISHED", deletedAt: null },
-    });
-  };
-
-  const loadCategoryCount = async () => {
-    if (isCfPublicRuntime()) return countCategoriesViaSupabase();
-    const { prisma } = await import("@/infrastructure/db/prisma");
-    return prisma.category.count({ where: { deletedAt: null } });
-  };
-
-  const loadPageViews = async () => {
-    if (isCfPublicRuntime()) return countHomePageViewsViaSupabase(siteLocale);
-    const { fetchSiteViewTotal } = await import("@/lib/analytics/post-view-totals");
-    return fetchSiteViewTotal(siteLocale);
-  };
+  const repo = await getPublicReadRepository();
 
   const [
     featuredPosts,
@@ -112,18 +43,22 @@ export async function loadHomepageData(
     siteSettings,
     homePageViews,
   ] = await Promise.all([
-    safeQuery("homepage.featuredPosts", loadFeaturedPosts, EMPTY_POSTS),
+    safeQuery("homepage.featuredPosts", () => repo.loadFeaturedPosts(), EMPTY_POSTS),
     safeQuery("homepage.heroSlides", () => getHeroSlidesForHomepage(siteLocale), []),
     safeQuery(
       "homepage.carousel",
       () => getHomeCarouselForHomepage(siteLocale),
       []
     ),
-    safeQuery("homepage.postCount", loadPostCount, 0),
-    safeQuery("homepage.categoryCount", loadCategoryCount, 0),
-    safeQuery("homepage.affiliateLinks", loadAffiliateLinks, EMPTY_AFFILIATES),
-    getSafeSiteSettings(),
-    safeQuery("homepage.pageViews", loadPageViews, 0),
+    safeQuery("homepage.postCount", () => repo.countPublishedPosts(), 0),
+    safeQuery("homepage.categoryCount", () => repo.countCategories(), 0),
+    safeQuery(
+      "homepage.affiliateLinks",
+      () => repo.loadAffiliateLinksForHome(),
+      EMPTY_AFFILIATES
+    ),
+    safeQuery("homepage.siteSettings", () => repo.getSiteSettings(), DEFAULT_SITE_SETTINGS),
+    safeQuery("homepage.pageViews", () => repo.countHomePageViews(siteLocale), 0),
   ]);
 
   return {

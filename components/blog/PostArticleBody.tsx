@@ -1,7 +1,7 @@
 // components/blog/PostArticleBody.tsx — Server Component
 // 有通過契約的 contentBlocks 時優先渲染；否則回退 HTML（Tiptap / Markdown 轉 HTML）
 
-import { isCfPublicRuntime } from "@/lib/db/cf-public-runtime";
+import { isPublicCfBackend } from "@/lib/public-content/runtime";
 import { parseContentBlocksForLocale } from "@/lib/content-blocks/schema";
 import ArticleContent from "./ArticleContent";
 import BlockRenderer from "./BlockRenderer";
@@ -19,7 +19,7 @@ export default function PostArticleBody({
   contentType,
   contentBlocks,
 }: Props) {
-  if (isCfPublicRuntime()) {
+  if (isPublicCfBackend()) {
     return <ArticleContent content={content} contentType={contentType} />;
   }
 

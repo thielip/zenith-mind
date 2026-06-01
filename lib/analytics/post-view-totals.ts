@@ -1,7 +1,7 @@
 /**
  * 瀏覽量：首頁直接數 page_views；文章可讀彙總 view 或日後再簡化。
  */
-import { isCfPublicRuntime } from "@/lib/db/cf-public-runtime";
+import { isPublicCfBackend } from "@/lib/public-content/runtime";
 import {
   supabaseCount,
   supabaseRestWithFallback,
@@ -33,7 +33,7 @@ function readViewCount(row: { total_views?: number; view_count?: number }): numb
 
 /** 首頁累計瀏覽：postId 為 null 的 page_views 筆數（最直覺、與 DB 一致） */
 export async function fetchSiteViewTotal(locale: SiteLocale): Promise<number> {
-  if (isCfPublicRuntime()) {
+  if (isPublicCfBackend()) {
     return supabaseCount(
       "page_views",
       { postId: "is.null", locale: `eq.${locale}` },
@@ -53,7 +53,7 @@ export async function fetchPostViewTotalsMap(
   const map = new Map<string, number>();
   if (postIds.length === 0) return map;
 
-  if (isCfPublicRuntime()) {
+  if (isPublicCfBackend()) {
     const inList = postIds.map((id) => `"${id}"`).join(",");
     const rows = await supabaseRestWithFallback<PostTotalRow[]>(
       "v_post_view_totals",

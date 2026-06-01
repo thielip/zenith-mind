@@ -1,16 +1,22 @@
 import type { PublicContentRepository } from "@/domain/content/ports";
-import { isCfPublicRuntime } from "@/lib/db/cf-public-runtime";
+import type { PublicReadRepository } from "@/domain/content/public-read.port";
+import { isPublicCfBackend } from "@/lib/public-content/runtime";
 
-export async function getPublicContentRepository(): Promise<PublicContentRepository> {
-  if (isCfPublicRuntime()) {
-    const { publicContentSupabaseRepository } = await import(
-      "@/infrastructure/content/public-content-supabase.repository"
+export async function getPublicReadRepository(): Promise<PublicReadRepository> {
+  if (isPublicCfBackend()) {
+    const { publicReadSupabaseRepository } = await import(
+      "@/infrastructure/content/public-read-supabase.repository"
     );
-    return publicContentSupabaseRepository;
+    return publicReadSupabaseRepository;
   }
 
-  const { publicContentPrismaRepository } = await import(
-    "@/infrastructure/content/public-content-prisma.repository"
+  const { publicReadPrismaRepository } = await import(
+    "@/infrastructure/content/public-read-prisma.repository"
   );
-  return publicContentPrismaRepository;
+  return publicReadPrismaRepository;
+}
+
+/** @deprecated 使用 getPublicReadRepository */
+export async function getPublicContentRepository(): Promise<PublicContentRepository> {
+  return getPublicReadRepository();
 }

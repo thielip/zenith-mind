@@ -1,10 +1,5 @@
-import { createCookieJar } from "@/test-utils/next-mocks";
-
-jest.mock("next/headers", () => ({
-  cookies: jest.fn(),
-}));
-jest.mock("@/lib/auth/jwt", () => ({
-  verifyAccessToken: jest.fn(),
+jest.mock("@/lib/auth/resolve-admin-action", () => ({
+  gateAdminOnly: jest.fn(),
 }));
 jest.mock("@/domain/ai/ai.job-manager", () => ({
   aiJobManager: {
@@ -12,35 +7,68 @@ jest.mock("@/domain/ai/ai.job-manager", () => ({
   },
 }));
 
-import { cookies } from "next/headers";
-import { verifyAccessToken } from "@/lib/auth/jwt";
+import { gateAdminOnly } from "@/lib/auth/resolve-admin-action";
 import { aiJobManager } from "@/domain/ai/ai.job-manager";
 import { GET } from "../route";
 
-const cookiesMock = jest.mocked(cookies);
-const verifyAccessTokenMock = jest.mocked(verifyAccessToken);
+const gateAdminOnlyMock = jest.mocked(gateAdminOnly);
 const getJobStatusForUserMock = jest.mocked(aiJobManager.getJobStatusForUser);
 
 describe("GET /api/ai/jobs/:id", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    cookiesMock.mockResolvedValue(createCookieJar({ access_token: "access" }));
-    verifyAccessTokenMock.mockResolvedValue({
-      userId: "user-1",
-      email: "admin@example.com",
-      role: "ADMIN",
-      tokenType: "access",
+    gateAdminOnlyMock.mockResolvedValue({
+      ok: true,
+      session: {
+        userId: "user-1",
+        email: "admin@example.com",
+        role: "ADMIN",
+      },
     });
   });
 
-  it("rejects missing auth cookie", async () => {
-    cookiesMock.mockResolvedValue(createCookieJar());
+  it("rejects unauthenticated requests", async () => {
+    gateAdminOnlyMock.mockResolvedValue({
+      ok: false,
+      result: {
+        success: false,
+        data: null,
+        error: {
+          code: "AUTH_FAILED",
+          message: "auth",
+          retryable: false,
+          severity: "warn",
+        },
+      },
+    });
 
     const response = await GET(new Request("http://localhost/api/ai/jobs/job-1") as never, {
       params: Promise.resolve({ id: "job-1" }),
     });
 
     expect(response.status).toBe(401);
+  });
+
+  it("rejects guest role", async () => {
+    gateAdminOnlyMock.mockResolvedValue({
+      ok: false,
+      result: {
+        success: false,
+        data: null,
+        error: {
+          code: "FORBIDDEN",
+          message: "forbidden",
+          retryable: false,
+          severity: "warn",
+        },
+      },
+    });
+
+    const response = await GET(new Request("http://localhost/api/ai/jobs/job-1") as never, {
+      params: Promise.resolve({ id: "job-1" }),
+    });
+
+    expect(response.status).toBe(403);
   });
 
   it("loads job status scoped to authenticated user", async () => {

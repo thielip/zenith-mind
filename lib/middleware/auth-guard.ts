@@ -1,42 +1,49 @@
 // lib/middleware/auth-guard.ts — Edge Runtime
 // JWT 路由守衛（jose，Edge Web Crypto API）
-// ⚠ 禁止使用 jsonwebtoken（Node.js crypto，Edge 不相容）
+// RBAC：GUEST 可讀後台；ADMIN_ONLY 路徑拒絕 GUEST（403）
 
-import { jwtVerify } from "jose";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import {
+  canAccessAdminRoute,
+  isAdminAuthenticatedApi,
+  isAdminProtectedPage,
+  isAdminPublicPage,
+} from "@/lib/auth/admin-route-policy";
+import { verifyAccessToken } from "@/lib/auth/jwt";
 
-const PROTECTED = [
-  "/admin/dashboard",
-  "/admin/site",
-  "/admin/posts",
-  "/admin/media",
-  "/admin/affiliate",
-  "/admin/analytics",
-  "/admin/audit-log",
-  "/admin/settings",
-  "/admin/users",
-];
+function extractAccessToken(request: NextRequest): string {
+  return (
+    request.cookies.get("access_token")?.value ??
+    request.headers.get("Authorization")?.replace(/^Bearer\s+/i, "") ??
+    ""
+  );
+}
 
-const PUBLIC_ADMIN = ["/admin/login", "/admin/totp"];
+function forbiddenResponse(): NextResponse {
+  return new NextResponse("Forbidden", {
+    status: 403,
+    headers: { "Content-Type": "text/plain; charset=utf-8" },
+  });
+}
 
-async function verifyJwt(token: string): Promise<boolean> {
+function unauthorizedJson(): NextResponse {
+  return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+}
+
+function forbiddenJson(): NextResponse {
+  return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+}
+
+async function resolveAccess(
+  token: string
+): Promise<{ ok: true; role: "ADMIN" | "GUEST" } | { ok: false }> {
+  if (!token || !process.env["JWT_ACCESS_SECRET"]) return { ok: false };
   try {
-    const secret = new TextEncoder().encode(
-      process.env["JWT_ACCESS_SECRET"] ?? ""
-    );
-    if (!process.env["JWT_ACCESS_SECRET"]) return false;
-    const { payload } = await jwtVerify(token, secret, { algorithms: ["HS256"] });
-    const role = payload["role"];
-    return (
-      payload["tokenType"] === "access" &&
-      (role === "ADMIN" || role === "GUEST") &&
-      typeof payload["userId"] === "string" &&
-      typeof payload["email"] === "string" &&
-      !("purpose" in payload)
-    );
+    const payload = await verifyAccessToken(token);
+    return { ok: true, role: payload.role };
   } catch {
-    return false;
+    return { ok: false };
   }
 }
 
@@ -44,34 +51,36 @@ export async function adminAuthGuard(
   request: NextRequest
 ): Promise<NextResponse | null> {
   const { pathname } = request.nextUrl;
+  const token = extractAccessToken(request);
 
-  const isProtected = PROTECTED.some((p) => pathname.startsWith(p));
-  const isPublic    = PUBLIC_ADMIN.some((p) => pathname.startsWith(p));
+  if (isAdminAuthenticatedApi(pathname)) {
+    const access = await resolveAccess(token);
+    if (!access.ok) return unauthorizedJson();
+    if (!canAccessAdminRoute(pathname, access.role)) return forbiddenJson();
+    return null;
+  }
 
-  if (isProtected) {
-    const token =
-      request.cookies.get("access_token")?.value ??
-      request.headers.get("Authorization")?.replace("Bearer ", "") ??
-      "";
-
-    const valid = token ? await verifyJwt(token) : false;
-
-    if (!valid) {
+  if (isAdminProtectedPage(pathname)) {
+    const access = await resolveAccess(token);
+    if (!access.ok) {
       const url = new URL("/admin/login", request.url);
       url.searchParams.set("redirect", pathname);
       const res = NextResponse.redirect(url);
       res.cookies.delete("access_token");
       return res;
     }
+    if (!canAccessAdminRoute(pathname, access.role)) {
+      return forbiddenResponse();
+    }
+    return null;
   }
 
-  // 已登入者訪問 /admin/login → 轉向 dashboard
-  if (isPublic && pathname === "/admin/login") {
-    const token = request.cookies.get("access_token")?.value ?? "";
-    if (token && (await verifyJwt(token))) {
+  if (isAdminPublicPage(pathname) && pathname === "/admin/login") {
+    const access = await resolveAccess(token);
+    if (access.ok) {
       return NextResponse.redirect(new URL("/admin/dashboard", request.url));
     }
   }
 
-  return null; // 繼續下一步
+  return null;
 }

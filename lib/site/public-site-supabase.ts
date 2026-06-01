@@ -2,6 +2,8 @@
  * 公開站資料（Cloudflare Worker）：僅 Supabase PostgREST + fetch。
  * 禁止 import @/infrastructure/db/prisma。
  */
+import { supabasePublishedVisibilityAnd } from "@/lib/blog/public-post-visibility";
+import { PUBLIC_READ_CACHE_TAGS } from "@/lib/public-content/cache-tags";
 import {
   supabaseCount,
   supabaseRest,
@@ -172,13 +174,16 @@ export async function fetchFeaturedPostsViaSupabase() {
     {
       select:
         "id,slug,title,titleEn,excerpt,excerptEn,publishedAt,readingTime,categories(name,nameEn,slug)",
-      status: "eq.PUBLISHED",
-      deletedAt: "is.null",
+      and: supabasePublishedVisibilityAnd(),
       order: "publishedAt.desc,createdAt.desc",
       limit: "6",
     },
     undefined,
-    { kind: "public", revalidate: 3600, tags: ["posts"] }
+    {
+      kind: "public",
+      revalidate: 3600,
+      tags: [...PUBLIC_READ_CACHE_TAGS.posts],
+    }
   );
   return rows.map(mapFeaturedPost);
 }
@@ -194,10 +199,15 @@ export async function fetchAffiliateLinksViaSupabase() {
 }
 
 export async function countPublishedPostsViaSupabase(): Promise<number> {
-  return supabaseCount("posts", {
-    status: "eq.PUBLISHED",
-    deletedAt: "is.null",
-  });
+  return supabaseCount(
+    "posts",
+    { and: supabasePublishedVisibilityAnd() },
+    {
+      kind: "public",
+      revalidate: 3600,
+      tags: [...PUBLIC_READ_CACHE_TAGS.posts],
+    }
+  );
 }
 
 export async function countCategoriesViaSupabase(): Promise<number> {

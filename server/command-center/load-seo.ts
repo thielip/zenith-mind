@@ -5,10 +5,12 @@ import type { SeoPayload } from "@/types/command-center/module-payloads";
 export type { SeoPayload };
 import type { KpiMetric } from "@/types/command-center/metrics";
 
-export async function loadSeoPayload(): Promise<SeoPayload> {
+export async function loadSeoPayload(options?: {
+  signal?: AbortSignal;
+}): Promise<SeoPayload> {
   const [ga4, gsc] = await Promise.all([
     getCachedGa4Bundle(),
-    fetchSearchConsoleSummary(),
+    fetchSearchConsoleSummary({ signal: options?.signal }),
   ]);
 
   const kpis: KpiMetric[] = [

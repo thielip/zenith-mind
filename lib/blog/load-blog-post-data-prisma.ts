@@ -1,33 +1,34 @@
 import type { PrismaClient } from "@prisma/client";
 import { fetchPostViewTotal } from "@/lib/analytics/post-view-totals";
+import { mergePrismaPublishedWhere } from "@/lib/blog/public-post-visibility";
+import {
+  mapBlogPostDetailFromCore,
+  mapSeoRow,
+  mapAuthorFromUserRecord,
+} from "@/lib/blog/map-blog-post-detail";
 import type {
   BlogPostDetail,
-  BlogPostFaq,
   RecommendedPostCard,
 } from "@/lib/blog/blog-post-types";
 
 const postInclude = {
+  author: { select: { id: true, email: true } },
   category: { select: { id: true, name: true, nameEn: true, slug: true } },
   tags: { include: { tag: { select: { name: true, slug: true } } } },
   seoMetadata: true,
 } as const;
-
-function mapFaq(raw: unknown): BlogPostFaq[] | null {
-  if (!Array.isArray(raw)) return null;
-  return raw as BlogPostFaq[];
-}
 
 export async function loadBlogPostBySlugPrisma(
   prisma: PrismaClient,
   slug: string
 ): Promise<BlogPostDetail | null> {
   const post = await prisma.post.findFirst({
-    where: { slug, status: "PUBLISHED", deletedAt: null },
+    where: mergePrismaPublishedWhere({ slug }),
     include: postInclude,
   });
   if (!post) return null;
 
-  return {
+  return mapBlogPostDetailFromCore({
     id: post.id,
     slug: post.slug,
     title: post.title,
@@ -38,7 +39,7 @@ export async function loadBlogPostBySlugPrisma(
     contentEn: post.contentEn,
     contentType: post.contentType,
     contentBlocks: post.contentBlocks,
-    faq: mapFaq(post.faq),
+    faq: post.faq,
     coverImage: post.coverImage,
     coverImageAlt: post.coverImageAlt,
     coverImageWidth: post.coverImageWidth,
@@ -49,23 +50,12 @@ export async function loadBlogPostBySlugPrisma(
     categoryId: post.categoryId,
     readingTime: post.readingTime,
     isPasswordProtected: post.isPasswordProtected,
+    author: mapAuthorFromUserRecord(post.author),
     category: post.category,
     tags: post.tags,
-    seoMetadata: post.seoMetadata
-      ? {
-          metaTitle: post.seoMetadata.metaTitle,
-          metaTitleEn: post.seoMetadata.metaTitleEn,
-          metaDescription: post.seoMetadata.metaDescription,
-          metaDescriptionEn: post.seoMetadata.metaDescriptionEn,
-          ogTitle: post.seoMetadata.ogTitle,
-          ogDescription: post.seoMetadata.ogDescription,
-          ogImage: post.seoMetadata.ogImage,
-          noIndex: post.seoMetadata.noIndex,
-          noFollow: post.seoMetadata.noFollow,
-        }
-      : null,
-    _count: { pageViews: await fetchPostViewTotal(post.id) },
-  };
+    seoMetadata: post.seoMetadata ? mapSeoRow(post.seoMetadata) : null,
+    pageViews: await fetchPostViewTotal(post.id),
+  });
 }
 
 export async function loadRecommendedPostsPrisma(
@@ -74,12 +64,10 @@ export async function loadRecommendedPostsPrisma(
   categoryId?: string
 ): Promise<RecommendedPostCard[]> {
   return prisma.post.findMany({
-    where: {
-      status: "PUBLISHED",
-      deletedAt: null,
+    where: mergePrismaPublishedWhere({
       id: { not: currentPostId },
       ...(categoryId ? { categoryId } : {}),
-    },
+    }),
     select: {
       slug: true,
       title: true,
@@ -98,7 +86,7 @@ export async function loadPublishedPostSlugsPrisma(
   limit: number
 ): Promise<string[]> {
   const rows = await prisma.post.findMany({
-    where: { status: "PUBLISHED", deletedAt: null },
+    where: mergePrismaPublishedWhere({}),
     select: { slug: true },
     orderBy: { publishedAt: "desc" },
     take: limit,

@@ -3,6 +3,8 @@
  * 禁止 import @/infrastructure/db/prisma。
  */
 import { fetchPostViewTotalsMap } from "@/lib/analytics/post-view-totals";
+import { supabasePublishedVisibilityAnd } from "@/lib/blog/public-post-visibility";
+import { PUBLIC_READ_CACHE_TAGS } from "@/lib/public-content/cache-tags";
 import { supabaseCount, supabaseRestWithFallback } from "@/lib/db/supabase-rest";
 
 const PUBLIC_KEY = "public" as const;
@@ -47,10 +49,15 @@ function escapeIlikeTerm(raw: string): string {
   return raw.replace(/[%_*(),.\\]/g, "").trim();
 }
 
+const POSTS_LIST_CACHE = {
+  kind: "public" as const,
+  revalidate: 3600,
+  tags: [...PUBLIC_READ_CACHE_TAGS.posts],
+};
+
 function buildListParams(filters: BlogListFilters): Record<string, string> {
   const params: Record<string, string> = {
-    status: "eq.PUBLISHED",
-    deletedAt: "is.null",
+    and: supabasePublishedVisibilityAnd(),
     select: POST_LIST_SELECT,
     order: "publishedAt.desc,createdAt.desc",
   };
@@ -118,7 +125,7 @@ async function fetchTagsForPosts(
     },
     [],
     undefined,
-    { kind: "public", revalidate: 3600, tags: ["posts"] },
+    POSTS_LIST_CACHE,
     PUBLIC_KEY
   );
 
@@ -147,7 +154,7 @@ export async function fetchBlogListPostsViaSupabase(
     params,
     [],
     undefined,
-    { kind: "public", revalidate: 3600, tags: ["posts"] },
+    POSTS_LIST_CACHE,
     PUBLIC_KEY
   );
   const tagsByPostId = await safeQuery(
@@ -171,7 +178,7 @@ export async function countBlogListPostsViaSupabase(
   delete params.order;
   delete params.limit;
   delete params.offset;
-  return supabaseCount("posts", params, undefined, PUBLIC_KEY);
+  return supabaseCount("posts", params, POSTS_LIST_CACHE, PUBLIC_KEY);
 }
 
 export async function fetchBlogCategoriesViaSupabase(): Promise<BlogListCategory[]> {
@@ -185,7 +192,7 @@ export async function fetchBlogCategoriesViaSupabase(): Promise<BlogListCategory
     },
     [],
     undefined,
-    undefined,
+    POSTS_LIST_CACHE,
     PUBLIC_KEY
   );
 }
@@ -201,7 +208,7 @@ export async function fetchBlogTagsViaSupabase(): Promise<BlogListTag[]> {
     },
     [],
     undefined,
-    undefined,
+    POSTS_LIST_CACHE,
     PUBLIC_KEY
   );
 }

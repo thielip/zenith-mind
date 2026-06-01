@@ -2,8 +2,16 @@ import type {
   AffiliateLinkRedirect,
   PublicContentRepository,
 } from "@/domain/content/ports";
+import { supabasePublishedVisibilityAndWith } from "@/lib/blog/public-post-visibility";
+import { PUBLIC_READ_CACHE_TAGS } from "@/lib/public-content/cache-tags";
 import { supabaseRestWithFallback } from "@/lib/db/supabase-rest";
 import { toPublicPostListItemDto } from "@/lib/dto/post-public.dto";
+
+const SEARCH_CACHE = {
+  kind: "public" as const,
+  revalidate: 3600,
+  tags: [...PUBLIC_READ_CACHE_TAGS.posts],
+};
 
 type SearchPostRow = {
   id: string;
@@ -50,15 +58,13 @@ export const publicContentSupabaseRepository: PublicContentRepository = {
       {
         select:
           "id,slug,title,titleEn,excerpt,excerptEn,publishedAt,readingTime,categories(slug,name,nameEn)",
-        status: "eq.PUBLISHED",
-        deletedAt: "is.null",
-        or: `(${orFilter})`,
+        and: supabasePublishedVisibilityAndWith([`or(${orFilter})`]),
         order: "publishedAt.desc",
         limit: "30",
       },
       [],
       undefined,
-      { kind: "fresh" }
+      SEARCH_CACHE
     );
 
     return rows.map((row) => {

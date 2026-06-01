@@ -2,8 +2,7 @@
 // AI Job 狀態查詢（前端 Polling 使用，每 2 秒呼叫一次）
 
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { verifyAccessToken } from "@/lib/auth/jwt";
+import { gateAdminOnly } from "@/lib/auth/resolve-admin-action";
 import { aiJobManager } from "@/domain/ai/ai.job-manager";
 
 export const dynamic = "force-dynamic";
@@ -16,22 +15,16 @@ export async function GET(
   _req: NextRequest,
   { params }: RouteParams
 ): Promise<NextResponse> {
-  // ── JWT 驗證 ─────────────────────────────────────────
-  const jar   = await cookies();
-  const token = jar.get("access_token")?.value ?? "";
-
-  if (!token) {
-    return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+  const gate = await gateAdminOnly();
+  if (!gate.ok) {
+    const status = gate.result.error?.code === "FORBIDDEN" ? 403 : 401;
+    return NextResponse.json(
+      { error: status === 403 ? "FORBIDDEN" : "UNAUTHORIZED" },
+      { status }
+    );
   }
 
-  let userId: string;
-  try {
-    const payload = await verifyAccessToken(token);
-    userId = payload.userId;
-  } catch {
-    return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
-  }
-
+  const userId = gate.session.userId;
   const { id } = await params;
 
   try {

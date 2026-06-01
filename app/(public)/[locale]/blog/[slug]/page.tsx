@@ -30,7 +30,7 @@ import PostArticleBody from "@/components/blog/PostArticleBody";
 import TableOfContents  from "@/components/blog/TableOfContents";
 import PageViewTracker from "@/components/analytics/PageViewTracker";
 import { hasPostAccess } from "@/lib/blog/post-access-cookie";
-import { isCfPublicRuntime } from "@/lib/db/cf-public-runtime";
+import { isPublicCfBackend } from "@/lib/public-content/runtime";
 
 export const revalidate = 3600;
 
@@ -134,7 +134,7 @@ export default async function BlogPostPage({ params }: Props) {
     logBlogRenderError("BlogPostPage", error, {
       locale,
       slug,
-      cfRuntime: isCfPublicRuntime(),
+      cfRuntime: isPublicCfBackend(),
     });
     return (
       <BlogPostUnavailable locale={locale} slug={slug} reason="unavailable" />
@@ -197,7 +197,7 @@ async function renderBlogPostPage(locale: string, slug: string) {
     description: (isEn ? post.excerptEn : post.excerpt) ?? "",
     url: canonical,
     imageUrl: post.coverImage ?? undefined,
-    authorName: "巔峰思維",
+    authorName: post.author?.displayName ?? "Zenith Mind",
       publishedAt: post.publishedAt ?? post.createdAt,
       updatedAt: post.updatedAt,
     });
@@ -234,7 +234,7 @@ async function renderBlogPostPage(locale: string, slug: string) {
     ? toIsoStringSafe(post.publishedAt)
     : undefined;
 
-  const cfLight = isCfPublicRuntime();
+  const cfLight = isPublicCfBackend();
   let PasswordGate: typeof import("@/components/blog/PostPasswordGate").default | null =
     null;
   let RecommendedPostsSection: typeof import("@/components/blog/RecommendedPostsSection").default | null =

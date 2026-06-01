@@ -7,6 +7,11 @@ export type BlogPostFaq = {
   answerEn?: string;
 };
 
+export type BlogPostAuthor = {
+  id: string;
+  displayName: string;
+};
+
 export type BlogPostSeo = {
   metaTitle: string | null;
   metaTitleEn: string | null;
@@ -41,6 +46,7 @@ export type BlogPostDetail = {
   categoryId: string | null;
   readingTime: number;
   isPasswordProtected: boolean;
+  author: BlogPostAuthor | null;
   category: {
     id: string;
     name: string;

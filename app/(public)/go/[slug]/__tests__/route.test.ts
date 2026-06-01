@@ -1,10 +1,12 @@
-import { prismaMock, resetPrismaMock } from "@/test-utils/prisma-mock";
+const mockFindAffiliate = jest.fn();
 
-jest.mock("@/lib/db/cf-public-runtime", () => ({
-  isCfPublicRuntime: jest.fn().mockReturnValue(false),
+jest.mock("@/lib/public-content/runtime", () => ({
+  isPublicCfBackend: jest.fn().mockReturnValue(false),
 }));
-jest.mock("@/infrastructure/db/prisma", () => ({
-  prisma: require("@/test-utils/prisma-mock").prismaMock,
+jest.mock("@/lib/public-content/get-repository", () => ({
+  getPublicReadRepository: jest.fn(async () => ({
+    findActiveAffiliateLinkBySlug: mockFindAffiliate,
+  })),
 }));
 jest.mock("@/lib/affiliate/record-click", () => ({
   recordAffiliateClick: jest.fn().mockResolvedValue(undefined),
@@ -17,12 +19,11 @@ const recordAffiliateClickMock = jest.mocked(recordAffiliateClick);
 
 describe("GET /go/:slug", () => {
   beforeEach(() => {
-    resetPrismaMock();
     jest.clearAllMocks();
   });
 
   it("redirects inactive or missing affiliate links to home", async () => {
-    prismaMock.affiliateLink.findFirst.mockResolvedValue(null);
+    mockFindAffiliate.mockResolvedValue(null);
 
     const response = await GET(new Request("http://localhost/go/missing") as never, {
       params: Promise.resolve({ slug: "missing" }),
@@ -33,7 +34,7 @@ describe("GET /go/:slug", () => {
   });
 
   it("redirects active links and increments click count", async () => {
-    prismaMock.affiliateLink.findFirst.mockResolvedValue({
+    mockFindAffiliate.mockResolvedValue({
       id: "link-1",
       slug: "tool",
       targetUrl: "https://example.com/tool",

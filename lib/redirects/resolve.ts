@@ -1,5 +1,5 @@
 import { permanentRedirect } from "next/navigation";
-import { isCfPublicRuntime } from "@/lib/db/cf-public-runtime";
+import { isPublicCfBackend } from "@/lib/public-content/runtime";
 import { postArticlePath, type PublicLocale } from "@/lib/redirects/paths";
 import { findActiveRedirectViaSupabase } from "@/lib/redirects/edge-lookup";
 import { findActiveRedirect } from "@/lib/redirects/queries";
@@ -15,7 +15,7 @@ export async function redirectArchivedPostIfNeeded(
 ): Promise<void> {
   try {
     const from = postArticlePath(toPublicLocale(locale), slug);
-    const hit = isCfPublicRuntime()
+    const hit = isPublicCfBackend()
       ? await findActiveRedirectViaSupabase(from)
       : await findActiveRedirect(from);
     if (!hit) return;

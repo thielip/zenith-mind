@@ -1,4 +1,5 @@
 import { google } from "googleapis";
+import { withRetry } from "@/lib/http/with-retry";
 import { createSearchConsoleAuth, getSearchConsoleAuthMode } from "./auth";
 import { normalizeGscSiteUrl } from "@/lib/google/gsc-site-url";
 import { probeSearchConsoleRest } from "./search-console-probe";
@@ -63,7 +64,9 @@ export async function probeSearchConsoleApi(): Promise<{
   return result;
 }
 
-export async function fetchSearchConsoleSummary(): Promise<{
+export async function fetchSearchConsoleSummary(options?: {
+  signal?: AbortSignal;
+}): Promise<{
   ok: boolean;
   message?: string;
   queries: GscQueryRow[];
@@ -99,26 +102,30 @@ export async function fetchSearchConsoleSummary(): Promise<{
     const start = new Date();
     start.setDate(end.getDate() - 28);
 
-    const [queryRes, pageRes] = await Promise.all([
-      searchconsole.searchanalytics.query({
-        siteUrl,
-        requestBody: {
-          startDate: start.toISOString().slice(0, 10),
-          endDate: end.toISOString().slice(0, 10),
-          dimensions: ["query"],
-          rowLimit: 12,
-        },
-      }),
-      searchconsole.searchanalytics.query({
-        siteUrl,
-        requestBody: {
-          startDate: start.toISOString().slice(0, 10),
-          endDate: end.toISOString().slice(0, 10),
-          dimensions: ["page"],
-          rowLimit: 10,
-        },
-      }),
-    ]);
+    const [queryRes, pageRes] = await withRetry(
+      () =>
+      Promise.all([
+        searchconsole.searchanalytics.query({
+          siteUrl,
+          requestBody: {
+            startDate: start.toISOString().slice(0, 10),
+            endDate: end.toISOString().slice(0, 10),
+            dimensions: ["query"],
+            rowLimit: 12,
+          },
+        }),
+        searchconsole.searchanalytics.query({
+          siteUrl,
+          requestBody: {
+            startDate: start.toISOString().slice(0, 10),
+            endDate: end.toISOString().slice(0, 10),
+            dimensions: ["page"],
+            rowLimit: 10,
+          },
+        }),
+      ]),
+      { signal: options?.signal }
+    );
 
     const queries: GscQueryRow[] = (queryRes.data.rows ?? []).map((row) => ({
       query: row.keys?.[0] ?? "(not set)",
@@ -198,15 +205,17 @@ export async function fetchGscAeoAppearanceTotals(): Promise<GscAeoAppearanceTot
     const searchconsole = google.searchconsole({ version: "v1", auth });
     const { startDate, endDate } = gscDateRange(28);
 
-    const res = await searchconsole.searchanalytics.query({
-      siteUrl,
-      requestBody: {
-        startDate,
-        endDate,
-        dimensions: ["searchAppearance"],
-        rowLimit: 50,
-      },
-    });
+    const res = await withRetry(() =>
+      searchconsole.searchanalytics.query({
+        siteUrl,
+        requestBody: {
+          startDate,
+          endDate,
+          dimensions: ["searchAppearance"],
+          rowLimit: 50,
+        },
+      })
+    );
 
     const appearances: GscSearchAppearanceRow[] = (res.data.rows ?? []).map((row) => ({
       appearance: row.keys?.[0] ?? "(not set)",

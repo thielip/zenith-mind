@@ -3,21 +3,20 @@ import type {
   PublicContentRepository,
 } from "@/domain/content/ports";
 import { prisma } from "@/infrastructure/db/prisma";
+import { mergePrismaPublishedWhere } from "@/lib/blog/public-post-visibility";
 import { toPublicPostListItemDto } from "@/lib/dto/post-public.dto";
 
 export const publicContentPrismaRepository: PublicContentRepository = {
   async searchPublishedPosts(query, locale) {
     const posts = await prisma.post.findMany({
-      where: {
-        status: "PUBLISHED",
-        deletedAt: null,
+      where: mergePrismaPublishedWhere({
         OR: [
           { title: { contains: query, mode: "insensitive" } },
           { titleEn: { contains: query, mode: "insensitive" } },
           { excerpt: { contains: query, mode: "insensitive" } },
           { excerptEn: { contains: query, mode: "insensitive" } },
         ],
-      },
+      }),
       select: {
         id: true,
         slug: true,

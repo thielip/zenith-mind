@@ -2,22 +2,22 @@
  * 部落格文章詳頁（Cloudflare Worker）：僅 Supabase PostgREST。
  * 禁止 import @/infrastructure/db/prisma。
  */
-import { isCfPublicRuntime } from "@/lib/db/cf-public-runtime";
 import { fetchPostViewTotal } from "@/lib/analytics/post-view-totals";
+import { supabasePublishedVisibilityAnd } from "@/lib/blog/public-post-visibility";
 import { logBlogRenderError } from "@/lib/blog/log-blog-render-error";
+import {
+  mapBlogPostDetailFromCore,
+  mapSeoRow,
+  mapAuthorFromUserRecord,
+} from "@/lib/blog/map-blog-post-detail";
 import { toSafeDate } from "@/lib/blog/safe-blog-dates";
 import {
   supabaseRest,
   supabaseRestWithFallback,
 } from "@/lib/db/supabase-rest";
+import type { BlogPostDetail, RecommendedPostCard } from "@/lib/blog/blog-post-types";
 
 const PUBLIC_KEY = "public" as const;
-import type {
-  BlogPostDetail,
-  BlogPostFaq,
-  BlogPostSeo,
-  RecommendedPostCard,
-} from "@/lib/blog/blog-post-types";
 
 const POST_TAGS = ["posts", "blog"] as const;
 
@@ -42,6 +42,7 @@ const POST_DETAIL_CORE_SELECT = [
   "createdAt",
   "updatedAt",
   "categoryId",
+  "authorId",
   "readingTime",
   "isPasswordProtected",
   "categories(id,name,nameEn,slug)",
@@ -67,6 +68,7 @@ type PostDetailRow = {
   createdAt: string;
   updatedAt: string;
   categoryId: string | null;
+  authorId: string | null;
   readingTime: number | null;
   isPasswordProtected: boolean | null;
   categories:
@@ -121,40 +123,6 @@ function parseDate(value: string | null): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function mapFaq(raw: unknown): BlogPostFaq[] | null {
-  if (!Array.isArray(raw)) return null;
-  const out: BlogPostFaq[] = [];
-  for (const item of raw) {
-    if (!item || typeof item !== "object") continue;
-    const o = item as Record<string, unknown>;
-    const question = typeof o.question === "string" ? o.question : "";
-    const answer = typeof o.answer === "string" ? o.answer : "";
-    if (!question || !answer) continue;
-    out.push({
-      question,
-      answer,
-      ...(typeof o.questionEn === "string" ? { questionEn: o.questionEn } : {}),
-      ...(typeof o.answerEn === "string" ? { answerEn: o.answerEn } : {}),
-    });
-  }
-  return out.length > 0 ? out : null;
-}
-
-function mapSeo(row: SeoMetadataRow): BlogPostSeo | null {
-  if (!row) return null;
-  return {
-    metaTitle: row.metaTitle,
-    metaTitleEn: row.metaTitleEn,
-    metaDescription: row.metaDescription,
-    metaDescriptionEn: row.metaDescriptionEn,
-    ogTitle: row.ogTitle,
-    ogDescription: row.ogDescription,
-    ogImage: row.ogImage,
-    noIndex: Boolean(row.noIndex),
-    noFollow: Boolean(row.noFollow),
-  };
-}
-
 function mapPostTags(rows: PostTagJoinRow[]): { tag: { name: string; slug: string } }[] {
   const tags: { tag: { name: string; slug: string } }[] = [];
   for (const pt of rows) {
@@ -179,42 +147,27 @@ function pickCategoryEmbed(
   return cat ?? null;
 }
 
-function mapPostDetailRow(
-  row: PostDetailRow,
-  tags: { tag: { name: string; slug: string } }[],
-  seoMetadata: BlogPostSeo | null
-): BlogPostDetail {
-  const cat = pickCategoryEmbed(row.categories);
-  return {
-    id: row.id,
-    slug: row.slug,
-    title: row.title,
-    titleEn: row.titleEn,
-    excerpt: row.excerpt,
-    excerptEn: row.excerptEn,
-    content: typeof row.content === "string" ? row.content : "",
-    contentEn: row.contentEn,
-    contentType: row.contentType ?? "markdown",
-    contentBlocks: row.contentBlocks,
-    faq: mapFaq(row.faq),
-    coverImage: row.coverImage,
-    coverImageAlt: row.coverImageAlt,
-    coverImageWidth: row.coverImageWidth,
-    coverImageHeight: row.coverImageHeight,
-    publishedAt: parseDate(row.publishedAt),
-    createdAt: toSafeDate(row.createdAt),
-    updatedAt: toSafeDate(row.updatedAt),
-    categoryId: row.categoryId,
-    readingTime: row.readingTime ?? 0,
-    isPasswordProtected: Boolean(row.isPasswordProtected),
-    category: cat,
-    tags,
-    seoMetadata,
-    _count: { pageViews: 0 },
-  };
-}
-
 const postCache = { kind: "public" as const, revalidate: 3600, tags: [...POST_TAGS] };
+
+async function fetchAuthorById(authorId: string | null) {
+  if (!authorId) return null;
+  try {
+    const rows = await supabaseRest<{ id: string; email: string }[]>(
+      "users",
+      {
+        select: "id,email",
+        id: `eq.${authorId}`,
+        limit: "1",
+      },
+      undefined,
+      postCache,
+      PUBLIC_KEY
+    );
+    return mapAuthorFromUserRecord(rows[0]);
+  } catch {
+    return null;
+  }
+}
 
 async function fetchPostTagsForPost(
   postId: string
@@ -233,7 +186,7 @@ async function fetchPostTagsForPost(
   return mapPostTags(rows);
 }
 
-async function fetchSeoForPost(postId: string): Promise<BlogPostSeo | null> {
+async function fetchSeoForPost(postId: string): Promise<SeoMetadataRow | null> {
   const rows = await supabaseRestWithFallback<SeoMetadataRow[]>(
     "seo_metadata",
     {
@@ -247,7 +200,7 @@ async function fetchSeoForPost(postId: string): Promise<BlogPostSeo | null> {
     postCache,
     PUBLIC_KEY
   );
-  return rows[0] ? mapSeo(rows[0]) : null;
+  return rows[0] ?? null;
 }
 
 /** 輕量探測：區分「真的沒有文章」與「載入失敗」 */
@@ -258,8 +211,7 @@ export async function probePublishedPostSlugExists(slug: string): Promise<boolea
       {
         select: "slug",
         slug: `eq.${slug}`,
-        status: "eq.PUBLISHED",
-        deletedAt: "is.null",
+        and: supabasePublishedVisibilityAnd(),
         limit: "1",
       },
       undefined,
@@ -292,8 +244,7 @@ async function fetchBlogPostBySlugViaSupabaseInner(
     {
       select: POST_DETAIL_CORE_SELECT,
       slug: `eq.${slug}`,
-      status: "eq.PUBLISHED",
-      deletedAt: "is.null",
+      and: supabasePublishedVisibilityAnd(),
       limit: "1",
     },
     undefined,
@@ -303,21 +254,47 @@ async function fetchBlogPostBySlugViaSupabaseInner(
   const row = rows[0];
   if (!row) return null;
 
-  const viewPromise = isCfPublicRuntime()
-    ? Promise.resolve(0)
-    : fetchPostViewTotal(row.id).catch((error) => {
-        console.error("[blog.post] view total failed", error);
-        return 0;
-      });
+  const viewPromise = fetchPostViewTotal(row.id).catch((error) => {
+    console.error("[blog.post] view total failed", error);
+    return 0;
+  });
 
-  const [tags, seoMetadata, pageViews] = await Promise.all([
+  const [tags, seoRow, pageViews, author] = await Promise.all([
     fetchPostTagsForPost(row.id),
     fetchSeoForPost(row.id),
     viewPromise,
+    fetchAuthorById(row.authorId),
   ]);
 
-  const post = mapPostDetailRow(row, tags, seoMetadata);
-  return { ...post, _count: { pageViews } };
+  const cat = pickCategoryEmbed(row.categories);
+  return mapBlogPostDetailFromCore({
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    titleEn: row.titleEn,
+    excerpt: row.excerpt,
+    excerptEn: row.excerptEn,
+    content: typeof row.content === "string" ? row.content : "",
+    contentEn: row.contentEn,
+    contentType: row.contentType ?? "markdown",
+    contentBlocks: row.contentBlocks,
+    faq: row.faq,
+    coverImage: row.coverImage,
+    coverImageAlt: row.coverImageAlt,
+    coverImageWidth: row.coverImageWidth,
+    coverImageHeight: row.coverImageHeight,
+    publishedAt: parseDate(row.publishedAt),
+    createdAt: toSafeDate(row.createdAt),
+    updatedAt: toSafeDate(row.updatedAt),
+    categoryId: row.categoryId,
+    readingTime: row.readingTime ?? 0,
+    isPasswordProtected: Boolean(row.isPasswordProtected),
+    author,
+    category: cat,
+    tags,
+    seoMetadata: seoRow ? mapSeoRow(seoRow) : null,
+    pageViews,
+  });
 }
 
 export async function fetchRecommendedPostsViaSupabase(
@@ -326,8 +303,7 @@ export async function fetchRecommendedPostsViaSupabase(
 ): Promise<RecommendedPostCard[]> {
   const params: Record<string, string> = {
     select: "slug,title,titleEn,coverImage,coverImageAlt,publishedAt",
-    status: "eq.PUBLISHED",
-    deletedAt: "is.null",
+    and: supabasePublishedVisibilityAnd(),
     id: `neq.${currentPostId}`,
     order: "publishedAt.desc",
     limit: "3",
@@ -360,8 +336,7 @@ export async function fetchPublishedPostSlugsViaSupabase(
     "posts",
     {
       select: "slug",
-      status: "eq.PUBLISHED",
-      deletedAt: "is.null",
+      and: supabasePublishedVisibilityAnd(),
       order: "publishedAt.desc",
       limit: String(limit),
     },
@@ -391,8 +366,7 @@ export async function fetchSitemapPostsViaSupabase(
       "posts",
       {
         select: "slug,updatedAt",
-        status: "eq.PUBLISHED",
-        deletedAt: "is.null",
+        and: supabasePublishedVisibilityAnd(),
         order: "updatedAt.desc",
         limit: String(take),
         offset: String(offset),

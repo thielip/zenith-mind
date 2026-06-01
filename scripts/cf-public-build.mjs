@@ -176,7 +176,15 @@ try {
     shell: true,
   });
   exitCode = r.status ?? 1;
-  if (exitCode === 0) assertBundleHasNoSecrets();
+  if (exitCode === 0) {
+    assertBundleHasNoSecrets();
+    const scan = spawnSync("node", ["scripts/scan-cf-bundle.mjs"], {
+      cwd: root,
+      stdio: "inherit",
+      shell: true,
+    });
+    if ((scan.status ?? 1) !== 0) exitCode = scan.status ?? 1;
+  }
 } finally {
   restoreEnvFiles();
   restoreDirs();

@@ -5,6 +5,7 @@
 
 import { BetaAnalyticsDataClient } from "@google-analytics/data";
 import { env } from "@/env";
+import { withRetry } from "@/lib/http/with-retry";
 import { normalizeServiceAccountPrivateKey } from "@/lib/google/normalize-private-key";
 
 let _client: BetaAnalyticsDataClient | null = null;
@@ -86,15 +87,17 @@ export interface TopPageMetric {
 }
 
 export async function fetchBasicStatsLast7Days(): Promise<BasicStatsLast7Days> {
-  const [response] = await getClient().runReport({
-    property: ga4PropertyResourceName(),
-    dateRanges: [{ startDate: "7daysAgo", endDate: "today" }],
-    metrics: [
-      { name: "sessions" },
-      { name: "screenPageViews" },
-      { name: "activeUsers" },
-    ],
-  });
+  const [response] = await withRetry(() =>
+    getClient().runReport({
+      property: ga4PropertyResourceName(),
+      dateRanges: [{ startDate: "7daysAgo", endDate: "today" }],
+      metrics: [
+        { name: "sessions" },
+        { name: "screenPageViews" },
+        { name: "activeUsers" },
+      ],
+    })
+  );
 
   const row = response.rows?.[0];
   return {
@@ -108,17 +111,19 @@ export async function fetchTrafficTrend(p: {
   startDate: string;
   endDate: string;
 }): Promise<TrafficDataPoint[]> {
-  const [response] = await getClient().runReport({
-    property: ga4PropertyResourceName(),
-    dateRanges: [{ startDate: p.startDate, endDate: p.endDate }],
-    dimensions: [{ name: "date" }],
-    metrics: [
-      { name: "sessions" },
-      { name: "screenPageViews" },
-      { name: "totalUsers" },
-    ],
-    orderBys: [{ dimension: { dimensionName: "date" } }],
-  });
+  const [response] = await withRetry(() =>
+    getClient().runReport({
+      property: ga4PropertyResourceName(),
+      dateRanges: [{ startDate: p.startDate, endDate: p.endDate }],
+      dimensions: [{ name: "date" }],
+      metrics: [
+        { name: "sessions" },
+        { name: "screenPageViews" },
+        { name: "totalUsers" },
+      ],
+      orderBys: [{ dimension: { dimensionName: "date" } }],
+    })
+  );
 
   return (response.rows ?? []).map((row) => ({
     date: row.dimensionValues?.[0]?.value ?? "",
@@ -129,23 +134,27 @@ export async function fetchTrafficTrend(p: {
 }
 
 export async function fetchRealtimeActiveUsers(): Promise<number> {
-  const [response] = await getClient().runRealtimeReport({
-    property: ga4PropertyResourceName(),
-    metrics: [{ name: "activeUsers" }],
-  });
+  const [response] = await withRetry(() =>
+    getClient().runRealtimeReport({
+      property: ga4PropertyResourceName(),
+      metrics: [{ name: "activeUsers" }],
+    })
+  );
 
   return parseInt(response.rows?.[0]?.metricValues?.[0]?.value ?? "0", 10);
 }
 
 export async function fetchTopPagesLast7Days(limit = 8): Promise<TopPageMetric[]> {
-  const [response] = await getClient().runReport({
-    property: ga4PropertyResourceName(),
-    dateRanges: [{ startDate: "7daysAgo", endDate: "today" }],
-    dimensions: [{ name: "pagePath" }, { name: "pageTitle" }],
-    metrics: [{ name: "screenPageViews" }, { name: "activeUsers" }],
-    orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
-    limit,
-  });
+  const [response] = await withRetry(() =>
+    getClient().runReport({
+      property: ga4PropertyResourceName(),
+      dateRanges: [{ startDate: "7daysAgo", endDate: "today" }],
+      dimensions: [{ name: "pagePath" }, { name: "pageTitle" }],
+      metrics: [{ name: "screenPageViews" }, { name: "activeUsers" }],
+      orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
+      limit,
+    })
+  );
 
   return (response.rows ?? []).map((row) => ({
     path: row.dimensionValues?.[0]?.value ?? "",

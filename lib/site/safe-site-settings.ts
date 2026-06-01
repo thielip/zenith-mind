@@ -1,29 +1,13 @@
-import { isCfPublicRuntime } from "@/lib/db/cf-public-runtime";
-import { getCachedSiteSettings } from "@/lib/site/site-settings-cache";
-import {
-  DEFAULT_SITE_SETTINGS,
-  getSiteSettings,
-} from "@/lib/site/queries";
-import { getSiteSettingsViaSupabase } from "@/lib/site/public-site-supabase";
+import { getPublicReadRepository } from "@/lib/public-content/get-repository";
+import { DEFAULT_SITE_SETTINGS } from "@/lib/site/queries";
 import type { SiteSettingsData } from "@/lib/site/types";
 
-/** 公開版型：CF Worker 僅 Supabase REST；其餘環境 cache + Prisma */
+/** 公開版型設定（CF→Supabase、Vercel→Prisma cache） */
 export async function getSafeSiteSettings(): Promise<SiteSettingsData> {
-  if (isCfPublicRuntime()) {
-    try {
-      return await getSiteSettingsViaSupabase();
-    } catch {
-      return DEFAULT_SITE_SETTINGS;
-    }
-  }
-
   try {
-    return await getCachedSiteSettings();
+    const repo = await getPublicReadRepository();
+    return repo.getSiteSettings();
   } catch {
-    try {
-      return await getSiteSettings();
-    } catch {
-      return DEFAULT_SITE_SETTINGS;
-    }
+    return DEFAULT_SITE_SETTINGS;
   }
 }

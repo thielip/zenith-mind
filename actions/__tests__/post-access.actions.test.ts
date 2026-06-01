@@ -1,8 +1,10 @@
 import { createCookieJar } from "@/test-utils/next-mocks";
 import { prismaMock, resetPrismaMock } from "@/test-utils/prisma-mock";
 
-jest.mock("@/lib/db/cf-public-runtime", () => ({
-  isCfPublicRuntime: jest.fn(() => false),
+jest.mock("@/lib/public-content/runtime", () => ({
+  withPublicReadBackend: jest.fn(
+    async (_supabase: () => Promise<unknown>, prisma: () => Promise<unknown>) => prisma()
+  ),
 }));
 jest.mock("@/lib/blog/post-access-supabase", () => ({
   fetchProtectedPostHashBySlug: jest.fn(),

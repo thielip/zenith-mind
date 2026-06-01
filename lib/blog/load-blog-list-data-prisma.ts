@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { fetchPostViewTotalsMap } from "@/lib/analytics/post-view-totals";
+import { mergePrismaPublishedWhere } from "@/lib/blog/public-post-visibility";
 import type {
   BlogListData,
   BlogListFilters,
@@ -7,9 +8,7 @@ import type {
 
 function buildWhere(filters: BlogListFilters): Prisma.PostWhereInput {
   const query = filters.query?.trim() ?? "";
-  return {
-    status: "PUBLISHED",
-    deletedAt: null,
+  return mergePrismaPublishedWhere({
     ...(filters.category ? { category: { slug: filters.category } } : {}),
     ...(filters.tag ? { tags: { some: { tag: { slug: filters.tag } } } } : {}),
     ...(query
@@ -22,7 +21,7 @@ function buildWhere(filters: BlogListFilters): Prisma.PostWhereInput {
           ],
         }
       : {}),
-  };
+  });
 }
 
 export async function loadBlogListDataWithPrisma(

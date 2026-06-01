@@ -1,6 +1,6 @@
-import { createHash, randomUUID } from "crypto";
 import { z } from "zod";
-import { isCfPublicRuntime } from "@/lib/db/cf-public-runtime";
+import { newPageViewId, sha256Hex } from "@/lib/analytics/visitor-hash";
+import { isPublicCfBackend } from "@/lib/public-content/runtime";
 import { supabaseInsert } from "@/lib/db/supabase-rest";
 import type { SiteLocale } from "@/lib/site/types";
 
@@ -19,13 +19,16 @@ function normalizeLocale(locale: string): SiteLocale {
   return locale === "en" ? "en" : "zh-TW";
 }
 
-function visitorHashFromHeaders(
+async function visitorHashFromHeaders(
   headers: Headers,
   salt: string
-): string {
-  const ip = headers.get("cf-connecting-ip") ?? headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+): Promise<string> {
+  const ip =
+    headers.get("cf-connecting-ip") ??
+    headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    "unknown";
   const ua = headers.get("user-agent") ?? "";
-  return createHash("sha256").update(`${ip}${ua}${salt}`).digest("hex");
+  return sha256Hex(`${ip}${ua}${salt}`);
 }
 
 function resolveHashSalt(): string | null {
@@ -46,16 +49,16 @@ export async function recordPageViewCore(
   if (!hashSalt) return { ok: false, reason: "missing_salt" };
 
   const locale = normalizeLocale(parsed.data.locale);
-  const visitorHash = visitorHashFromHeaders(headers, hashSalt);
+  const visitorHash = await visitorHashFromHeaders(headers, hashSalt);
   const row = {
-    id: randomUUID(),
+    id: newPageViewId(),
     postId: parsed.data.postId ?? null,
     locale,
     referer: parsed.data.referer ?? null,
     visitorHash,
   };
 
-  if (isCfPublicRuntime()) {
+  if (isPublicCfBackend()) {
     try {
       await supabaseInsert("page_views", row);
       return { ok: true };

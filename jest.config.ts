@@ -29,6 +29,7 @@ const config: Config = {
     "actions/totp-activate.actions.ts",
     "lib/auth/jwt.ts",
     "lib/middleware/auth-guard.ts",
+    "lib/auth/admin-route-policy.ts",
     "!**/*.d.ts",
     "!**/__tests__/**",
   ],
