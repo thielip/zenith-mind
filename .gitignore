@@ -30,6 +30,7 @@ lighthouse*.json
 coverage/
 test-results/
 playwright/.auth/
+playwright.auth/
 
 # 本機 IDE / MCP（勿上傳）
 .cursor/mcp.json
