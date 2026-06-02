@@ -60,6 +60,14 @@ const nextConfig: NextConfig = {
       "date-fns",
       "@radix-ui/react-dialog",
       "@radix-ui/react-tabs",
+      // Public pages: avoid pulling admin dashboard chart/command-center stacks into first paint.
+      ...(isCfPublicOnly
+        ? []
+        : [
+            "recharts",
+            "framer-motion",
+            "@tanstack/react-query",
+          ]),
     ],
   },
 

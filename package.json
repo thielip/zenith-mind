@@ -25,6 +25,7 @@
     "check:env": "node scripts/check-env-keys.mjs",
     "check:env:diff": "node scripts/check-env-keys.mjs --diff",
     "scan:cf-bundle": "node scripts/scan-cf-bundle.mjs",
+    "perf:bundle-audit": "node scripts/perf/public-bundle-audit.mjs",
     "audit:architecture": "node scripts/architecture-audit.mjs",
     "sync:categories": "node scripts/sync-default-categories.mjs",
     "db:migrate": "node scripts/prisma-with-local-env.mjs migrate dev",

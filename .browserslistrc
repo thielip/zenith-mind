@@ -1,5 +1,7 @@
-# 與 Next.js 15 預設一致（chrome 111+），避免 Array.at / Object.hasOwn 等 polyfill
-chrome 111
-edge 111
-firefox 111
-safari 16.4
+# Modern browsers only — reduces legacy polyfills in client bundles (PageSpeed legacy JS).
+chrome >= 120
+firefox >= 120
+safari >= 17
+edge >= 120
+not dead
+not op_mini all

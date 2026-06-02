@@ -67,12 +67,21 @@ function loadClarity() {
   const clarityId = process.env["NEXT_PUBLIC_CLARITY_ID"];
   if (!clarityId || document.querySelector(`script[data-clarity="${clarityId}"]`)) return;
 
-  const script = document.createElement("script");
-  script.setAttribute("data-clarity", clarityId);
-  script.async = true;
-  // nonce 由 Middleware 注入到 meta tag，此處讀取
-  const nonceMeta = document.querySelector<HTMLMetaElement>('meta[name="csp-nonce"]');
-  if (nonceMeta?.content) script.nonce = nonceMeta.content;
-  script.src = `https://www.clarity.ms/tag/${clarityId}`;
-  document.head.appendChild(script);
+  const append = () => {
+    const script = document.createElement("script");
+    script.setAttribute("data-clarity", clarityId);
+    script.async = true;
+    script.defer = true;
+    // nonce 由 Middleware 注入到 meta tag，此處讀取
+    const nonceMeta = document.querySelector<HTMLMetaElement>('meta[name="csp-nonce"]');
+    if (nonceMeta?.content) script.nonce = nonceMeta.content;
+    script.src = `https://www.clarity.ms/tag/${clarityId}`;
+    document.head.appendChild(script);
+  };
+
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(append, { timeout: 8000 });
+  } else {
+    globalThis.setTimeout(append, 1200);
+  }
 }

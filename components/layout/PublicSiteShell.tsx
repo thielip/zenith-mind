@@ -1,10 +1,8 @@
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { headers } from "next/headers";
-import ConsentGatedAnalytics from "@/components/analytics/ConsentGatedAnalytics";
 import PerformanceResourceHints from "@/components/seo/PerformanceResourceHints";
 import { env } from "@/env";
-import ConsentBanner from "@/components/analytics/ConsentBanner";
 import SkipToMain from "@/components/layout/SkipToMain";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -15,6 +13,7 @@ import {
 import { buildOrganizationSchema } from "@/lib/seo/schemas/article.schema";
 import JsonLd from "@/components/seo/JsonLd";
 import type { SiteSettingsData } from "@/lib/site/types";
+import PublicAnalyticsMount from "@/components/layout/PublicAnalyticsMount";
 
 interface Props {
   locale: string;
@@ -64,10 +63,9 @@ export default async function PublicSiteShell({
 
         <Footer locale={locale} settings={publicSiteSettings} />
 
-        <ConsentBanner />
       </NextIntlClientProvider>
 
-      <ConsentGatedAnalytics ga4Id={ga4Id} gtmId={gtmId} nonce={nonce} />
+      <PublicAnalyticsMount ga4Id={ga4Id} gtmId={gtmId} nonce={nonce} />
     </>
   );
 }

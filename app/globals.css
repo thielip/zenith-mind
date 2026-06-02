@@ -30,17 +30,6 @@ body {
   overflow-x: clip;
 }
 
-/* AI 作戰中心 */
-.command-center {
-  --cc-bg: #05070f;
-  --cc-cyan: #00d2ff;
-  --cc-green: #10b981;
-}
-
-.command-center .font-mono {
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-}
-
 [id] {
   scroll-margin-top: 5rem;
 }

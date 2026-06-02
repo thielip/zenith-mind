@@ -1,5 +1,6 @@
 import { CommandCenterProvider } from "@/shared/providers/command-center-provider";
 import { GridBackground } from "@/widgets/command-shell/grid-background";
+import "@/app/admin/dashboard/command-center.css";
 
 export default function CommandCenterLayout({
   children,
