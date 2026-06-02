@@ -57,8 +57,16 @@ function wrapClient(apiKey: string): GeminiCompatClient {
 
 let _client: GeminiCompatClient | null = null;
 
+function requireGeminiApiKey(): string {
+  const apiKey = env.GEMINI_API_KEY?.trim();
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY 未設定");
+  }
+  return apiKey;
+}
+
 export function getGeminiOpenAIClient(): GeminiCompatClient {
-  _client ??= wrapClient(env.GEMINI_API_KEY);
+  _client ??= wrapClient(requireGeminiApiKey());
   return _client;
 }
 

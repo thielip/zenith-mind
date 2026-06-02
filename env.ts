@@ -28,8 +28,11 @@ export const env = createEnv({
     // ── TOTP 2FA（64 字元 hex = 32 bytes AES-256）────────
     TOTP_ENCRYPTION_KEY: z.string().length(64),
 
-    // ── Gemini（Admin 後台 AI，OpenAI 相容介面，絕不可 NEXT_PUBLIC_）
-    GEMINI_API_KEY: z.string().startsWith("AIza"),
+    // ── Gemini（僅 AI 功能需要；未設定時不應阻斷登入等核心流程）
+    GEMINI_API_KEY: optionalNonEmptyString.refine(
+      (v) => !v || v.startsWith("AIza"),
+      { message: "GEMINI_API_KEY 格式錯誤（應以 AIza 開頭）" }
+    ),
 
     // ── GA4 Reporting API（Service Account 拆分儲存）─────
     GA4_CLIENT_EMAIL: z.string().email(),

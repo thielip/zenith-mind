@@ -6,9 +6,9 @@ import {
   createGeminiChatCompletionStream,
   GeminiApiError,
 } from "@/lib/ai/gemini-compat-api";
-import { env } from "@/env";
 import {
   GEMINI_FLASH_LITE_MODEL,
+  getGeminiOpenAIClientFromEnv,
   getGeminiOpenAIClient,
 } from "@/lib/ai/gemini-openai-client";
 import type { AiPort, AiPromptOptions, AiResponse } from "@/domain/ai/ai.port";
@@ -58,7 +58,15 @@ export class OpenAiAdapter implements AiPort {
   }
 
   async *stream(prompt: string, options?: AiPromptOptions): AsyncIterable<string> {
-    for await (const chunk of createGeminiChatCompletionStream(env.GEMINI_API_KEY, {
+    const client = getGeminiOpenAIClientFromEnv();
+    if (!client) {
+      throw new Error("GEMINI_API_KEY 未設定");
+    }
+    const apiKey = process.env["GEMINI_API_KEY"]?.trim();
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY 未設定");
+    }
+    for await (const chunk of createGeminiChatCompletionStream(apiKey, {
       model: GEMINI_FLASH_LITE_MODEL,
       messages: [{ role: "user", content: prompt }],
       temperature: options?.temperature,
