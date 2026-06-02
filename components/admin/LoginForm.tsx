@@ -3,36 +3,47 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { loginAction } from "@/actions/auth.actions";
 import {
+  loginErrorMessage,
+  safeRedirectPath,
+} from "@/components/admin/login-form-utils";
+import {
   getAdminEmailHint,
   persistAdminSessionHint,
 } from "@/lib/auth/client-session";
 
 const schema = z.object({
-  email:    z.string().email("請輸入有效的 Email"),
+  email: z.string().email("請輸入有效的 Email"),
   password: z.string().min(8, "密碼至少 8 字元"),
 });
 type FormValues = z.infer<typeof schema>;
 
-export default function LoginForm() {
-  const router     = useRouter();
-  const sp         = useSearchParams();
-  const redirect   = sp.get("redirect") ?? "/admin/dashboard";
-  const reason     = sp.get("reason");
+export type LoginFormProps = {
+  redirect?: string;
+  reason?: string | null;
+};
 
-  const [showPw,   setShowPw]   = useState(false);
+export default function LoginForm({
+  redirect: redirectProp,
+  reason,
+}: LoginFormProps) {
+  const router = useRouter();
+  const redirect = safeRedirectPath(redirectProp);
+
+  const [showPw, setShowPw] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [isPending, startTransition] = useTransition();
 
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-  });
+  const { register, handleSubmit, setValue, formState: { errors } } =
+    useForm<FormValues>({
+      resolver: zodResolver(schema),
+    });
 
   useEffect(() => {
     const emailHint = getAdminEmailHint();
@@ -49,11 +60,7 @@ export default function LoginForm() {
       });
 
       if (!result.success) {
-        setErrorMsg(
-          result.error.code === "AUTH_FAILED"
-            ? "Email 或密碼錯誤"
-            : "登入失敗，請稍後再試"
-        );
+        setErrorMsg(loginErrorMessage(result.error?.code));
         return;
       }
 
@@ -74,7 +81,6 @@ export default function LoginForm() {
       noValidate
       aria-label="Admin 登入表單"
     >
-      {/* 工作階段逾時提示 */}
       {(reason === "session_expired" || reason === "idle_timeout") && (
         <div
           role="alert"
@@ -86,7 +92,6 @@ export default function LoginForm() {
         </div>
       )}
 
-      {/* Email */}
       <div>
         <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-gray-700">
           Email
@@ -112,7 +117,6 @@ export default function LoginForm() {
         )}
       </div>
 
-      {/* Password */}
       <div>
         <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-gray-700">
           密碼
@@ -146,7 +150,6 @@ export default function LoginForm() {
         )}
       </div>
 
-      {/* 全域錯誤 */}
       {errorMsg && (
         <p role="alert" className="text-sm text-red-600">{errorMsg}</p>
       )}

@@ -46,7 +46,7 @@ export default function TotpForm() {
         router.push("/admin/dashboard");
       } else {
         setErrorMsg(
-          result.error.code === "TOTP_INVALID"
+          result.error?.code === "TOTP_INVALID"
             ? "驗證碼錯誤，請重新輸入"
             : "驗證失敗，請稍後再試"
         );
