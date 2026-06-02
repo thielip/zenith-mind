@@ -167,7 +167,6 @@ const sentryBuildOptions = {
   silent: !sentryUploadEnabled,
   sourcemaps: { disable: !sentryUploadEnabled },
   widenClientFileUpload: sentryUploadEnabled,
-  tunnelRoute: "/monitoring",
   webpack: {
     automaticVercelMonitors: true,
     treeshake: { removeDebugLogging: true },
