@@ -72,7 +72,10 @@ async function loadSecurityModules() {
   };
 }
 
-function forceRedisDown(redis: { incr: (...a: unknown[]) => Promise<number>; expire: (...a: unknown[]) => Promise<number> }): () => void {
+function forceRedisDown(redis: {
+  incr: (key: string) => Promise<number>;
+  expire: (key: string, seconds: number) => Promise<number>;
+}): () => void {
   const origIncr = redis.incr.bind(redis);
   const origExpire = redis.expire.bind(redis);
   redis.incr = async () => {

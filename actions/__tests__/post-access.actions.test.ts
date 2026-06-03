@@ -12,6 +12,17 @@ jest.mock("@/lib/blog/post-access-supabase", () => ({
 jest.mock("next/headers", () => ({
   cookies: jest.fn(),
 }));
+jest.mock("@/lib/request/request-meta", () => ({
+  getRequestMeta: jest.fn(async () => ({
+    ip: "203.0.113.1",
+    userAgent: "jest-test",
+    requestId: "test-request-id",
+  })),
+}));
+jest.mock("@/lib/security/post-password-guard", () => ({
+  assertPostPasswordAttemptAllowed: jest.fn(async () => ({ allowed: true })),
+  delayAfterPostPasswordFailure: jest.fn(async () => undefined),
+}));
 jest.mock("@/infrastructure/db/prisma", () => ({
   prisma: require("@/test-utils/prisma-mock").prismaMock,
 }));
