@@ -88,7 +88,9 @@ function sanitizeOpenTag(tag: string, rawAttrs: string): string {
     /([a-zA-Z][\w:.-]*)\s*(?:=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
   let m: RegExpExecArray | null;
   while ((m = attrRe.exec(rawAttrs)) !== null) {
-    const name = m[1]!.toLowerCase();
+    const rawName = m[1];
+    if (!rawName) continue;
+    const name = rawName.toLowerCase();
     if (!allowed.has(name)) continue;
     const rawVal = m[2] ?? m[3] ?? m[4] ?? "";
     const safe = sanitizeAttributeValue(name, rawVal);
