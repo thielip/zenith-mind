@@ -1,13 +1,16 @@
 import { redis } from "@/infrastructure/redis/client";
+import {
+  checkMemoryRateLimit,
+  type RateLimitBackend,
+  type RateLimitResult,
+} from "@/lib/security/rate-limit-memory";
 
-export interface RateLimitResult {
-  allowed: boolean;
-  remaining: number;
-}
+export type { RateLimitBackend, RateLimitResult };
 
 /**
  * 固定視窗計數（Upstash Redis INCR + EXPIRE）
- * Edge / Node 皆可（REST Redis）
+ * Redis 故障 → 記憶體滑動視窗（fail-closed，不再 fail-open）
+ * Edge / Node 皆可（REST Redis + 程序內降級）
  */
 export async function checkRateLimit(
   key: string,
@@ -21,11 +24,20 @@ export async function checkRateLimit(
       await redis.expire(bucket, windowSec);
     }
     const allowed = count <= limit;
-    return { allowed, remaining: Math.max(0, limit - count) };
+    return {
+      allowed,
+      remaining: Math.max(0, limit - count),
+      backend: "redis",
+    };
   } catch (e: unknown) {
-    // Redis 不可用時不阻斷主流程（降級）
-    console.error("[rate-limit] Redis error:", e);
-    return { allowed: true, remaining: limit };
+    if (!process.env["SECURITY_MATRIX_QUIET"]) {
+      console.error("[rate-limit] Redis error, falling back to memory:", e);
+    }
+    const mem = checkMemoryRateLimit(key, limit, windowSec * 1000);
+    if (!mem.allowed) return mem;
+
+    // 記憶體降級仍允許時回傳 memory；極端情況生產環境可改為 deny（目前依需求以 memory 為準）
+    return mem;
   }
 }
 

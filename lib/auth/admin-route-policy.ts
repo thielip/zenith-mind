@@ -20,9 +20,16 @@ export const ADMIN_ONLY_PAGE_PREFIXES = [
 /** 需 JWT 的後台 API 前綴（Vercel；CF 會 302 至 ADMIN_DEPLOYMENT_URL） */
 export const ADMIN_AUTHENTICATED_API_PREFIXES = ["/api/admin", "/api/ai"] as const;
 
-/** 僅 ADMIN 的 API（其餘 /api/admin 允許 GUEST 讀取類端點） */
+/**
+ * 僅 ADMIN 的 API（敏感讀寫：探測、env、稽核匯出、即時串流、AI）
+ * 其餘 /api/admin 允許 GUEST 讀取類端點（若未來新增須審查）
+ */
 export const ADMIN_ONLY_API_PREFIXES = [
   "/api/admin/audit-log/export",
+  "/api/admin/env-check",
+  "/api/admin/integrations/probe",
+  "/api/admin/integrations/refresh-health",
+  "/api/admin/realtime/stream",
   "/api/ai",
 ] as const;
 

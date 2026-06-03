@@ -308,11 +308,10 @@ export async function uploadSiteAssetAction(
 
     return { success: true, data: { url }, error: null };
   } catch (e: unknown) {
-    console.error(`[Site] upload error [${meta.requestId}]:`, e);
     const msg = e instanceof Error ? e.message : typeof e === "string" ? e : JSON.stringify(e);
-    const lower = msg.toLowerCase();
+    console.error(`[Site] upload error [${meta.requestId}]:`, msg, e);
 
-    if (msg === "UNSUPPORTED_IMAGE_TYPE" || lower.includes("unsupported_image_type")) {
+    if (msg === "UNSUPPORTED_IMAGE_TYPE") {
       return {
         success: false,
         data: null,
@@ -323,14 +322,7 @@ export async function uploadSiteAssetAction(
         }),
       };
     }
-    if (
-      msg === "IMAGE_TOO_LARGE" ||
-      lower.includes("image_too_large") ||
-      lower.includes("exceeded") ||
-      lower.includes("too large") ||
-      lower.includes("payload too large") ||
-      lower.includes("request entity too large")
-    ) {
+    if (msg === "IMAGE_TOO_LARGE") {
       return {
         success: false,
         data: null,
@@ -341,32 +333,11 @@ export async function uploadSiteAssetAction(
         }),
       };
     }
-    if (lower.includes("jwt") || lower.includes("invalid api key") || lower.includes("unauthorized")) {
-      return {
-        success: false,
-        data: null,
-        error: Errors.validation({
-          formErrors: [
-            "Supabase 認證失敗：請檢查 SUPABASE_SERVICE_ROLE_KEY 與 NEXT_PUBLIC_SUPABASE_URL 是否與專案一致。",
-          ],
-        }),
-      };
-    }
-    if (lower.includes("bucket") && lower.includes("not found")) {
-      return {
-        success: false,
-        data: null,
-        error: Errors.validation({
-          formErrors: ["Storage bucket `site-assets` 不存在或無權限。請在 Supabase Storage 建立公開 bucket 或檢查 Service Role。"],
-        }),
-      };
-    }
+
     return {
       success: false,
       data: null,
-      error: Errors.validation({
-        formErrors: [`上傳失敗：${msg.slice(0, 280)}`],
-      }),
+      error: Errors.internal(meta.requestId),
     };
   }
 }

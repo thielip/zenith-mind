@@ -1,6 +1,7 @@
 /**
  * 公開站資料源健康檢查（避免 REST 403 被誤當「無文章」造成 SEO Soft 404）
  */
+import { unstable_cache } from "next/cache";
 import { getSupabaseRestConfig, isSupabaseAuthOrForbidden } from "@/lib/db/supabase-rest";
 
 export type PublicDataHealth = "ok" | "empty" | "forbidden" | "unconfigured" | "error";
@@ -60,6 +61,13 @@ export async function probePublicPostsHealth(): Promise<PublicDataHealth> {
 export function isPublicDataDegraded(health: PublicDataHealth): boolean {
   return health === "forbidden" || health === "unconfigured" || health === "error";
 }
+
+/** 部落格列表／metadata 共用：60s 快取，避免每請求打 REST count */
+export const getCachedPublicPostsHealth = unstable_cache(
+  async () => probePublicPostsHealth(),
+  ["public-posts-health-probe"],
+  { revalidate: 60, tags: ["public-data-health"] }
+);
 
 export function healthFromError(error: unknown): PublicDataHealth | null {
   if (isSupabaseAuthOrForbidden(error)) return "forbidden";

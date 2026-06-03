@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/infrastructure/db/prisma";
-import { gateAdminWrite } from "@/lib/auth/resolve-admin-action";
+import { gateAdminOnly } from "@/lib/auth/resolve-admin-action";
 import { Errors, type ActionResult } from "@/domain/shared/core.types";
 import { publishRealtimeEvent, createRealtimeEvent } from "@/server/realtime/event-hub";
 
@@ -21,7 +21,7 @@ function logAgent(message: string, level: "info" | "warn" | "error" = "info") {
 export async function cancelAgentJobAction(
   jobId: string
 ): Promise<ActionResult<{ id: string }>> {
-  const gate = await gateAdminWrite("analytics");
+  const gate = await gateAdminOnly();
   if (!gate.ok) return gate.result;
 
   const job = await prisma.aiJob.findUnique({
@@ -58,7 +58,7 @@ export async function cancelAgentJobAction(
 export async function prioritizeAgentJobAction(
   jobId: string
 ): Promise<ActionResult<{ id: string }>> {
-  const gate = await gateAdminWrite("analytics");
+  const gate = await gateAdminOnly();
   if (!gate.ok) return gate.result;
 
   const job = await prisma.aiJob.findUnique({
@@ -86,7 +86,7 @@ export async function prioritizeAgentJobAction(
 export async function clearPendingAgentQueueAction(): Promise<
   ActionResult<{ cleared: number }>
 > {
-  const gate = await gateAdminWrite("analytics");
+  const gate = await gateAdminOnly();
   if (!gate.ok) return gate.result;
 
   const result = await prisma.aiJob.updateMany({
@@ -105,7 +105,7 @@ export async function clearPendingAgentQueueAction(): Promise<
 export async function recoverStuckAgentJobsAction(): Promise<
   ActionResult<{ recovered: number }>
 > {
-  const gate = await gateAdminWrite("analytics");
+  const gate = await gateAdminOnly();
   if (!gate.ok) return gate.result;
 
   const now = new Date();

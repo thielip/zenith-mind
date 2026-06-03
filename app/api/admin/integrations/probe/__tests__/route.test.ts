@@ -1,5 +1,5 @@
 jest.mock("@/lib/auth/resolve-admin-action", () => ({
-  gateAdminRead: jest.fn(),
+  gateAdminOnly: jest.fn(),
 }));
 jest.mock("@/infrastructure/health/probes", () => ({
   probeDatabase: jest.fn(),
@@ -12,11 +12,11 @@ jest.mock("@/infrastructure/health/probes", () => ({
 }));
 
 import { Errors } from "@/domain/shared/core.types";
-import { gateAdminRead } from "@/lib/auth/resolve-admin-action";
+import { gateAdminOnly } from "@/lib/auth/resolve-admin-action";
 import { probeSearchConsole } from "@/infrastructure/health/probes";
 import { POST } from "../route";
 
-const gateAdminReadMock = jest.mocked(gateAdminRead);
+const gateAdminOnlyMock = jest.mocked(gateAdminOnly);
 const probeSearchConsoleMock = jest.mocked(probeSearchConsole);
 
 describe("POST /api/admin/integrations/probe", () => {
@@ -29,7 +29,7 @@ describe("POST /api/admin/integrations/probe", () => {
   });
 
   it("returns 401 without admin session", async () => {
-    gateAdminReadMock.mockResolvedValue({
+    gateAdminOnlyMock.mockResolvedValue({
       ok: false,
       result: { success: false, data: null, error: Errors.auth() },
     });
@@ -44,7 +44,7 @@ describe("POST /api/admin/integrations/probe", () => {
   });
 
   it("probes search-console-live via probeSearchConsole", async () => {
-    gateAdminReadMock.mockResolvedValue({
+    gateAdminOnlyMock.mockResolvedValue({
       ok: true,
       session: { userId: "u1", email: "a@b.com", role: "ADMIN" },
     });

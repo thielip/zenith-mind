@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { gateAdminRead } from "@/lib/auth/resolve-admin-action";
+import { gateAdminOnly } from "@/lib/auth/resolve-admin-action";
 import { deriveGcpProjectId } from "@/lib/google/integration-status";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ function envPresent(name: string): boolean {
 
 /** 管理員用：檢查關鍵 env 是否已注入（不回傳 secret 值） */
 export async function GET() {
-  const gate = await gateAdminRead();
+  const gate = await gateAdminOnly();
   if (!gate.ok) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

@@ -24,7 +24,9 @@ describe("admin-route-policy", () => {
     expect(adminRouteRequiresAdminRole("/admin/posts/new")).toBe(true);
     expect(adminRouteRequiresAdminRole("/api/ai/jobs")).toBe(true);
     expect(adminRouteRequiresAdminRole("/api/admin/audit-log/export")).toBe(true);
-    expect(adminRouteRequiresAdminRole("/api/admin/realtime/stream")).toBe(false);
+    expect(adminRouteRequiresAdminRole("/api/admin/env-check")).toBe(true);
+    expect(adminRouteRequiresAdminRole("/api/admin/integrations/probe")).toBe(true);
+    expect(adminRouteRequiresAdminRole("/api/admin/realtime/stream")).toBe(true);
     expect(adminRouteRequiresAdminRole("/admin/dashboard/seo")).toBe(false);
   });
 
@@ -33,6 +35,11 @@ describe("admin-route-policy", () => {
     expect(canAccessAdminRoute("/admin/users", "GUEST")).toBe(false);
     expect(canAccessAdminRoute("/admin/users", "ADMIN")).toBe(true);
     expect(canAccessAdminRoute("/api/ai/jobs", "GUEST")).toBe(false);
+    expect(canAccessAdminRoute("/api/admin/env-check", "GUEST")).toBe(false);
+    expect(canAccessAdminRoute("/api/admin/integrations/probe", "GUEST")).toBe(
+      false
+    );
+    expect(canAccessAdminRoute("/api/admin/realtime/stream", "GUEST")).toBe(false);
   });
 
   it("covers authenticated api prefixes", () => {

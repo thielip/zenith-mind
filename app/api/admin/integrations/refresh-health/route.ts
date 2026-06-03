@@ -1,6 +1,6 @@
 import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
-import { gateAdminRead } from "@/lib/auth/resolve-admin-action";
+import { gateAdminOnly } from "@/lib/auth/resolve-admin-action";
 import { runIntegrationHealthChecks } from "@/lib/admin/integration-health";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 
 /** 清除作戰中心健康快取並立即重跑探測（Vercel 更新 env 後使用） */
 export async function POST() {
-  const gate = await gateAdminRead();
+  const gate = await gateAdminOnly();
   if (!gate.ok) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

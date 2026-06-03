@@ -1,4 +1,8 @@
 import { prisma } from "@/infrastructure/db/prisma";
+import {
+  assertGuestBootstrapPasswordAllowed,
+  resolveGuestBootstrapPassword,
+} from "@/lib/auth/guest-bootstrap-policy";
 import { hashPassword } from "@/lib/auth/password";
 
 const DEFAULT_GUEST_EMAIL = "guest@gmail.com";
@@ -32,14 +36,21 @@ export async function seedBootstrapAdminIfEmpty(): Promise<boolean> {
   return true;
 }
 
-/** 確保存在參訪帳號（預設 guest@gmail.com / guest123，登入可填 guest） */
+/** 確保存在參訪帳號（開發可 guest123；生產須 GUEST_BOOTSTRAP_PASSWORD ≥12 字） */
 export async function seedGuestUserIfMissing(): Promise<boolean> {
   const email = (
     process.env["GUEST_BOOTSTRAP_EMAIL"] ?? DEFAULT_GUEST_EMAIL
   )
     .trim()
     .toLowerCase();
-  const password = process.env["GUEST_BOOTSTRAP_PASSWORD"] ?? "guest123";
+  const password = resolveGuestBootstrapPassword();
+  if (!password) {
+    console.error(
+      "[bootstrap] GUEST_BOOTSTRAP_PASSWORD is required in production to create the guest account"
+    );
+    return false;
+  }
+  assertGuestBootstrapPasswordAllowed(password);
 
   const existing = await prisma.user.findFirst({
     where: { email, deletedAt: null },

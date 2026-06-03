@@ -13,8 +13,8 @@ import { loadBlogListData } from "@/lib/blog/load-blog-list-data";
 import BlogSearchFilters from "@/components/blog/BlogSearchFilters";
 import PublicDataDegradedBanner from "@/components/public/PublicDataDegradedBanner";
 import {
+  getCachedPublicPostsHealth,
   isPublicDataDegraded,
-  probePublicPostsHealth,
 } from "@/lib/db/public-data-health";
 import { isSearchEngineCrawler } from "@/lib/seo/crawler";
 import JsonLd from "@/components/seo/JsonLd";
@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const isEn = locale === "en";
   const siteUrl = env.NEXT_PUBLIC_SITE_URL;
-  const health = await probePublicPostsHealth();
+  const health = await getCachedPublicPostsHealth();
   const degraded = isPublicDataDegraded(health);
 
   return {
@@ -59,7 +59,7 @@ export default async function BlogListPage({ params, searchParams }: Props) {
   const { locale } = await params;
   const sp    = await searchParams;
   const isEn  = locale === "en";
-  const health = await probePublicPostsHealth();
+  const health = await getCachedPublicPostsHealth();
   const dataDegraded = isPublicDataDegraded(health);
   const h = await headers();
   if (dataDegraded && isSearchEngineCrawler(h.get("user-agent"))) {

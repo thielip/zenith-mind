@@ -12,6 +12,11 @@ import {
 } from "@/lib/blog/post-access-cookie";
 import type { ActionResult } from "@/domain/shared/core.types";
 import { Errors } from "@/domain/shared/core.types";
+import { getRequestMeta } from "@/lib/request/request-meta";
+import {
+  assertPostPasswordAttemptAllowed,
+  delayAfterPostPasswordFailure,
+} from "@/lib/security/post-password-guard";
 
 const schema = z.object({
   slug: z.string().min(1).max(200),
@@ -21,6 +26,8 @@ const schema = z.object({
 export async function verifyPostPasswordAction(
   input: unknown
 ): Promise<ActionResult<{ unlocked: boolean }>> {
+  const meta = await getRequestMeta();
+
   try {
     const parsed = schema.safeParse(input);
     if (!parsed.success) {
@@ -28,6 +35,12 @@ export async function verifyPostPasswordAction(
     }
 
     const { slug, password } = parsed.data;
+
+    const attempt = await assertPostPasswordAttemptAllowed(slug, meta.ip);
+    if (!attempt.allowed) {
+      return { success: false, data: null, error: Errors.rateLimit() };
+    }
+
     const post = await withPublicReadBackend(
       () => fetchProtectedPostHashBySlug(slug),
       async () => {
@@ -50,6 +63,7 @@ export async function verifyPostPasswordAction(
 
     const ok = await verifyPassword(password, post.accessPasswordHash);
     if (!ok) {
+      await delayAfterPostPasswordFailure(slug, meta.ip);
       return { success: false, data: null, error: Errors.auth() };
     }
 
@@ -66,8 +80,8 @@ export async function verifyPostPasswordAction(
 
     return { success: true, data: { unlocked: true }, error: null };
   } catch (e: unknown) {
-    console.error("[PostAccess] verify failed:", e);
-    return { success: false, data: null, error: Errors.internal() };
+    console.error(`[PostAccess] verify failed [${meta.requestId}]:`, e);
+    return { success: false, data: null, error: Errors.internal(meta.requestId) };
   }
 }
 

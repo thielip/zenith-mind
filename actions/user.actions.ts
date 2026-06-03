@@ -10,7 +10,7 @@ import {
   listAdminUsers,
   softDeleteAdminUser,
 } from "@/domain/auth/user.service";
-import { gateAdminRead, gateAdminWrite } from "@/lib/auth/resolve-admin-action";
+import { gateAdminOnly, gateAdminWrite } from "@/lib/auth/resolve-admin-action";
 import { writeAuditLog } from "@/infrastructure/db/adapters/audit.prisma-adapter";
 
 const emailSchema = z.string().email();
@@ -39,7 +39,7 @@ export async function listUsersAction(): Promise<
   >
 > {
   try {
-    const gate = await gateAdminRead();
+    const gate = await gateAdminOnly();
     if (!gate.ok) return gate.result;
     const users = await listAdminUsers();
     return {

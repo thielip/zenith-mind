@@ -38,6 +38,26 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     }
   }
 
+  if (pathname === "/api/public/page-view" && request.method === "POST") {
+    const ip = resolveClientIpFromHeaders(request.headers);
+    const rl = await checkRateLimit(rateLimitKeyIp(ip, "public:page-view"), 60, 60);
+    if (!rl.allowed) {
+      return secureEarlyNextResponse(
+        NextResponse.json({ error: "RATE_LIMIT" }, { status: 429 })
+      );
+    }
+  }
+
+  if (pathname === "/api/search" && request.method === "GET") {
+    const ip = resolveClientIpFromHeaders(request.headers);
+    const rl = await checkRateLimit(rateLimitKeyIp(ip, "public:search"), 30, 60);
+    if (!rl.allowed) {
+      return secureEarlyNextResponse(
+        NextResponse.json({ error: "RATE_LIMIT", items: [] }, { status: 429 })
+      );
+    }
+  }
+
   // *.vercel.app / *.workers.dev 公開頁 → www（避免重複內容；/admin 除外）
   const canonicalRedirect = canonicalHostRedirect(request);
   if (canonicalRedirect) {

@@ -96,7 +96,7 @@ describe("adminAuthGuard", () => {
     expect(response?.status).toBe(403);
   });
 
-  it("allows guest on read admin api", async () => {
+  it("returns 403 for guest on sensitive admin apis", async () => {
     const token = await signAccessToken({
       userId: "guest-1",
       email: "guest@gmail.com",
@@ -107,7 +107,7 @@ describe("adminAuthGuard", () => {
       request("/api/admin/realtime/stream", token)
     );
 
-    expect(response).toBeNull();
+    expect(response?.status).toBe(403);
   });
 
   it("rejects temporary TOTP tokens on protected admin routes", async () => {

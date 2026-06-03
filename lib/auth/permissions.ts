@@ -33,14 +33,14 @@ const ROLE_ENTITY_PERMISSIONS: Record<
   },
   GUEST: {
     post: ["read"],
-    user: ["read"],
     site: ["read"],
     media: ["read"],
     affiliate: ["read"],
-    integration: ["read"],
-    analytics: ["read"],
-    audit: ["read"],
-    settings: ["read"],
+    user: [],
+    integration: [],
+    analytics: [],
+    audit: [],
+    settings: [],
   },
 };
 
@@ -50,6 +50,10 @@ export function hasAdminPermission(
   permission: AdminPermission
 ): boolean {
   return ROLE_ENTITY_PERMISSIONS[role][entity].includes(permission);
+}
+
+export function canReadAdminEntity(role: UserRole, entity: AdminEntity): boolean {
+  return hasAdminPermission(role, entity, "read");
 }
 
 export function canWriteAdminEntity(role: UserRole, entity: AdminEntity): boolean {

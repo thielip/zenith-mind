@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { gateAdminRead } from "@/lib/auth/resolve-admin-action";
+import { gateAdminOnly } from "@/lib/auth/resolve-admin-action";
 import {
   probeDatabase,
   probeGa4Reporting,
@@ -24,7 +24,7 @@ const PROBES: Record<string, () => Promise<ProbeResult>> = {
 };
 
 export async function POST(req: NextRequest) {
-  const gate = await gateAdminRead();
+  const gate = await gateAdminOnly();
   if (!gate.ok) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

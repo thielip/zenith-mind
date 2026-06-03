@@ -3,10 +3,22 @@
 
 import { NextResponse } from "next/server";
 import { getPublicContentRepository } from "@/lib/public-content/get-repository";
+import {
+  enforceRateLimitResponse,
+  PUBLIC_API_RATE_LIMITS,
+} from "@/lib/security/enforce-rate-limit";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
+  const limited = await enforceRateLimitResponse(
+    req.headers,
+    "public:search",
+    PUBLIC_API_RATE_LIMITS.search.limit,
+    PUBLIC_API_RATE_LIMITS.search.windowSec
+  );
+  if (limited) return limited;
+
   const { searchParams } = new URL(req.url);
   const q = (searchParams.get("q") ?? "").trim();
   const localeRaw = searchParams.get("locale") ?? "zh-TW";
